@@ -61,6 +61,21 @@ export default function SobrePage() {
         </div>
       ),
     },
+    {
+      type: "node",
+      columns: 1,
+      node: (
+        <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+          <div className="relative h-64 w-64 overflow-hidden shadow-md sm:h-80 sm:w-80">
+            <Image src="/colunistas/jurandir-junior.png" alt="Jurandir Júnior" fill className="object-cover" />
+          </div>
+          <div>
+            <h3 className="font-serif text-xl font-bold text-polis-ink">Jurandir Júnior</h3>
+            <p className="text-sm text-polis-ink-soft">Redator e colunista do Portal Pólis</p>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   return <Newspaper sectionLabel="Sobre" showMasthead blocks={blocks} />;

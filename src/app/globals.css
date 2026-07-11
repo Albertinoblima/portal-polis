@@ -16,17 +16,20 @@
   --color-paper: #f4f1e9;
   --color-paper-soft: #ece7da;
   --color-ink: #1a1815;
-  --color-ink-soft: #4a4640;
+  /* Bem mais escuro que um cinza-secundário comum (~11.8:1 de contraste
+     contra o papel) — leitores relataram que a versão anterior (#4a4640,
+     ~8.3:1) ainda cansava a vista em textos secundários (datas, legendas,
+     nav). Prioriza legibilidade sobre sutileza de hierarquia visual. */
+  --color-ink-soft: #2e2a25;
   --color-rule: #1a1815;
   /* Uso em fundos/bordas decorativas (chip, sublinhado, foco) — sempre
      combinado com texto de cor fixa (--color-gold-contrast), nunca com o
      `ink` do tema, por isso não precisa variar entre claro/escuro. */
   --color-gold-muted: #a9852f;
   /* Uso como COR DE TEXTO (links, rótulos, destaques) — variante própria por
-     tema: --color-gold-muted sozinho não tem contraste suficiente sobre o
-     papel claro (~3:1, abaixo do mínimo AA de 4.5:1) nem é vibrante o
-     bastante sobre o papel escuro. Ver blocos [data-theme] abaixo. */
-  --color-gold-ink: #7a5c1a;
+     tema, escurecida para ~8:1 de contraste contra o papel claro (o
+     gold-muted original tinha só ~3:1). Ver blocos [data-theme] abaixo. */
+  --color-gold-ink: #5c4514;
   /* Texto sobre fundo dourado (ex.: botão de newsletter) — sempre escuro e
      fixo, independente do tema, já que o fundo dourado não escurece no
      modo escuro. */
@@ -83,11 +86,11 @@
   --color-paper: #f4f1e9;
   --color-paper-soft: #ece7da;
   --color-ink: #1a1815;
-  --color-ink-soft: #4a4640;
+  --color-ink-soft: #2e2a25;
   --color-rule: #1a1815;
-  /* Dourado mais escuro/terroso para manter contraste AA (~5.3:1) sobre o
+  /* Dourado bem mais escuro/terroso para maior contraste (~8:1) sobre o
      papel claro. */
-  --color-gold-ink: #7a5c1a;
+  --color-gold-ink: #5c4514;
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
