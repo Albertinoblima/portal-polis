@@ -6,6 +6,7 @@ import { PageChrome } from "./PageChrome";
 import { Masthead } from "./Masthead";
 import { HotCorner } from "./HotCorner";
 import { paginateHtml } from "./paginate";
+import { useIsClient } from "@/hooks/useIsClient";
 
 export type NewspaperBlock =
   | { type: "html"; html: string; columns?: 1 | 2 | 3 }
@@ -48,6 +49,7 @@ interface PreparedPage {
 export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, blocks }: NewspaperProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlipHandle>(null);
+  const isClient = useIsClient();
   const [size, setSize] = useState<{ width: number; height: number }>(DEFAULT_SIZE);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageCountSeen, setPageCountSeen] = useState(0);
@@ -103,11 +105,20 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
       }
 
       const columns = block.columns ?? columnsDefault;
-      const fragments = paginateHtml(block.html, {
-        pageWidthPx: contentWidth,
-        columnHeightPx: contentHeight,
-        columnsPerPage: columns,
-      });
+      // No primeiro render do cliente (hidratação), o layout real de colunas do
+      // navegador já existe — diferente do servidor, onde `document` não existe
+      // e paginateHtml sempre devolve o HTML inteiro como uma única folha. Sem
+      // este `isClient`, a hidratação produziria uma contagem de páginas
+      // diferente da renderizada pelo servidor (mismatch garantido em qualquer
+      // matéria cujo corpo não caiba inteiro numa folha). Só medimos de verdade
+      // depois que `isClient` vira true, no ciclo de render seguinte à hidratação.
+      const fragments = isClient
+        ? paginateHtml(block.html, {
+            pageWidthPx: contentWidth,
+            columnHeightPx: contentHeight,
+            columnsPerPage: columns,
+          })
+        : [block.html];
       for (const html of fragments) {
         out.push({
           content: (
@@ -121,7 +132,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
       }
     }
     return out;
-  }, [blocks, contentWidth, contentHeight, columnsDefault, isDesktop]);
+  }, [blocks, contentWidth, contentHeight, columnsDefault, isDesktop, isClient]);
 
   if (preparedPages.length !== pageCountSeen) {
     setPageCountSeen(preparedPages.length);
@@ -163,6 +174,14 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
       {flipPages.length > 0 && contentWidth > 0 && (
         <>
           <PageFlipEngine
+            // Força remontagem completa sempre que a contagem de páginas muda
+            // (ex.: da paginação de fallback do SSR para a real do cliente, ou
+            // após um resize). Sem isso, o React tentaria reconciliar (inserir/
+            // remover) filhos individuais que a biblioteca já reparentou para
+            // dentro do próprio DOM dela — removeChild falha porque o nó não
+            // está mais onde o React acha que está. Remontar em vez de
+            // reconciliar evita esse conflito de propriedade do DOM por completo.
+            key={totalPages}
             ref={flipRef}
             pages={flipPages}
             width={Math.max(pageWidth, 280)}

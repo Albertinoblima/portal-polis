@@ -111,3 +111,14 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Capitular de abertura de matéria, ao estilo de jornal impresso. */
+.dropcap::first-letter {
+  float: left;
+  font-family: var(--font-serif);
+  font-size: 3.4em;
+  line-height: 0.8;
+  padding-right: 0.08em;
+  padding-top: 0.05em;
+  color: var(--color-ink);
+}
