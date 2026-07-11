@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { slugify } from "@/lib/utils";
-import type { ArticleStatus, BannerPosition, UserRole } from "@/types/database";
+import type { ArticleStatus, BannerPosition, CommentStatus, UserRole } from "@/types/database";
 
 export async function getEditorias() {
   const { data, error } = await supabase.from("editorias").select("*").order("name");
@@ -277,6 +277,51 @@ export async function toggleProfileActive(id: string, isActive: boolean) {
 
 export async function updateMediaAltText(id: string, altText: string) {
   const { error } = await supabase.from("media").update({ alt_text: altText }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function getComments() {
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*, article:articles(id, title, slug)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCommentStatus(id: string, status: CommentStatus) {
+  const { error } = await supabase.from("comments").update({ status }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteComment(id: string) {
+  const { error } = await supabase.from("comments").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getNewsletterSubscribers() {
+  const { data, error } = await supabase
+    .from("newsletter_subscribers")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function getContactMessages() {
+  const { data, error } = await supabase
+    .from("contact_messages")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function markContactHandled(id: string, handled: boolean) {
+  const { error } = await supabase
+    .from("contact_messages")
+    .update({ handled_at: handled ? new Date().toISOString() : null })
+    .eq("id", id);
   if (error) throw error;
 }
 

@@ -229,7 +229,25 @@ export interface Database {
           parent_id: string | null;
           status: CommentStatus;
           created_at: string;
-        }>
+        }>,
+        Partial<{
+          article_id: string;
+          user_id: string | null;
+          author_name: string;
+          content: string;
+          parent_id: string | null;
+          status: CommentStatus;
+          created_at: string;
+        }>,
+        [
+          {
+            foreignKeyName: "comments_article_id_fkey";
+            columns: ["article_id"];
+            isOneToOne: false;
+            referencedRelation: "articles";
+            referencedColumns: ["id"];
+          },
+        ]
       >;
       media: Table<
         {
