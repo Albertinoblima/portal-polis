@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 const CONTENT_HTML = `
   <h1>Política de Privacidade</h1>
-  <p>O Pólis coleta o mínimo de dados pessoais necessário para operar o portal e a
+  <p>O Portal Pólis coleta o mínimo de dados pessoais necessário para operar o portal e a
   newsletter, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
   <p>Esta página será detalhada com o texto completo da política de privacidade antes do
   lançamento público do portal.</p>

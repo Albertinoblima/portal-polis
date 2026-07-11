@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 const CONTENT_HTML = `
   <h1>LGPD</h1>
-  <p>O Pólis trata dados pessoais com base nos princípios de minimização, finalidade e
+  <p>O Portal Pólis trata dados pessoais com base nos princípios de minimização, finalidade e
   transparência previstos na Lei Geral de Proteção de Dados (LGPD).</p>
   <p>Para exercer seus direitos como titular de dados (acesso, correção, exclusão ou
   portabilidade), entre em contato pelo canal disponível na página de

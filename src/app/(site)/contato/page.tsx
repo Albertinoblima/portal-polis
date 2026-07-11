@@ -4,7 +4,7 @@ import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper
 
 export const metadata: Metadata = {
   title: "Contato",
-  description: "Fale com a redação do Pólis.",
+  description: "Fale com a redação do Portal Pólis.",
 };
 
 export default function ContatoPage() {

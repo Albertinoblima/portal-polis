@@ -3,11 +3,11 @@ import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper
 
 export const metadata: Metadata = {
   title: "Sobre",
-  description: "Conheça o Pólis, onde a política faz sentido.",
+  description: "Conheça o Portal Pólis, onde a política faz sentido.",
 };
 
 const CONTENT_HTML = `
-  <h1>Sobre o Pólis</h1>
+  <h1>Sobre o Portal Pólis</h1>
   <p><strong>Pólis</strong> (πόλις) é a palavra grega para cidade-estado — o centro da vida
   cívica, política e democrática na Grécia Antiga. É de lá que nasce o nome do nosso portal.</p>
   <p>Somos uma plataforma de jornalismo político que acredita que a política deixa de ser

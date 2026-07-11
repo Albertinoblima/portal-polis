@@ -5,7 +5,7 @@ import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper
 
 export const metadata: Metadata = {
   title: "Busca",
-  description: "Busque matérias no Pólis por título, subtítulo ou conteúdo.",
+  description: "Busque matérias no Portal Pólis por título, subtítulo ou conteúdo.",
 };
 
 export default function BuscaPage() {

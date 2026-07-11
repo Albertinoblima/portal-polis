@@ -66,7 +66,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     author: author ? { "@type": "Person", name: author.name } : undefined,
     publisher: {
       "@type": "Organization",
-      name: "Pólis",
+      name: "Portal Pólis",
       logo: { "@type": "ImageObject", url: `${SITE_URL}/brand/LOGO_MARCA.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },

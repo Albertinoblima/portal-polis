@@ -14,8 +14,8 @@ export function NavBar() {
   return (
     <div className="relative z-30 flex h-12 shrink-0 items-center justify-between gap-4 border-b border-polis-rule/20 bg-polis-paper px-4 text-polis-ink md:px-6">
       <Link href="/" className="flex items-center gap-2">
-        <Image src="/brand/LOGO_MARCA.png" alt="Pólis" width={24} height={24} className="h-6 w-6" priority />
-        <span className="font-serif text-sm font-bold">Pólis</span>
+        <Image src="/brand/LOGO_MARCA.png" alt="Portal Pólis" width={24} height={24} className="h-6 w-6" priority />
+        <span className="hidden font-serif text-sm font-bold sm:inline">Portal Pólis</span>
       </Link>
 
       <nav className="hidden items-center gap-5 lg:flex">

@@ -173,22 +173,24 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
             onFlip={setPageIndex}
           />
 
-          <HotCorner onFlip={() => flipRef.current?.flipNext()} />
+          <HotCorner />
 
+          {/* Recurso de acessibilidade (teclado/leitor de tela) — a interação
+              principal é clicar/arrastar o canto da página, como num jornal real. */}
           <nav
             aria-label="Navegação de páginas"
-            className="pointer-events-none absolute inset-x-0 bottom-1 z-30 flex items-center justify-center gap-4"
+            className="pointer-events-none absolute inset-x-0 bottom-1 z-30 flex items-center justify-center gap-3 opacity-60 transition-opacity hover:opacity-100"
           >
             <button
               type="button"
               onClick={() => flipRef.current?.flipPrev()}
               disabled={pageIndex <= 0}
               aria-label="Página anterior"
-              className="pointer-events-auto rounded-full border border-polis-rule/30 bg-polis-paper/90 px-3 py-1 text-xs text-polis-ink shadow-sm disabled:opacity-30"
+              className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
             >
-              ‹ Anterior
+              ‹
             </button>
-            <span className="pointer-events-none text-xs text-polis-ink-soft">
+            <span className="pointer-events-none text-[11px] text-polis-ink-soft">
               {pageIndex + 1} / {totalPages}
             </span>
             <button
@@ -196,9 +198,9 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
               onClick={() => flipRef.current?.flipNext()}
               disabled={pageIndex >= totalPages - 1}
               aria-label="Próxima página"
-              className="pointer-events-auto rounded-full border border-polis-rule/30 bg-polis-paper/90 px-3 py-1 text-xs text-polis-ink shadow-sm disabled:opacity-30"
+              className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
             >
-              Próxima ›
+              ›
             </button>
           </nav>
         </>

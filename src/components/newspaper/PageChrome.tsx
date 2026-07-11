@@ -47,7 +47,7 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
         <span>
           Página {pageNumber} de {totalPages}
         </span>
-        <span>Pólis</span>
+        <span>Portal Pólis</span>
       </div>
     </div>
   );

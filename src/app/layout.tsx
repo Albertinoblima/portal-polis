@@ -21,8 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Pólis — Onde a política faz sentido",
-    template: "%s | Pólis",
+    default: "Portal Pólis — Onde a política faz sentido",
+    template: "%s | Portal Pólis",
   },
   description: SITE_DESCRIPTION,
   icons: {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     siteName: SITE_NAME,
-    title: "Pólis — Onde a política faz sentido",
+    title: "Portal Pólis — Onde a política faz sentido",
     description: SITE_DESCRIPTION,
   },
   alternates: {

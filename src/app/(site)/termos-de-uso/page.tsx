@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 const CONTENT_HTML = `
   <h1>Termos de Uso</h1>
-  <p>Ao acessar o Pólis, o usuário concorda com os termos de uso do portal, incluindo as
+  <p>Ao acessar o Portal Pólis, o usuário concorda com os termos de uso do portal, incluindo as
   regras de moderação de comentários e uso do conteúdo publicado.</p>
   <p>Esta página será detalhada com o texto completo dos termos de uso antes do lançamento
   público do portal.</p>

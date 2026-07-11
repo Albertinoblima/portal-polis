@@ -6,7 +6,7 @@ import { getAuthors } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Colunistas",
-  description: "Conheça os colunistas e editores do Pólis.",
+  description: "Conheça os colunistas e editores do Portal Pólis.",
 };
 
 export default function ColunistasPage() {
