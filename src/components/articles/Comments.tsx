@@ -119,6 +119,14 @@ export function Comments({ articleId }: { articleId: string }) {
             <Button type="submit" disabled={status === "submitting"}>
               {status === "submitting" ? "Enviando..." : "Comentar"}
             </Button>
+            <p className="text-xs text-polis-ink-soft">
+              Comentários passam por moderação antes de aparecer. Ao enviar, você concorda com
+              nossa{" "}
+              <a href="/politica-de-privacidade" className="underline hover:text-polis-gold-ink">
+                Política de Privacidade
+              </a>
+              .
+            </p>
           </form>
         )}
       </div>

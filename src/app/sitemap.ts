@@ -13,6 +13,7 @@ const staticPaths = [
   "colunistas",
   "lgpd",
   "politica-de-privacidade",
+  "politica-de-cookies",
   "termos-de-uso",
 ];
 

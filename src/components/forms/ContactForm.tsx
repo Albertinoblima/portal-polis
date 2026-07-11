@@ -91,6 +91,13 @@ export function ContactForm() {
       <Button type="submit" disabled={status === "submitting"}>
         {status === "submitting" ? "Enviando..." : "Enviar mensagem"}
       </Button>
+      <p className="text-xs text-polis-ink-soft">
+        Ao enviar, você concorda com nossa{" "}
+        <a href="/politica-de-privacidade" className="underline hover:text-polis-gold-ink">
+          Política de Privacidade
+        </a>
+        .
+      </p>
     </form>
   );
 }

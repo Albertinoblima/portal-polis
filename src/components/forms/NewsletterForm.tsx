@@ -37,20 +37,29 @@ export function NewsletterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
-      <input
-        type="email"
-        name="email"
-        required
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        placeholder="seu@email.com"
-        className="w-full rounded-sm border border-polis-ink/20 px-4 py-3 focus:border-polis-gold-muted focus:outline-none"
-      />
-      <Button type="submit" disabled={status === "submitting"} className="whitespace-nowrap">
-        {status === "submitting" ? "Enviando..." : "Inscrever-se"}
-      </Button>
-      {status === "error" && <p className="text-sm text-red-700 sm:col-span-2">{message}</p>}
+    <form onSubmit={handleSubmit} className="mx-auto mt-8 flex max-w-md flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input
+          type="email"
+          name="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="seu@email.com"
+          className="w-full rounded-sm border border-polis-ink/20 px-4 py-3 focus:border-polis-gold-muted focus:outline-none"
+        />
+        <Button type="submit" disabled={status === "submitting"} className="whitespace-nowrap">
+          {status === "submitting" ? "Enviando..." : "Inscrever-se"}
+        </Button>
+      </div>
+      {status === "error" && <p className="text-sm text-red-700">{message}</p>}
+      <p className="text-xs text-polis-ink-soft">
+        Ao se inscrever, você concorda com nossa{" "}
+        <a href="/politica-de-privacidade" className="underline hover:text-polis-gold-ink">
+          Política de Privacidade
+        </a>
+        .
+      </p>
     </form>
   );
 }
