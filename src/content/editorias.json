@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ed-politica",
+    "name": "Política",
+    "slug": "politica",
+    "color": "#0A192F",
+    "description": "Cobertura da política nacional: Congresso, Executivo, Judiciário e os bastidores do poder em Brasília.",
+    "isActive": true
+  },
+  {
+    "id": "ed-municipios",
+    "name": "Municípios",
+    "slug": "municipios",
+    "color": "#1E5128",
+    "description": "Política local nos municípios brasileiros: prefeituras, câmaras municipais e o impacto das leis no dia a dia do cidadão.",
+    "isActive": true
+  },
+  {
+    "id": "ed-eleicoes",
+    "name": "Eleições",
+    "slug": "eleicoes",
+    "color": "#7A1F2B",
+    "description": "Tudo sobre pleitos eleitorais: candidaturas, pesquisas, propaganda eleitoral e resultados.",
+    "isActive": true
+  },
+  {
+    "id": "ed-editorial",
+    "name": "Editorial",
+    "slug": "editorial",
+    "color": "#C9A227",
+    "description": "A posição institucional do Pólis sobre os temas mais relevantes da política nacional.",
+    "isActive": true
+  },
+  {
+    "id": "ed-opiniao",
+    "name": "Opinião",
+    "slug": "opiniao",
+    "color": "#4A3F6B",
+    "description": "Espaço plural de colunistas convidados para análise e debate qualificado.",
+    "isActive": true
+  },
+  {
+    "id": "ed-bastidores",
+    "name": "Bastidores",
+    "slug": "bastidores",
+    "color": "#334155",
+    "description": "O que não sai no noticiário tradicional: articulações, negociações e os bastidores do poder.",
+    "isActive": true
+  },
+  {
+    "id": "ed-radar",
+    "name": "Radar Político",
+    "slug": "radar-politico",
+    "color": "#0E7490",
+    "description": "Curadoria das matérias e temas mais relevantes do momento, atualizada continuamente.",
+    "isActive": true
+  }
+]
