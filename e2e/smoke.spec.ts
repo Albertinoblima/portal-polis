@@ -5,10 +5,17 @@ test("home page loads and shows the site title", async ({ page }) => {
   await expect(page).toHaveTitle(/Pólis/);
 });
 
-test("navigating to an article from the home page works", async ({ page }) => {
+test("navigating to an article from the home page works, when articles exist", async ({ page }) => {
+  // O site pode legitimamente ter zero matérias publicadas (ex.: logo após o
+  // setup inicial do Supabase) — ver withPlaceholderParam em src/lib/utils.ts.
+  // Nesse caso não há link de matéria para clicar; o teste é pulado em vez de
+  // falhar, já que "zero matérias" é um estado válido, não um bug.
   await page.goto("/");
-  const articleLink = page.locator('a[href^="/materia/"]').first();
-  await articleLink.click();
+  const articleLinks = page.locator('a[href^="/materia/"]');
+  const count = await articleLinks.count();
+  test.skip(count === 0, "Nenhuma matéria publicada neste ambiente.");
+
+  await articleLinks.first().click();
   await expect(page).toHaveURL(/\/materia\//);
 });
 
