@@ -307,6 +307,27 @@ export interface Database {
           created_at: string;
         }>
       >;
+      staff_editorias: Table<
+        { profile_id: string; editoria_id: string },
+        { profile_id: string; editoria_id: string },
+        Partial<{ profile_id: string; editoria_id: string }>,
+        [
+          {
+            foreignKeyName: "staff_editorias_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_editorias_editoria_id_fkey";
+            columns: ["editoria_id"];
+            isOneToOne: false;
+            referencedRelation: "editorias";
+            referencedColumns: ["id"];
+          },
+        ]
+      >;
       contact_messages: Table<
         {
           id: string;

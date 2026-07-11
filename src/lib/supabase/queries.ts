@@ -325,6 +325,30 @@ export async function markContactHandled(id: string, handled: boolean) {
   if (error) throw error;
 }
 
+export async function getStaffEditoriaIds(profileId: string) {
+  const { data, error } = await supabase
+    .from("staff_editorias")
+    .select("editoria_id")
+    .eq("profile_id", profileId);
+  if (error) throw error;
+  return data.map((row) => row.editoria_id);
+}
+
+export async function setStaffEditorias(profileId: string, editoriaIds: string[]) {
+  const { error: deleteError } = await supabase
+    .from("staff_editorias")
+    .delete()
+    .eq("profile_id", profileId);
+  if (deleteError) throw deleteError;
+
+  if (editoriaIds.length > 0) {
+    const { error } = await supabase
+      .from("staff_editorias")
+      .insert(editoriaIds.map((editoriaId) => ({ profile_id: profileId, editoria_id: editoriaId })));
+    if (error) throw error;
+  }
+}
+
 export async function triggerSiteRebuild() {
   const {
     data: { session },

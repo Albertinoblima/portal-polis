@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
+import { EditoriaAssignments } from "@/components/admin/EditoriaAssignments";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { getStaffProfiles, toggleProfileActive, updateProfileRole } from "@/lib/supabase/queries";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 import { logAction } from "@/lib/supabase/audit";
 import { supabase } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
+
+const EDITORIA_SCOPED_ROLES: UserRole[] = ["reviewer", "columnist"];
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
@@ -26,6 +29,7 @@ export default function AdminUsuariosPage() {
   const { data: users, loading, refetch } = useSupabaseQuery(getStaffProfiles);
   const isAdmin = profile.role === "admin";
 
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -182,52 +186,76 @@ export default function AdminUsuariosPage() {
                   </td>
                 </tr>
               ) : (
-                (users ?? []).map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-5 py-3 font-medium text-polis-navy">{user.name}</td>
-                    <td className="px-5 py-3 text-polis-slate">{user.email}</td>
-                    <td className="px-5 py-3 text-polis-slate">
-                      {isAdmin ? (
-                        <select
-                          aria-label={`Papel de ${user.name}`}
-                          value={user.role}
-                          onChange={(event) =>
-                            handleRoleChange(user.id, user.role, event.target.value as UserRole)
-                          }
-                          className="rounded-sm border border-polis-navy/20 px-2 py-1 text-sm focus:border-polis-gold focus:outline-none"
-                        >
-                          {INVITABLE_ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {roleLabels[r]}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        roleLabels[user.role]
+                (users ?? []).map((user) => {
+                  const isEditoriaScoped = EDITORIA_SCOPED_ROLES.includes(user.role);
+                  const isExpanded = expandedUserId === user.id;
+                  return (
+                    <Fragment key={user.id}>
+                      <tr>
+                        <td className="px-5 py-3 font-medium text-polis-navy">{user.name}</td>
+                        <td className="px-5 py-3 text-polis-slate">{user.email}</td>
+                        <td className="px-5 py-3 text-polis-slate">
+                          {isAdmin ? (
+                            <select
+                              aria-label={`Papel de ${user.name}`}
+                              value={user.role}
+                              onChange={(event) =>
+                                handleRoleChange(user.id, user.role, event.target.value as UserRole)
+                              }
+                              className="rounded-sm border border-polis-navy/20 px-2 py-1 text-sm focus:border-polis-gold focus:outline-none"
+                            >
+                              {INVITABLE_ROLES.map((r) => (
+                                <option key={r} value={r}>
+                                  {roleLabels[r]}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            roleLabels[user.role]
+                          )}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              user.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {user.is_active ? "Ativo" : "Inativo"}
+                          </span>
+                        </td>
+                        {isAdmin && (
+                          <td className="px-5 py-3">
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActive(user.id, user.is_active)}
+                                className="text-xs font-semibold text-polis-navy hover:text-polis-gold"
+                              >
+                                {user.is_active ? "Desativar" : "Ativar"}
+                              </button>
+                              {isEditoriaScoped && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                                  className="text-xs font-semibold text-polis-navy hover:text-polis-gold"
+                                >
+                                  {isExpanded ? "Ocultar editorias" : "Editorias"}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                      {isAdmin && isEditoriaScoped && isExpanded && (
+                        <tr>
+                          <td colSpan={5} className="p-0">
+                            <EditoriaAssignments profileId={user.id} />
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          user.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {user.is_active ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-5 py-3">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(user.id, user.is_active)}
-                          className="text-xs font-semibold text-polis-navy hover:text-polis-gold"
-                        >
-                          {user.is_active ? "Desativar" : "Ativar"}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
