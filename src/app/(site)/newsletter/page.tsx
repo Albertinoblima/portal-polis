@@ -20,7 +20,7 @@ export default function NewsletterPage() {
             redação.
           </p>
           <NewsletterForm />
-          <p className="mt-4 text-xs text-polis-ink-soft/80">
+          <p className="mt-4 text-xs text-polis-ink-soft">
             Seus dados são usados apenas para o envio da newsletter. Você pode cancelar a
             inscrição quando quiser, escrevendo para a nossa redação.
           </p>

@@ -49,7 +49,7 @@ export default function HomePage() {
             <Link
               key={editoria.slug}
               href={`/editoria/${editoria.slug}`}
-              className="rounded-sm border border-polis-ink/15 px-4 py-2 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-muted"
+              className="rounded-sm border border-polis-ink/15 px-4 py-2 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
             >
               {editoria.name}
             </Link>
@@ -75,7 +75,7 @@ export default function HomePage() {
     node: (
       <div className="flex h-full flex-col justify-center gap-6">
         <div className="rounded-sm border border-polis-ink/15 p-5">
-          <h3 className="font-sans text-sm font-bold uppercase tracking-wide text-polis-gold-muted">
+          <h3 className="font-sans text-sm font-bold uppercase tracking-wide text-polis-gold-ink">
             Radar Político
           </h3>
           <ul className="mt-4 space-y-3">
@@ -83,7 +83,7 @@ export default function HomePage() {
               <li key={article.id}>
                 <Link
                   href={`/materia/${article.slug}`}
-                  className="text-sm font-medium text-polis-ink hover:text-polis-gold-muted"
+                  className="text-sm font-medium text-polis-ink hover:text-polis-gold-ink"
                 >
                   {article.title}
                 </Link>
@@ -93,13 +93,13 @@ export default function HomePage() {
         </div>
 
         <div className="rounded-sm bg-polis-ink p-5 text-polis-paper">
-          <h3 className="font-sans text-sm font-bold uppercase tracking-wide text-polis-gold-muted">Newsletter</h3>
+          <h3 className="font-sans text-sm font-bold uppercase tracking-wide text-polis-gold-ink">Newsletter</h3>
           <p className="mt-2 text-sm text-polis-paper/80">
             Receba as principais análises políticas direto no seu e-mail.
           </p>
           <Link
             href="/newsletter"
-            className="mt-4 inline-block rounded-sm bg-polis-gold-muted px-4 py-2 text-sm font-semibold text-polis-ink"
+            className="mt-4 inline-block rounded-sm bg-polis-gold-muted px-4 py-2 text-sm font-semibold text-polis-gold-contrast"
           >
             Inscrever-se
           </Link>

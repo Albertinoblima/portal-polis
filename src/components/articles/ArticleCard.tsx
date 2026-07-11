@@ -47,7 +47,7 @@ export function ArticleCard({ article, editoria, size = "default" }: ArticleCard
           {article.title}
         </h3>
         <p className="line-clamp-2 text-sm text-polis-ink-soft">{article.subtitle}</p>
-        <p className="text-xs text-polis-ink-soft/80">
+        <p className="text-xs text-polis-ink-soft">
           {formatDate(article.publishedAt)} · {article.readingTimeMinutes} min de leitura
         </p>
       </div>

@@ -20,7 +20,7 @@ export function AdMargin({ banners }: AdMarginProps) {
 
   return (
     <div className="flex h-full w-full flex-col gap-3">
-      <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft/70">
+      <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
       </span>
       <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3">

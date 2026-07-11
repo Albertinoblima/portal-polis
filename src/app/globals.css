@@ -18,7 +18,19 @@
   --color-ink: #1a1815;
   --color-ink-soft: #4a4640;
   --color-rule: #1a1815;
+  /* Uso em fundos/bordas decorativas (chip, sublinhado, foco) — sempre
+     combinado com texto de cor fixa (--color-gold-contrast), nunca com o
+     `ink` do tema, por isso não precisa variar entre claro/escuro. */
   --color-gold-muted: #a9852f;
+  /* Uso como COR DE TEXTO (links, rótulos, destaques) — variante própria por
+     tema: --color-gold-muted sozinho não tem contraste suficiente sobre o
+     papel claro (~3:1, abaixo do mínimo AA de 4.5:1) nem é vibrante o
+     bastante sobre o papel escuro. Ver blocos [data-theme] abaixo. */
+  --color-gold-ink: #7a5c1a;
+  /* Texto sobre fundo dourado (ex.: botão de newsletter) — sempre escuro e
+     fixo, independente do tema, já que o fundo dourado não escurece no
+     modo escuro. */
+  --color-gold-contrast: #1a1815;
 
   --background: var(--color-paper);
   --foreground: var(--color-ink);
@@ -39,6 +51,8 @@
   --color-polis-ink: var(--color-ink);
   --color-polis-ink-soft: var(--color-ink-soft);
   --color-polis-rule: var(--color-rule);
+  --color-polis-gold-ink: var(--color-gold-ink);
+  --color-polis-gold-contrast: var(--color-gold-contrast);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -57,6 +71,10 @@
   --color-ink: #ede6d6;
   --color-ink-soft: #c9c0ac;
   --color-rule: #c9a227;
+  /* Dourado mais claro/vibrante para se destacar do papel quase-preto
+     (~8:1 de contraste — o mesmo tom escuro do modo claro ficaria quase
+     invisível aqui). */
+  --color-gold-ink: #d9b53c;
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -67,6 +85,9 @@
   --color-ink: #1a1815;
   --color-ink-soft: #4a4640;
   --color-rule: #1a1815;
+  /* Dourado mais escuro/terroso para manter contraste AA (~5.3:1) sobre o
+     papel claro. */
+  --color-gold-ink: #7a5c1a;
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -107,6 +128,31 @@ body {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+
+/* O plugin @tailwindcss/typography define suas próprias cores fixas (cinza
+   escuro) para elementos como <blockquote>, <strong>, listas, <code> e
+   <hr> — elas nunca acompanham nosso tema claro/escuro. No modo escuro isso
+   deixava esses elementos quase pretos sobre um fundo quase preto
+   (ilegíveis). Redirecionando as variáveis do plugin para os tokens do
+   jornal, cada elemento herda a cor certa automaticamente em qualquer tema. */
+.prose {
+  --tw-prose-body: var(--color-ink);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-lead: var(--color-ink-soft);
+  --tw-prose-links: var(--color-gold-ink);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-counters: var(--color-ink-soft);
+  --tw-prose-bullets: var(--color-ink-soft);
+  --tw-prose-hr: var(--color-rule);
+  --tw-prose-quotes: var(--color-ink);
+  --tw-prose-quote-borders: var(--color-gold-muted);
+  --tw-prose-captions: var(--color-ink-soft);
+  --tw-prose-code: var(--color-ink);
+  --tw-prose-pre-code: var(--color-paper);
+  --tw-prose-pre-bg: var(--color-ink);
+  --tw-prose-th-borders: var(--color-rule);
+  --tw-prose-td-borders: var(--color-rule);
 }
 
 /* Capitular de abertura de matéria, ao estilo de jornal impresso. */

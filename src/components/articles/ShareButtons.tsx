@@ -23,7 +23,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-polis-ink underline decoration-polis-gold-muted decoration-2 underline-offset-4 hover:text-polis-gold-muted"
+          className="text-sm font-medium text-polis-ink underline decoration-polis-gold-muted decoration-2 underline-offset-4 hover:text-polis-gold-ink"
         >
           {link.label}
         </a>

@@ -79,7 +79,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         <div className="flex h-full flex-col">
           <Link
             href={editoria ? `/editoria/${editoria.slug}` : "/"}
-            className="mb-3 inline-flex w-fit items-center gap-2 text-xs font-semibold text-polis-ink-soft hover:text-polis-gold-muted"
+            className="mb-3 inline-flex w-fit items-center gap-2 text-xs font-semibold text-polis-ink-soft hover:text-polis-gold-ink"
           >
             ← Voltar
           </Link>
@@ -102,7 +102,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-polis-rule/20 py-3 text-xs text-polis-ink-soft">
             {author && (
-              <Link href={`/colunista/${author.id}`} className="font-semibold text-polis-ink hover:text-polis-gold-muted">
+              <Link href={`/colunista/${author.id}`} className="font-semibold text-polis-ink hover:text-polis-gold-ink">
                 {author.name}
               </Link>
             )}

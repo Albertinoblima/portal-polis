@@ -160,7 +160,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
         out.push({
           content: (
             <div
-              className="prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-headings:text-polis-ink prose-p:text-polis-ink/90 prose-blockquote:border-polis-gold-muted prose-blockquote:font-serif prose-blockquote:italic prose-a:text-polis-gold-muted"
+              className="prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-blockquote:font-serif prose-blockquote:italic"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ),
@@ -179,7 +179,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
     if (out.length % 2 !== 0) {
       out.push({
         content: (
-          <p className="flex h-full items-center justify-center font-serif text-sm italic text-polis-ink-soft/60">
+          <p className="flex h-full items-center justify-center font-serif text-sm italic text-polis-ink-soft">
             Esta página foi deixada em branco intencionalmente.
           </p>
         ),

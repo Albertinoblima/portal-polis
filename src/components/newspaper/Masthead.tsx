@@ -21,7 +21,7 @@ export function Masthead({ sectionLabel }: MastheadProps) {
       </h1>
       <p className="mt-1 font-serif text-sm italic text-polis-ink-soft">Onde a política faz sentido</p>
       {sectionLabel && (
-        <div className="mt-3 border-t border-polis-rule pt-2 text-xs font-semibold uppercase tracking-[0.3em] text-polis-gold-muted">
+        <div className="mt-3 border-t border-polis-rule pt-2 text-xs font-semibold uppercase tracking-[0.3em] text-polis-gold-ink">
           {sectionLabel}
         </div>
       )}
