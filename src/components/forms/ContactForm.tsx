@@ -42,7 +42,7 @@ export function ContactForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
       <div>
-        <label htmlFor="name" className="block text-sm font-semibold text-polis-navy">
+        <label htmlFor="name" className="block text-sm font-semibold text-polis-ink">
           Nome
         </label>
         <input
@@ -52,11 +52,11 @@ export function ContactForm() {
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="mt-1 w-full rounded-sm border border-polis-navy/20 px-4 py-2.5 focus:border-polis-gold focus:outline-none"
+          className="mt-1 w-full rounded-sm border border-polis-ink/20 px-4 py-2.5 focus:border-polis-gold-muted focus:outline-none"
         />
       </div>
       <div>
-        <label htmlFor="email" className="block text-sm font-semibold text-polis-navy">
+        <label htmlFor="email" className="block text-sm font-semibold text-polis-ink">
           E-mail
         </label>
         <input
@@ -66,11 +66,11 @@ export function ContactForm() {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-sm border border-polis-navy/20 px-4 py-2.5 focus:border-polis-gold focus:outline-none"
+          className="mt-1 w-full rounded-sm border border-polis-ink/20 px-4 py-2.5 focus:border-polis-gold-muted focus:outline-none"
         />
       </div>
       <div>
-        <label htmlFor="message" className="block text-sm font-semibold text-polis-navy">
+        <label htmlFor="message" className="block text-sm font-semibold text-polis-ink">
           Mensagem
         </label>
         <textarea
@@ -80,7 +80,7 @@ export function ContactForm() {
           required
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          className="mt-1 w-full rounded-sm border border-polis-navy/20 px-4 py-2.5 focus:border-polis-gold focus:outline-none"
+          className="mt-1 w-full rounded-sm border border-polis-ink/20 px-4 py-2.5 focus:border-polis-gold-muted focus:outline-none"
         />
       </div>
       {status === "error" && (

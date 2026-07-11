@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/forms/ContactForm";
+import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper";
 
 export const metadata: Metadata = {
   title: "Contato",
@@ -7,14 +8,22 @@ export const metadata: Metadata = {
 };
 
 export default function ContatoPage() {
-  return (
-    <div className="mx-auto max-w-xl px-4 py-16 md:px-6">
-      <h1 className="font-sans text-4xl font-bold text-polis-navy">Contato</h1>
-      <p className="mt-2 text-polis-slate">
-        Envie sugestões de pauta, correções ou dúvidas para a redação.
-      </p>
+  const blocks: NewspaperBlock[] = [
+    {
+      type: "node",
+      dense: true,
+      columns: 1,
+      node: (
+        <div className="mx-auto flex h-full max-w-md flex-col justify-center">
+          <h1 className="font-serif text-4xl font-bold text-polis-ink">Contato</h1>
+          <p className="mt-2 text-polis-ink-soft">
+            Envie sugestões de pauta, correções ou dúvidas para a redação.
+          </p>
+          <ContactForm />
+        </div>
+      ),
+    },
+  ];
 
-      <ContactForm />
-    </div>
-  );
+  return <Newspaper sectionLabel="Contato" showMasthead blocks={blocks} />;
 }

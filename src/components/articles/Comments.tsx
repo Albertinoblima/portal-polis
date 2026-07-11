@@ -62,30 +62,34 @@ export function Comments({ articleId }: { articleId: string }) {
   }
 
   return (
-    <section className="mt-16 border-t border-polis-navy/10 pt-10">
-      <h2 className="mb-6 border-b-2 border-polis-gold pb-2 font-sans text-xl font-bold text-polis-navy">
+    <section className="flex h-full min-h-0 flex-col">
+      <h2 className="mb-4 shrink-0 border-b-2 border-polis-gold-muted pb-2 font-sans text-xl font-bold text-polis-ink">
         Comentários{comments.length > 0 && ` (${comments.length})`}
       </h2>
 
-      {loading ? (
-        <p className="text-sm text-polis-slate">Carregando comentários...</p>
-      ) : comments.length === 0 ? (
-        <p className="text-sm text-polis-slate">Seja o primeiro a comentar.</p>
-      ) : (
-        <ul className="space-y-6">
-          {comments.map((comment) => (
-            <li key={comment.id} className="border-b border-polis-navy/5 pb-4">
-              <div className="flex items-baseline gap-3">
-                <span className="font-semibold text-polis-navy">{comment.author_name}</span>
-                <span className="text-xs text-polis-gray">{formatDate(comment.created_at)}</span>
-              </div>
-              <p className="mt-1 text-sm text-polis-navy/90">{comment.content}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Lista de comentários pode crescer sem limite, então tem rolagem própria
+          dentro desta página dedicada (não é conteúdo editorial paginado). */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {loading ? (
+          <p className="text-sm text-polis-ink-soft">Carregando comentários...</p>
+        ) : comments.length === 0 ? (
+          <p className="text-sm text-polis-ink-soft">Seja o primeiro a comentar.</p>
+        ) : (
+          <ul className="space-y-6">
+            {comments.map((comment) => (
+              <li key={comment.id} className="border-b border-polis-ink/5 pb-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-semibold text-polis-ink">{comment.author_name}</span>
+                  <span className="text-xs text-polis-ink-soft">{formatDate(comment.created_at)}</span>
+                </div>
+                <p className="mt-1 text-sm text-polis-ink/90">{comment.content}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      <div className="mt-8">
+      <div className="mt-6 shrink-0">
         {status === "success" ? (
           <p className="text-sm font-medium text-emerald-700">
             Comentário enviado! Ele será exibido após revisão da nossa equipe.
@@ -97,15 +101,15 @@ export function Comments({ articleId }: { articleId: string }) {
               value={authorName}
               onChange={(event) => setAuthorName(event.target.value)}
               placeholder="Seu nome"
-              className="w-full rounded-sm border border-polis-navy/20 px-4 py-2.5 text-sm focus:border-polis-gold focus:outline-none"
+              className="w-full rounded-sm border border-polis-ink/20 px-4 py-2.5 text-sm focus:border-polis-gold-muted focus:outline-none"
             />
             <textarea
               required
-              rows={4}
+              rows={3}
               value={content}
               onChange={(event) => setContent(event.target.value)}
               placeholder="Escreva seu comentário..."
-              className="w-full rounded-sm border border-polis-navy/20 px-4 py-2.5 text-sm focus:border-polis-gold focus:outline-none"
+              className="w-full rounded-sm border border-polis-ink/20 px-4 py-2.5 text-sm focus:border-polis-gold-muted focus:outline-none"
             />
             {status === "error" && (
               <p className="text-sm text-red-700">

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
   --color-navy: #0a192f;
@@ -11,19 +12,33 @@
   --color-white: #ffffff;
   --color-newsprint: #f4f1e9;
 
-  --background: var(--color-off-white);
-  --foreground: var(--color-navy);
+  /* Jornal impresso: papel claro e tinta quase-preta (light) */
+  --color-paper: #f4f1e9;
+  --color-paper-soft: #ece7da;
+  --color-ink: #1a1815;
+  --color-ink-soft: #4a4640;
+  --color-rule: #1a1815;
+  --color-gold-muted: #a9852f;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
 @theme inline {
   --color-polis-navy: var(--color-navy);
   --color-polis-navy-deep: var(--color-navy-deep);
   --color-polis-gold: var(--color-gold);
+  --color-polis-gold-muted: var(--color-gold-muted);
   --color-polis-slate: var(--color-slate);
   --color-polis-gray: var(--color-gray-medium);
   --color-polis-off-white: var(--color-off-white);
   --color-polis-white: var(--color-white);
   --color-polis-newsprint: var(--color-newsprint);
+  --color-polis-paper: var(--color-paper);
+  --color-polis-paper-soft: var(--color-paper-soft);
+  --color-polis-ink: var(--color-ink);
+  --color-polis-ink-soft: var(--color-ink-soft);
+  --color-polis-rule: var(--color-rule);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -33,15 +48,66 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* Tema escuro "sépia noturno": nunca preto puro, alto contraste elegante. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-navy-deep);
-    --foreground: var(--color-off-white);
+  :root:not([data-theme="light"]) {
+    --color-paper: #24221d;
+    --color-paper-soft: #2c2a24;
+    --color-ink: #ede6d6;
+    --color-ink-soft: #c9c0ac;
+    --color-rule: #c9a227;
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
   }
+}
+
+:root[data-theme="dark"] {
+  --color-paper: #24221d;
+  --color-paper-soft: #2c2a24;
+  --color-ink: #ede6d6;
+  --color-ink-soft: #c9c0ac;
+  --color-rule: #c9a227;
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+}
+
+:root[data-theme="light"] {
+  --color-paper: #f4f1e9;
+  --color-paper-soft: #ece7da;
+  --color-ink: #1a1815;
+  --color-ink-soft: #4a4640;
+  --color-rule: #1a1815;
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Textura sutil de papel, auto-contida (sem imagem externa). */
+.paper-texture {
+  position: relative;
+  isolation: isolate;
+}
+
+.paper-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newspaper-flip-transition {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

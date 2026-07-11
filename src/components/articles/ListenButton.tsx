@@ -24,7 +24,7 @@ export function ListenButton({ text }: { text: string }) {
   return (
     <button
       onClick={toggleSpeech}
-      className="inline-flex items-center gap-2 rounded-sm border border-polis-navy px-4 py-2 text-sm font-semibold text-polis-navy transition-colors hover:bg-polis-navy hover:text-white"
+      className="inline-flex items-center gap-2 rounded-sm border border-polis-ink px-4 py-2 text-sm font-semibold text-polis-ink transition-colors hover:bg-polis-ink hover:text-polis-paper"
     >
       <span aria-hidden>{isSpeaking ? "⏸" : "🔊"}</span>
       {isSpeaking ? "Parar leitura" : "Ouvir matéria"}

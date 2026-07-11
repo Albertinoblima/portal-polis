@@ -18,36 +18,38 @@ export function SearchResults() {
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="mt-6 flex gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <form onSubmit={handleSubmit} className="mt-6 flex shrink-0 gap-2">
         <input
           type="search"
           name="q"
           value={term}
           onChange={(event) => setTerm(event.target.value)}
           placeholder="Buscar matérias, temas, editorias..."
-          className="w-full rounded-sm border border-polis-navy/20 px-4 py-3 text-polis-navy focus:border-polis-gold focus:outline-none"
+          className="w-full rounded-sm border border-polis-ink/20 px-4 py-3 text-polis-ink focus:border-polis-gold-muted focus:outline-none"
         />
         <button
           type="submit"
-          className="rounded-sm bg-polis-navy px-6 py-3 text-sm font-semibold text-white hover:bg-polis-navy/90"
+          className="rounded-sm bg-polis-ink px-6 py-3 text-sm font-semibold text-polis-paper hover:bg-polis-ink/90"
         >
           Buscar
         </button>
       </form>
 
-      <div className="mt-10">
+      {/* Resultados de busca são ilimitados/guiados pelo usuário, então esta é a
+          única área do jornal com rolagem interna própria (não é conteúdo editorial). */}
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
         {q && (
-          <p className="mb-6 text-sm text-polis-slate">
+          <p className="mb-6 text-sm text-polis-ink-soft">
             {results.length} resultado(s) para <strong>&ldquo;{q}&rdquo;</strong>
           </p>
         )}
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
           {results.map((article) => (
             <ArticleCard key={article.id} article={article} editoria={getEditoriaById(article.editoriaId)} />
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

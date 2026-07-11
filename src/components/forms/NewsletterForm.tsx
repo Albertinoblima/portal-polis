@@ -45,7 +45,7 @@ export function NewsletterForm() {
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         placeholder="seu@email.com"
-        className="w-full rounded-sm border border-polis-navy/20 px-4 py-3 focus:border-polis-gold focus:outline-none"
+        className="w-full rounded-sm border border-polis-ink/20 px-4 py-3 focus:border-polis-gold-muted focus:outline-none"
       />
       <Button type="submit" disabled={status === "submitting"} className="whitespace-nowrap">
         {status === "submitting" ? "Enviando..." : "Inscrever-se"}

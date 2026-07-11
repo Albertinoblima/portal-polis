@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
+import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { getArticlesByEditoria, getEditorias, getEditoriaBySlug } from "@/lib/content";
 import { withPlaceholderParam } from "@/lib/utils";
 
@@ -27,22 +28,28 @@ export default async function EditoriaPage({ params }: EditoriaPageProps) {
 
   const articles = getArticlesByEditoria(slug);
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-      <header className="mb-10 border-b-4 pb-4" style={{ borderColor: editoria.color }}>
-        <h1 className="font-sans text-4xl font-bold text-polis-navy">{editoria.name}</h1>
-        <p className="mt-2 max-w-2xl text-polis-slate">{editoria.description}</p>
-      </header>
+  const blocks: NewspaperBlock[] = [
+    {
+      type: "node",
+      dense: true,
+      node: (
+        <header
+          className="flex h-full flex-col justify-center border-b-4 pb-4"
+          style={{ borderColor: editoria.color }}
+        >
+          <h1 className="font-serif text-4xl font-bold text-polis-ink">{editoria.name}</h1>
+          <p className="mt-2 max-w-2xl text-polis-ink-soft">{editoria.description}</p>
+        </header>
+      ),
+    },
+    {
+      type: "grid",
+      items: articles.map((article) => <ArticleCard key={article.id} article={article} editoria={editoria} />),
+      itemsPerPage: { mobile: 2, desktop: 4 },
+      gridClassName: "grid h-full grid-cols-1 content-center gap-6 sm:grid-cols-2",
+      emptyState: <p className="text-polis-ink-soft">Nenhuma matéria publicada nesta editoria ainda.</p>,
+    },
+  ];
 
-      {articles.length === 0 ? (
-        <p className="text-polis-slate">Nenhuma matéria publicada nesta editoria ainda.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article) => (
-            <ArticleCard key={article.id} article={article} editoria={editoria} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <Newspaper sectionLabel={editoria.name} showMasthead blocks={blocks} />;
 }

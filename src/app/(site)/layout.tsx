@@ -1,15 +1,13 @@
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { PageTransition } from "@/components/layout/PageTransition";
+import { NavBar } from "@/components/newspaper/NavBar";
+import { RouteFlipTransition } from "@/components/newspaper/RouteFlipTransition";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <Header />
-      <main className="flex-1">
-        <PageTransition>{children}</PageTransition>
-      </main>
-      <Footer />
-    </>
+    <div className="flex h-dvh w-dvw flex-col overflow-hidden bg-polis-paper">
+      <NavBar />
+      <div className="min-h-0 flex-1" style={{ perspective: "1600px" }}>
+        <RouteFlipTransition>{children}</RouteFlipTransition>
+      </div>
+    </div>
   );
 }
