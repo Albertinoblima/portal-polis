@@ -32,7 +32,6 @@ export default async function AuthorPage({ params }: AuthorPageProps) {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       node: (
         <header className="flex h-full flex-col items-center justify-center gap-4 text-center">
           <Image

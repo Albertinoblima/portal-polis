@@ -11,7 +11,6 @@ export default function NewsletterPage() {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       columns: 1,
       node: (
         <div className="mx-auto flex h-full max-w-xl flex-col justify-center text-center">

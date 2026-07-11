@@ -8,18 +8,27 @@ interface PageChromeProps {
   totalPages: number;
   sectionLabel: string;
   columns?: 1 | 2 | 3;
-  dense?: boolean;
   runningTitle?: string;
+  /**
+   * Altura em px da área de colunas, calculada em Newspaper.tsx a partir do
+   * espaço realmente disponível (altura da página menos cabeçalho/rodapé
+   * daquela página específica). Necessário porque essa área usa `columns`
+   * (multi-coluna do CSS), que não é um contexto flex/grid — filhos com
+   * `height: 100%` dentro dela não enxergam um `flex-1` do ancestral como
+   * altura definida e acabam se dimensionando pelo próprio conteúdo,
+   * estourando a página (visto em blocos com imagem `fill`, por exemplo).
+   * Um valor em px explícito resolve isso para qualquer filho.
+   */
+  contentHeightPx: number;
 }
 
 export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function PageChrome(
-  { children, header, pageNumber, totalPages, sectionLabel, columns = 2, dense = false, runningTitle },
+  { children, header, pageNumber, totalPages, sectionLabel, columns = 2, runningTitle, contentHeightPx },
   ref
 ) {
   return (
     <div
       ref={ref}
-      data-density={dense ? "hard" : undefined}
       className="paper-texture relative flex h-full w-full flex-col bg-polis-paper text-polis-ink"
     >
       {header}
@@ -32,8 +41,9 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
       )}
 
       <div
-        className="min-h-0 flex-1 overflow-hidden px-6 py-5"
+        className="overflow-hidden px-6 py-5"
         style={{
+          height: contentHeightPx,
           columnCount: columns,
           columnGap: "2.25rem",
           columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",

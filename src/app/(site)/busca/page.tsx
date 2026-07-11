@@ -12,7 +12,6 @@ export default function BuscaPage() {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       node: (
         <div className="flex h-full flex-col">
           <h1 className="font-serif text-4xl font-bold text-polis-ink">Busca</h1>

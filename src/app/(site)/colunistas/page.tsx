@@ -15,7 +15,6 @@ export default function ColunistasPage() {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       node: (
         <header className="flex h-full flex-col justify-center">
           <h1 className="font-serif text-4xl font-bold text-polis-ink">Colunistas</h1>

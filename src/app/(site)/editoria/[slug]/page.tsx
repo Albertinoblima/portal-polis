@@ -31,7 +31,6 @@ export default async function EditoriaPage({ params }: EditoriaPageProps) {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       node: (
         <header
           className="flex h-full flex-col justify-center border-b-4 pb-4"

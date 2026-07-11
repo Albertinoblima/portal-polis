@@ -15,7 +15,6 @@ export default function HomePage() {
   if (hero) {
     blocks.push({
       type: "node",
-      dense: true,
       node: (
         <div className="flex h-full flex-col justify-center">
           <ArticleCard article={hero} editoria={getEditoriaById(hero.editoriaId)} size="large" />

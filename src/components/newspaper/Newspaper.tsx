@@ -14,7 +14,7 @@ const SIDEBAR_BANNERS = getActiveBanners("sidebar");
 
 export type NewspaperBlock =
   | { type: "html"; html: string; columns?: 1 | 2 | 3 }
-  | { type: "node"; node: ReactNode; dense?: boolean; columns?: 1 | 2 | 3 }
+  | { type: "node"; node: ReactNode; columns?: 1 | 2 | 3 }
   | {
       type: "grid";
       items: ReactNode[];
@@ -40,6 +40,9 @@ const DESKTOP_BREAKPOINT = 1024;
  */
 const DEFAULT_SIZE = { width: 1280, height: 800 };
 const CHROME_HEADER_PX = 33;
+/** Altura real do <Masthead> (medida empiricamente), bem maior que a barra
+ *  fina de título corrido usada nas demais páginas. */
+const MASTHEAD_HEADER_PX = { desktop: 220, mobile: 195 };
 const CHROME_FOOTER_PX = 40;
 const PAGE_PADDING_Y_PX = 40;
 const PAGE_PADDING_X_PX = 48;
@@ -47,7 +50,8 @@ const PAGE_PADDING_X_PX = 48;
 interface PreparedPage {
   content: ReactNode;
   columns: 1 | 2 | 3;
-  dense?: boolean;
+  contentHeightPx: number;
+  isMasthead?: boolean;
 }
 
 export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, blocks }: NewspaperProps) {
@@ -81,21 +85,46 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
   const pageHeight = size.height;
   const contentWidth = Math.max(pageWidth - PAGE_PADDING_X_PX, 0);
   const contentHeight = Math.max(pageHeight - CHROME_HEADER_PX - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
+  const mastheadHeaderPx = isDesktop ? MASTHEAD_HEADER_PX.desktop : MASTHEAD_HEADER_PX.mobile;
+  const contentHeightCover = Math.max(pageHeight - mastheadHeaderPx - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
 
   const preparedPages = useMemo<PreparedPage[]>(() => {
     if (contentWidth <= 0 || contentHeight <= 0) return [];
 
     const out: PreparedPage[] = [];
+
+    // O espaço publicitário vira uma folha real (não um overlay solto), para
+    // que ela vire junto com o resto do livro como uma dobra de papel comum
+    // — nunca uma folha "capa dura" isolada (ver showCover mais abaixo).
+    // Só faz sentido no desktop: é pareada lado a lado com a capa/timbre na
+    // primeira dobra dupla; no mobile cada folha aparece sozinha mesmo.
+    if (isDesktop && showMasthead) {
+      out.push({
+        content: <AdMargin banners={SIDEBAR_BANNERS} />,
+        columns: 1,
+        contentHeightPx: contentHeightCover,
+      });
+    }
+
+    let isFirstContentBlock = true;
     for (const block of blocks) {
       if (block.type === "node") {
         const columns = block.columns ?? columnsDefault;
-        out.push({ content: block.node, columns, dense: block.dense });
+        const isMasthead = isFirstContentBlock && showMasthead;
+        out.push({
+          content: block.node,
+          columns,
+          contentHeightPx: isMasthead ? contentHeightCover : contentHeight,
+          isMasthead,
+        });
+        isFirstContentBlock = false;
         continue;
       }
       if (block.type === "grid") {
         const perPage = Math.max(isDesktop ? block.itemsPerPage.desktop : block.itemsPerPage.mobile, 1);
         if (block.items.length === 0) {
-          if (block.emptyState) out.push({ content: block.emptyState, columns: 1 });
+          if (block.emptyState) out.push({ content: block.emptyState, columns: 1, contentHeightPx: contentHeight });
+          isFirstContentBlock = false;
           continue;
         }
         for (let i = 0; i < block.items.length; i += perPage) {
@@ -103,12 +132,16 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
           out.push({
             content: <div className={block.gridClassName}>{chunk}</div>,
             columns: 1,
+            contentHeightPx: contentHeight,
           });
         }
+        isFirstContentBlock = false;
         continue;
       }
 
       const columns = block.columns ?? columnsDefault;
+      const isMasthead = isFirstContentBlock && showMasthead;
+      const budgetHeight = isMasthead ? contentHeightCover : contentHeight;
       // No primeiro render do cliente (hidratação), o layout real de colunas do
       // navegador já existe — diferente do servidor, onde `document` não existe
       // e paginateHtml sempre devolve o HTML inteiro como uma única folha. Sem
@@ -119,11 +152,11 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
       const fragments = isClient
         ? paginateHtml(block.html, {
             pageWidthPx: contentWidth,
-            columnHeightPx: contentHeight,
+            columnHeightPx: budgetHeight,
             columnsPerPage: columns,
           })
         : [block.html];
-      for (const html of fragments) {
+      fragments.forEach((html, fragmentIndex) => {
         out.push({
           content: (
             <div
@@ -132,11 +165,31 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
             />
           ),
           columns,
+          contentHeightPx: fragmentIndex === 0 ? budgetHeight : contentHeight,
+          isMasthead: fragmentIndex === 0 && isMasthead,
         });
-      }
+      });
+      isFirstContentBlock = false;
     }
+
+    // O motor de flip trata qualquer folha que sobre sozinha (sem par) numa
+    // dobra dupla como "capa dura" e força uma virada rígida nela — sempre
+    // que o total for ímpar isso pegaria justo a última folha. Uma folha em
+    // branco no final garante número par e todas as folhas viram como papel.
+    if (out.length % 2 !== 0) {
+      out.push({
+        content: (
+          <p className="flex h-full items-center justify-center font-serif text-sm italic text-polis-ink-soft/60">
+            Esta página foi deixada em branco intencionalmente.
+          </p>
+        ),
+        columns: 1,
+        contentHeightPx: contentHeight,
+      });
+    }
+
     return out;
-  }, [blocks, contentWidth, contentHeight, columnsDefault, isDesktop, isClient]);
+  }, [blocks, contentWidth, contentHeight, contentHeightCover, columnsDefault, isDesktop, isClient, showMasthead]);
 
   if (preparedPages.length !== pageCountSeen) {
     setPageCountSeen(preparedPages.length);
@@ -152,14 +205,14 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
           totalPages={preparedPages.length}
           sectionLabel={sectionLabel}
           columns={page.columns}
-          dense={page.dense}
-          runningTitle={index === 0 ? undefined : runningTitle}
-          header={index === 0 && showMasthead ? <Masthead sectionLabel={sectionLabel} /> : undefined}
+          contentHeightPx={page.contentHeightPx}
+          runningTitle={index === 0 || page.isMasthead ? undefined : runningTitle}
+          header={page.isMasthead ? <Masthead sectionLabel={sectionLabel} /> : undefined}
         >
           {page.content}
         </PageChrome>
       )),
-    [preparedPages, sectionLabel, runningTitle, showMasthead]
+    [preparedPages, sectionLabel, runningTitle]
   );
 
   useEffect(() => {
@@ -173,20 +226,10 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
 
   const totalPages = preparedPages.length;
 
-  // A "capa" (primeira folha, com showCover) ocupa só metade da largura do
-  // container — a outra metade fica em branco até o leitor virar a página.
-  // Reaproveitamos essa sobra como espaço publicitário, só no desktop e só
-  // enquanto a capa está visível (ela desaparece ao avançar, junto da sobra).
-  const showAdMargin = isDesktop && showMasthead && pageIndex === 0;
-
   return (
     <div ref={viewportRef} className="relative h-full w-full">
       {flipPages.length > 0 && contentWidth > 0 && (
         <>
-          {showAdMargin && (
-            <AdMargin banners={SIDEBAR_BANNERS} width={Math.max(pageWidth, 280)} height={Math.max(pageHeight, 360)} />
-          )}
-
           <PageFlipEngine
             // Força remontagem completa sempre que a contagem de páginas muda
             // (ex.: da paginação de fallback do SSR para a real do cliente, ou
@@ -201,7 +244,12 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
             width={Math.max(pageWidth, 280)}
             height={Math.max(pageHeight, 360)}
             usePortrait={!isDesktop}
-            showCover={showMasthead}
+            // showCover:false (padrão) de propósito: a biblioteca marca a
+            // capa como folha "dura" e vira com rotação rígida, sem a curva
+            // macia das folhas internas — errado para um jornal, que não tem
+            // capa de papelão. Ver o preenchimento de folha em branco acima:
+            // junto disso, garante nº par de folhas, evitando que qualquer
+            // folha sobre sozinha numa dobra e também vire rígida.
             className="mx-auto h-full"
             onFlip={setPageIndex}
           />

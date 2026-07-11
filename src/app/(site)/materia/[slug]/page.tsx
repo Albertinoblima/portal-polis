@@ -75,7 +75,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
-      dense: true,
       node: (
         <div className="flex h-full flex-col">
           <Link
