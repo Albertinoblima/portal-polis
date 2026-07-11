@@ -2,6 +2,7 @@ import type { Article, Editoria, User } from "@/types";
 import editoriasData from "@/content/editorias.json";
 import authorsData from "@/content/authors.json";
 import articlesData from "@/content/articles.json";
+import { slugify } from "@/lib/utils";
 
 const editorias = editoriasData as Editoria[];
 const authors = authorsData as User[];
@@ -66,13 +67,4 @@ export function searchArticles(query: string): Article[] {
       a.subtitle.toLowerCase().includes(q) ||
       a.content.toLowerCase().includes(q)
   );
-}
-
-export function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }

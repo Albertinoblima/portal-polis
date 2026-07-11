@@ -8,15 +8,17 @@ export type UserRole =
 
 export interface User {
   id: string;
-  email: string;
+  /** Omitido no conteúdo público sincronizado do Supabase (ver scripts/sync-content.mjs). */
+  email?: string;
   name: string;
   avatarUrl?: string;
   role: UserRole;
   bio?: string;
   socials?: Partial<Record<"twitter" | "instagram" | "linkedin", string>>;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  /** Omitidos no conteúdo público sincronizado do Supabase (a view authors_public não os expõe). */
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type ArticleStatus =

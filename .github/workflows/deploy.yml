@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  repository_dispatch:
+    types: [content-updated]
+  schedule:
+    # Rede de segurança: garante que o site nunca fique desatualizado por
+    # mais de 30 min mesmo se o disparo via Edge Function falhar.
+    - cron: "*/30 * * * *"
 
 permissions:
   contents: read
@@ -13,6 +19,12 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
 jobs:
   build:
@@ -32,6 +44,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Sync content from Supabase
+        run: npm run sync-content
 
       - name: Build (static export)
         run: npm run build

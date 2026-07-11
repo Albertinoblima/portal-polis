@@ -1,17 +1,32 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "@/lib/supabase/auth";
+import { useAdminSession } from "@/components/admin/AuthProvider";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/materias", label: "Matérias" },
-  { href: "/admin/categorias", label: "Categorias e Editorias" },
-  { href: "/admin/midia", label: "Biblioteca de Mídia" },
-  { href: "/admin/banners", label: "Banners e Destaques" },
-  { href: "/admin/usuarios", label: "Usuários" },
-  { href: "/admin/configuracoes", label: "Configurações" },
+  { href: "/admin/dashboard/", label: "Dashboard" },
+  { href: "/admin/materias/", label: "Matérias" },
+  { href: "/admin/categorias/", label: "Categorias e Editorias" },
+  { href: "/admin/midia/", label: "Biblioteca de Mídia" },
+  { href: "/admin/banners/", label: "Banners e Destaques" },
+  { href: "/admin/usuarios/", label: "Usuários" },
+  { href: "/admin/configuracoes/", label: "Configurações" },
 ];
 
 export function AdminSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { profile } = useAdminSession();
+
+  async function handleSignOut() {
+    await signOut();
+    router.replace("/admin/login/");
+  }
+
   return (
     <aside className="hidden w-64 shrink-0 border-r border-polis-navy/10 bg-polis-navy text-polis-off-white md:flex md:flex-col">
       <div className="flex items-center gap-2 px-6 py-5">
@@ -23,14 +38,27 @@ export function AdminSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className="block rounded-sm px-3 py-2 text-sm font-medium text-polis-off-white/80 transition-colors hover:bg-white/5 hover:text-white"
+            className={cn(
+              "block rounded-sm px-3 py-2 text-sm font-medium transition-colors hover:bg-white/5 hover:text-white",
+              pathname?.startsWith(item.href.replace(/\/$/, ""))
+                ? "bg-white/10 text-white"
+                : "text-polis-off-white/80"
+            )}
           >
             {item.label}
           </Link>
         ))}
       </nav>
-      <div className="border-t border-white/10 px-6 py-4 text-xs text-polis-off-white/50">
-        Painel Administrativo · Fase 1
+      <div className="border-t border-white/10 px-6 py-4">
+        <p className="truncate text-sm font-semibold text-white">{profile.name}</p>
+        <p className="text-xs text-polis-off-white/50">{profile.email}</p>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="mt-3 text-xs font-semibold text-polis-gold hover:underline"
+        >
+          Sair
+        </button>
       </div>
     </aside>
   );

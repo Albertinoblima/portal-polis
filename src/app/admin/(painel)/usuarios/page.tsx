@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
-import { AdminTopbar } from "@/components/admin/Topbar";
-import { ButtonLink } from "@/components/ui/Button";
-import { getAuthors } from "@/lib/content";
-import type { UserRole } from "@/types";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Usuários",
-};
+import { useState } from "react";
+import { AdminTopbar } from "@/components/admin/Topbar";
+import { Button } from "@/components/ui/Button";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { getStaffProfiles } from "@/lib/supabase/queries";
+import { useAdminSession } from "@/components/admin/AuthProvider";
+import { supabase } from "@/lib/supabase/client";
+import type { UserRole } from "@/types/database";
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
@@ -17,17 +18,120 @@ const roleLabels: Record<UserRole, string> = {
   user: "Usuário",
 };
 
+const INVITABLE_ROLES: UserRole[] = ["editor_chief", "editor", "reviewer", "columnist", "admin"];
+
 export default function AdminUsuariosPage() {
-  const users = getAuthors();
+  const { profile } = useAdminSession();
+  const { data: users, loading, refetch } = useSupabaseQuery(getStaffProfiles);
+  const isAdmin = profile.role === "admin";
+
+  const [isInviting, setIsInviting] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<UserRole>("columnist");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleInvite(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada.");
+
+      const { error: invokeError } = await supabase.functions.invoke("invite-user", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { email: email.trim(), name: name.trim(), role },
+      });
+
+      if (invokeError) throw invokeError;
+
+      setSuccess(`Convite enviado para ${email}.`);
+      setName("");
+      setEmail("");
+      setIsInviting(false);
+      refetch();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível convidar o usuário.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <>
       <AdminTopbar title="Usuários" description="Gerencie os usuários e permissões do painel." />
 
       <div className="p-6">
-        <div className="mb-4 flex justify-end">
-          <ButtonLink href="#">+ Novo Usuário</ButtonLink>
-        </div>
+        {isAdmin && (
+          <div className="mb-4 flex justify-end">
+            <Button type="button" onClick={() => setIsInviting((v) => !v)}>
+              {isInviting ? "Cancelar" : "+ Novo Usuário"}
+            </Button>
+          </div>
+        )}
+
+        {isInviting && (
+          <form
+            onSubmit={handleInvite}
+            className="mb-6 grid grid-cols-1 gap-4 rounded-sm border border-polis-navy/10 bg-white p-4 sm:grid-cols-3"
+          >
+            <div>
+              <label htmlFor="name" className="block text-xs font-semibold text-polis-slate">
+                Nome
+              </label>
+              <input
+                id="name"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-polis-slate">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="role" className="block text-xs font-semibold text-polis-slate">
+                Papel
+              </label>
+              <select
+                id="role"
+                value={role}
+                onChange={(event) => setRole(event.target.value as UserRole)}
+                className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
+              >
+                {INVITABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabels[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {error && <p className="text-sm text-red-700 sm:col-span-3">{error}</p>}
+            <Button type="submit" disabled={submitting} className="sm:col-span-3">
+              {submitting ? "Enviando convite..." : "Enviar convite"}
+            </Button>
+          </form>
+        )}
+
+        {success && <p className="mb-4 text-sm text-emerald-700">{success}</p>}
 
         <div className="overflow-hidden rounded-sm border border-polis-navy/10 bg-white">
           <table className="w-full text-left text-sm">
@@ -40,18 +144,30 @@ export default function AdminUsuariosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-polis-navy/10">
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-5 py-3 font-medium text-polis-navy">{user.name}</td>
-                  <td className="px-5 py-3 text-polis-slate">{user.email}</td>
-                  <td className="px-5 py-3 text-polis-slate">{roleLabels[user.role]}</td>
-                  <td className="px-5 py-3">
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                      Ativo
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-center text-polis-slate">
+                    Carregando...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                (users ?? []).map((user) => (
+                  <tr key={user.id}>
+                    <td className="px-5 py-3 font-medium text-polis-navy">{user.name}</td>
+                    <td className="px-5 py-3 text-polis-slate">{user.email}</td>
+                    <td className="px-5 py-3 text-polis-slate">{roleLabels[user.role]}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          user.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {user.is_active ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
