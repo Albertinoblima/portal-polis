@@ -70,14 +70,18 @@ PORTAL-POLIS/
 │       └── trigger-rebuild/       Edge Function: aciona rebuild do site publicado
 ├── src/
 │   ├── app/
-│   │   ├── (site)/                 Rotas públicas (Home, Matéria, Editoria, Busca, ...)
+│   │   ├── (site)/                 Rotas públicas (Home, Matéria, Editoria, Busca, páginas
+│   │   │                            institucionais, ...) — layout "jornal impresso" com
+│   │   │                            page-flip (ver src/components/newspaper/)
 │   │   └── admin/                  Painel administrativo
 │   │       ├── login/, esqueci-senha/, redefinir-senha/   (sem sidebar)
 │   │       └── (painel)/           Rotas protegidas por AuthProvider + AdminSidebar
 │   │           ├── dashboard/, materias/, materias/nova/, materias/editar/
-│   │           ├── categorias/, usuarios/, midia/, banners/, configuracoes/
+│   │           ├── categorias/, tags/, usuarios/, midia/, banners/, comentarios/
+│   │           ├── mensagens/, newsletter/, auditoria/, configuracoes/
 │   ├── components/
-│   │   ├── layout/                 Header, Footer (site público)
+│   │   ├── newspaper/               NavBar, Newspaper, PageFlipEngine, PageChrome, Masthead (site público)
+│   │   ├── layout/                  ThemeToggle (claro/escuro do site público)
 │   │   ├── articles/                ArticleCard, ListenButton (TTS), ShareButtons, SearchResults
 │   │   ├── admin/                   AuthProvider, Sidebar, Topbar, KpiCard, ArticleEditorForm
 │   │   └── ui/                      Button, Badge (Design System)
@@ -229,3 +233,41 @@ estão configuradas em `src/app/globals.css` como tokens Tailwind: `polis-navy`,
 
 Detalhes completos em
 [`docs/10_Roadmap_Evolucao_Completo_Fases_1_2_3_Polis_v1.0.md`](./docs/10_Roadmap_Evolucao_Completo_Fases_1_2_3_Polis_v1.0.md).
+
+## Painel Administrativo — Roadmap de profissionalização (v2.0)
+
+O painel hoje é um CRUD funcional sobre Supabase, mas ainda tem lacunas identificadas no uso
+real: seleção de imagem por URL solta (em vez da Biblioteca de Mídia), editor de matéria sem
+barra de ferramentas, nenhuma edição de páginas/menus/rodapé do site pelo painel, sem
+monitoramento de erros e sem Google Analytics configurável. O plano abaixo organiza a evolução
+em fases — a arquitetura estática (site público 100% pré-gerado via `sync-content.mjs`, sem
+servidor em runtime) é a restrição que toda fase precisa respeitar.
+
+1. **Fase 1 — Correções relatadas:** componente `MediaPicker` reutilizável (substitui as três
+   implementações duplicadas de upload/seleção de imagem hoje espalhadas entre Banners, imagem
+   de destaque da matéria e a Biblioteca de Mídia); editor de texto rico (Tiptap) em Nova
+   Matéria, com barra de ferramentas e sanitização de HTML (DOMPurify) tanto no salvamento
+   quanto na sincronização estática; Google Analytics configurável em `site_settings` em vez de
+   variável de ambiente fixa.
+2. **Fase 2 — CMS de Páginas:** tabela `pages` no Supabase + CRUD no painel para as páginas
+   institucionais (Sobre, Contato, LGPD, Privacidade, Cookies, Termos, Newsletter), hoje HTML
+   fixo no código-fonte. Inclui formalizar "Equipe Editorial" (nome, cargo, foto, ordem) como
+   registros geridos pelo painel.
+3. **Fase 3 — Menus e Submenus:** tabela `menu_items` (com hierarquia via `parent_id` e
+   ordenação drag-and-drop), painel de CRUD, `NavBar` passa a renderizar a partir de dados em
+   vez dos arrays fixos atuais (`INSTITUTIONAL_LINKS` etc.).
+4. **Fase 4 — Rodapé do site:** nova barra fixa de rodapé (o design atual de "jornal impresso"
+   não tem rodapé de site, só um rodapé por página dentro do livro) com colunas de link, redes
+   sociais e copyright, editável em Configurações.
+5. **Fase 5 — Construtor de widgets da Home:** blocos ordenáveis por drag-and-drop (Destaques,
+   Editorias, Radar Político, Newsletter, Anúncio) editáveis pelo painel, em vez da ordem fixa
+   atual no código.
+6. **Fase 6 — Monitoramento de erros:** integração com Sentry (requer conta em sentry.io e DSN
+   configurado pelo responsável do projeto).
+7. **Fase 7 — Polimento sênior geral:** validação de formulário consistente
+   (`react-hook-form` + `zod`) em todo o painel, loading states com skeleton, substituição de
+   `alert()`/`confirm()` nativos por componentes de UI próprios.
+
+A Fase 1 já tem um plano de implementação detalhado (arquivos exatos a criar/editar, biblioteca
+escolhida, migração SQL, sequenciamento) pronto para ser retomado quando a v2.0 entrar em
+desenvolvimento.
