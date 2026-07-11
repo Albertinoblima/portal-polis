@@ -60,7 +60,8 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
     const renderedPages = pages.map((page, index) => attachRef(page, index, pageElementsRef));
 
     useEffect(() => {
-      if (renderedPages.length === 0 || !containerRef.current) return;
+      const container = containerRef.current;
+      if (renderedPages.length === 0 || !container) return;
       if (pageElementsRef.current.length !== renderedPages.length) return;
 
       const reducedMotion =
@@ -86,9 +87,9 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
       // removê-lo evita que ele fique "flutuando" por cima do conteúdo atual
       // bloqueando cliques (um wrapper vazio ainda ocupa 100%x100% e
       // intercepta ponteiro, mesmo invisível).
-      const previousWrapper = containerRef.current.querySelector<HTMLElement>(":scope > .stf__wrapper");
+      const previousWrapper = container.querySelector<HTMLElement>(":scope > .stf__wrapper");
 
-      const flip = new PageFlip(containerRef.current, {
+      const flip = new PageFlip(container, {
         width,
         height,
         size: "fixed",
@@ -116,8 +117,60 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
       const handleFlip = (event: WidgetEvent) => onFlip?.(event.data as number);
       flip.on("flip", handleFlip);
 
+      // A biblioteca decide sozinha, no touchend, se um toque vira a página —
+      // mas essa lógica tem um bug real em dois cenários comuns: (1) um
+      // "flick" rápido (<250ms) nunca chama startUserTouch (propositalmente
+      // adiado por esse tempo, para não iniciar o efeito de dobra num toque
+      // simples), então a checagem de swipe do próprio onTouchEnd calcula
+      // isSwipe corretamente mas o userStop() que ela dispara é um no-op
+      // inteiro, porque exige isUserTouch=true; (2) um arrasto lento e
+      // deliberado (>250ms, o gesto natural de "puxar a página") só completa
+      // a virada se soltar o dedo exatamente na borda oposta da página
+      // (pos.x<=0) — qualquer coisa 1px antes disso volta ao lugar. Ou seja,
+      // nenhum gesto de toque natural funciona de forma confiável. Como não
+      // dá para configurar esse comportamento via settings, detectamos o
+      // swipe nós mesmos e chamamos flipNext/flipPrev diretamente,
+      // interceptando o evento (stopPropagation) antes que o handler
+      // (quebrado) da própria biblioteca, registrado em `window`, o receba.
+      const SWIPE_MIN_DISTANCE_PX = 40;
+      const SWIPE_MAX_VERTICAL_DRIFT_PX = 100;
+      let touchStart: { x: number; y: number } | null = null;
+
+      // Não filtramos toques que começam num <a>/<button> aqui (ao contrário
+      // do checkTarget da biblioteca): cards de matéria ocupam quase a folha
+      // inteira, e o leitor precisa poder arrastar a partir de cima deles
+      // também. Um toque curto (< SWIPE_MIN_DISTANCE_PX) nunca aciona
+      // stopPropagation/preventDefault aqui, então o tap-to-click nativo do
+      // link segue intocado — só um deslocamento horizontal de verdade conta
+      // como intenção de virar página.
+      const handleTouchStart = (event: TouchEvent) => {
+        const touch = event.changedTouches[0];
+        touchStart = touch ? { x: touch.clientX, y: touch.clientY } : null;
+      };
+
+      const handleTouchEnd = (event: TouchEvent) => {
+        if (!touchStart) return;
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+
+        const dx = touch.clientX - touchStart.x;
+        const dy = Math.abs(touch.clientY - touchStart.y);
+        touchStart = null;
+
+        if (Math.abs(dx) < SWIPE_MIN_DISTANCE_PX || dy > SWIPE_MAX_VERTICAL_DRIFT_PX) return;
+
+        event.stopPropagation();
+        if (dx < 0) pageFlipRef.current?.flipNext();
+        else pageFlipRef.current?.flipPrev();
+      };
+
+      container.addEventListener("touchstart", handleTouchStart, { passive: true });
+      container.addEventListener("touchend", handleTouchEnd, { passive: true });
+
       return () => {
         flip.off("flip");
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchend", handleTouchEnd);
         if (pageFlipRef.current === flip) pageFlipRef.current = null;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps

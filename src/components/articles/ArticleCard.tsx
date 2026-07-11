@@ -18,7 +18,13 @@ export function ArticleCard({ article, editoria, size = "default" }: ArticleCard
       href={`/materia/${article.slug}`}
       className="group block overflow-hidden rounded-sm border border-transparent transition-all hover:border-polis-gold-muted/60"
     >
-      <div className={isLarge ? "aspect-[16/9]" : "aspect-[4/3]"}>
+      {/* pointer-events-none nos filhos: a biblioteca de page-flip só ignora
+          cliques quando event.target É o próprio <a>/<button> (não olha
+          ancestrais) — sem isso, tocar na imagem ou no título (o normal, já
+          que ocupam quase todo o card) faz o touchstart cair no fluxo de
+          "virar página" da biblioteca, que dá preventDefault() e suprime o
+          click sintético do toque, quebrando a navegação só no mobile. */}
+      <div className={`pointer-events-none ${isLarge ? "aspect-[16/9]" : "aspect-[4/3]"}`}>
         <div className="relative h-full w-full overflow-hidden bg-polis-ink/5">
           <Image
             src={article.featuredImage}
@@ -29,7 +35,7 @@ export function ArticleCard({ article, editoria, size = "default" }: ArticleCard
           />
         </div>
       </div>
-      <div className="space-y-2 py-4">
+      <div className="pointer-events-none space-y-2 py-4">
         {editoria && <EditoriaBadge name={editoria.name} color={editoria.color} />}
         <h3
           className={
