@@ -34,20 +34,22 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const [editorias, authors, articles] = await Promise.all([
+  const [editorias, authors, articles, banners] = await Promise.all([
     fetchEditorias(supabase),
     fetchAuthors(supabase),
     fetchArticles(supabase),
+    fetchBanners(supabase),
   ]);
 
   await Promise.all([
     writeJson("editorias.json", editorias),
     writeJson("authors.json", authors),
     writeJson("articles.json", articles),
+    writeJson("banners.json", banners),
   ]);
 
   console.log(
-    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${articles.length} matérias publicadas.`
+    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${articles.length} matérias publicadas, ${banners.length} banners ativos.`
   );
 }
 
@@ -126,6 +128,30 @@ async function fetchArticles(supabase) {
     viewCount: row.view_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }));
+}
+
+async function fetchBanners(supabase) {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("banners")
+    .select("id, title, image_url, link_url, position, start_date, end_date, is_active")
+    .eq("is_active", true)
+    .lte("start_date", nowIso)
+    .or(`end_date.is.null,end_date.gte.${nowIso}`)
+    .order("start_date", { ascending: false });
+
+  if (error) throw new Error(`Falha ao buscar banners: ${error.message}`);
+
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    imageUrl: row.image_url,
+    linkUrl: row.link_url,
+    position: row.position,
+    startDate: row.start_date,
+    endDate: row.end_date ?? undefined,
+    isActive: row.is_active,
   }));
 }
 

@@ -94,6 +94,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <h1 className="font-serif text-2xl font-bold leading-tight text-polis-ink md:text-4xl">
             {article.title}
           </h1>
+
+          <div className="mt-3">
+            <ListenButton text={plainTextContent} />
+          </div>
+
           <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-polis-rule/20 py-3 text-xs text-polis-ink-soft">
@@ -125,7 +130,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       node: (
         <div className="flex h-full flex-col gap-6">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-polis-rule/20 pb-6">
-            <ListenButton text={plainTextContent} />
             <ShareButtons url={articleUrl} title={article.title} />
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">

@@ -48,19 +48,9 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
-/* Tema escuro "sépia noturno": nunca preto puro, alto contraste elegante. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-paper: #24221d;
-    --color-paper-soft: #2c2a24;
-    --color-ink: #ede6d6;
-    --color-ink-soft: #c9c0ac;
-    --color-rule: #c9a227;
-    --background: var(--color-paper);
-    --foreground: var(--color-ink);
-  }
-}
-
+/* Tema escuro "sépia noturno": nunca preto puro, alto contraste elegante.
+   Só entra em vigor com escolha explícita do leitor (data-theme="dark") —
+   o padrão do site é sempre o tema claro, independente do SO. */
 :root[data-theme="dark"] {
   --color-paper: #24221d;
   --color-paper-soft: #2c2a24;
@@ -88,21 +78,28 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Textura sutil de papel, auto-contida (sem imagem externa). */
-.paper-texture {
-  position: relative;
-  isolation: isolate;
-}
+/* Textura sutil de papel, auto-contida (sem imagem externa). Definida dentro
+   de @layer components para que utilities do Tailwind (ex: `absolute` numa
+   camada mais prioritária) consigam sobrescrever o `position: relative`
+   default quando o elemento precisa de outro posicionamento — CSS solto
+   (fora de @layer) sempre venceria a cascata de qualquer utility, não
+   importa a ordem de declaração das classes. */
+@layer components {
+  .paper-texture {
+    position: relative;
+    isolation: isolate;
+  }
 
-.paper-texture::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  .paper-texture::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

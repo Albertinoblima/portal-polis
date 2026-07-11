@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getEditorias } from "@/lib/content";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
@@ -46,6 +46,7 @@ export function NavBar() {
         <Link href="/busca" aria-label="Buscar" className="rounded-full p-2 text-polis-ink hover:bg-polis-ink/10">
           <SearchIcon />
         </Link>
+        <FullscreenToggle />
         <ThemeToggle />
         <Link
           href="/admin/login"
@@ -108,6 +109,53 @@ function SearchIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
       <circle cx="11" cy="11" r="7" />
       <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FullscreenToggle() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    function handleChange() {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    }
+    document.addEventListener("fullscreenchange", handleChange);
+    return () => document.removeEventListener("fullscreenchange", handleChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggleFullscreen}
+      aria-label={isFullscreen ? "Sair da tela cheia" : "Ver em tela cheia"}
+      className="rounded-full p-2 text-polis-ink hover:bg-polis-ink/10"
+    >
+      {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+    </button>
+  );
+}
+
+function FullscreenIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FullscreenExitIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

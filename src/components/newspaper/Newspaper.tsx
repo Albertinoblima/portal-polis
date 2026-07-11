@@ -5,8 +5,12 @@ import { PageFlipEngine, type PageFlipHandle } from "./PageFlipEngine";
 import { PageChrome } from "./PageChrome";
 import { Masthead } from "./Masthead";
 import { HotCorner } from "./HotCorner";
+import { AdMargin } from "./AdMargin";
 import { paginateHtml } from "./paginate";
 import { useIsClient } from "@/hooks/useIsClient";
+import { getActiveBanners } from "@/lib/banners";
+
+const SIDEBAR_BANNERS = getActiveBanners("sidebar");
 
 export type NewspaperBlock =
   | { type: "html"; html: string; columns?: 1 | 2 | 3 }
@@ -169,10 +173,20 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
 
   const totalPages = preparedPages.length;
 
+  // A "capa" (primeira folha, com showCover) ocupa só metade da largura do
+  // container — a outra metade fica em branco até o leitor virar a página.
+  // Reaproveitamos essa sobra como espaço publicitário, só no desktop e só
+  // enquanto a capa está visível (ela desaparece ao avançar, junto da sobra).
+  const showAdMargin = isDesktop && showMasthead && pageIndex === 0;
+
   return (
     <div ref={viewportRef} className="relative h-full w-full">
       {flipPages.length > 0 && contentWidth > 0 && (
         <>
+          {showAdMargin && (
+            <AdMargin banners={SIDEBAR_BANNERS} width={Math.max(pageWidth, 280)} height={Math.max(pageHeight, 360)} />
+          )}
+
           <PageFlipEngine
             // Força remontagem completa sempre que a contagem de páginas muda
             // (ex.: da paginação de fallback do SSR para a real do cliente, ou

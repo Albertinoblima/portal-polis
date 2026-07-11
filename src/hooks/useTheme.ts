@@ -12,25 +12,15 @@ function getStoredTheme(): Theme | null {
   return stored === "light" || stored === "dark" ? stored : null;
 }
 
-function getSystemTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme() ?? getSystemTheme());
+  // O site abre sempre no tema claro por padrão, mesmo que o SO esteja em modo
+  // escuro — o escuro só entra em cena se o leitor escolher explicitamente
+  // pelo toggle (persistido em localStorage).
+  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme() ?? "light");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
-
-  useEffect(() => {
-    if (getStoredTheme()) return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = (event: MediaQueryListEvent) => setThemeState(event.matches ? "dark" : "light");
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
-  }, []);
 
   const setTheme = useCallback((next: Theme) => {
     window.localStorage.setItem(STORAGE_KEY, next);
