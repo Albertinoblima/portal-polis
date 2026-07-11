@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { getArticlesByAuthor, getAuthorBySlug, getAuthors, getEditoriaById } from "@/lib/content";
+import { withPlaceholderParam } from "@/lib/utils";
 
 interface AuthorPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return getAuthors().map((author) => ({ slug: author.id }));
+  const params = getAuthors().map((author) => ({ slug: author.id }));
+  return withPlaceholderParam(params, { slug: "_placeholder" });
 }
 
 export async function generateMetadata({ params }: AuthorPageProps): Promise<Metadata> {

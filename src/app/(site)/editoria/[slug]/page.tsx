@@ -2,13 +2,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { getArticlesByEditoria, getEditorias, getEditoriaBySlug } from "@/lib/content";
+import { withPlaceholderParam } from "@/lib/utils";
 
 interface EditoriaPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return getEditorias().map((editoria) => ({ slug: editoria.slug }));
+  const params = getEditorias().map((editoria) => ({ slug: editoria.slug }));
+  return withPlaceholderParam(params, { slug: "_placeholder" });
 }
 
 export async function generateMetadata({ params }: EditoriaPageProps): Promise<Metadata> {

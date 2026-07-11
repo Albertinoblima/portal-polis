@@ -13,14 +13,15 @@ import {
   getPublishedArticles,
   getRelatedArticles,
 } from "@/lib/content";
-import { formatDate } from "@/lib/utils";
+import { formatDate, withPlaceholderParam } from "@/lib/utils";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return getPublishedArticles().map((article) => ({ slug: article.slug }));
+  const params = getPublishedArticles().map((article) => ({ slug: article.slug }));
+  return withPlaceholderParam(params, { slug: "_placeholder" });
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
