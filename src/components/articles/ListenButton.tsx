@@ -38,7 +38,14 @@ export function ListenButton({ text }: { text: string }) {
       <CornerFlourish className="-right-[1px] -bottom-[1px] -scale-x-100 -scale-y-100" />
 
       <MegaphoneIcon speaking={isSpeaking} />
-      <span className="relative font-serif text-sm font-bold uppercase tracking-wide text-polis-ink group-hover:text-polis-paper">
+      {/* pointer-events-none: mesmo bug do ArticleCard — a biblioteca de
+          page-flip só ignora toques quando event.target É o próprio
+          <button> (não olha ancestrais); sem isso, tocar no ícone ou no
+          texto (a maior parte da área clicável) faz o touchstart cair no
+          fluxo de "virar página" dela, que dá preventDefault() e suprime o
+          click sintético do toque — só funcionava na sorte de acertar uma
+          borda sem elemento por cima. */}
+      <span className="pointer-events-none relative font-serif text-sm font-bold uppercase tracking-wide text-polis-ink group-hover:text-polis-paper">
         {isSpeaking ? "Parar leitura" : "Ouvir matéria"}
       </span>
     </button>
@@ -69,7 +76,11 @@ function CornerFlourish({ className }: { className?: string }) {
 
 function MegaphoneIcon({ speaking }: { speaking: boolean }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 32 24" className="relative h-5 w-7 shrink-0 text-polis-ink group-hover:text-polis-paper">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 32 24"
+      className="pointer-events-none relative h-5 w-7 shrink-0 text-polis-ink group-hover:text-polis-paper"
+    >
       <path d="M3 9 L14 4 L14 20 L3 15 Z" fill="currentColor" />
       <rect x="1" y="9" width="2.5" height="6" fill="currentColor" />
       <path
