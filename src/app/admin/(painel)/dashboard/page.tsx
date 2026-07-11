@@ -1,15 +1,17 @@
 "use client";
 
 import { AdminTopbar } from "@/components/admin/Topbar";
+import { BarChart } from "@/components/admin/BarChart";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { StatusBadge } from "@/components/ui/Badge";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getArticlesForAdmin } from "@/lib/supabase/queries";
+import { getArticlesForAdmin, getEditorias } from "@/lib/supabase/queries";
 import { supabase } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
   const { data: articles, loading: loadingArticles } = useSupabaseQuery(getArticlesForAdmin);
+  const { data: editorias } = useSupabaseQuery(getEditorias);
   const { data: subscriberCount } = useSupabaseQuery(async () => {
     const { count, error } = await supabase
       .from("newsletter_subscribers")
@@ -25,6 +27,20 @@ export default function AdminDashboardPage() {
   const recent = [...(articles ?? [])]
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 6);
+
+  const porEditoria = (editorias ?? [])
+    .map((editoria) => ({
+      label: editoria.name,
+      color: editoria.color,
+      value: published.filter((a) => a.editoria_id === editoria.id).length,
+    }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  const maisLidas = [...published]
+    .sort((a, b) => b.view_count - a.view_count)
+    .slice(0, 5)
+    .map((a) => ({ label: a.title, value: a.view_count }));
 
   return (
     <>
@@ -52,6 +68,25 @@ export default function AdminDashboardPage() {
             value={subscriberCount ?? "…"}
             hint="Inscritos ativos"
           />
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <section className="rounded-sm border border-polis-navy/10 bg-white p-5">
+            <h2 className="mb-4 font-sans text-sm font-bold text-polis-navy">Matérias por Editoria</h2>
+            {porEditoria.length === 0 ? (
+              <p className="text-sm text-polis-slate">Sem matérias publicadas ainda.</p>
+            ) : (
+              <BarChart items={porEditoria} />
+            )}
+          </section>
+          <section className="rounded-sm border border-polis-navy/10 bg-white p-5">
+            <h2 className="mb-4 font-sans text-sm font-bold text-polis-navy">Mais Lidas</h2>
+            {maisLidas.length === 0 ? (
+              <p className="text-sm text-polis-slate">Sem visualizações registradas ainda.</p>
+            ) : (
+              <BarChart items={maisLidas} />
+            )}
+          </section>
         </div>
 
         <section className="mt-8">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, EB_Garamond, JetBrains_Mono } from "next/font/google";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,13 +19,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://portalpolis.com.br"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Pólis — Onde a política faz sentido",
     template: "%s | Pólis",
   },
-  description:
-    "Jornalismo político contextual, plural e confiável. O Pólis é onde a política faz sentido.",
+  description: SITE_DESCRIPTION,
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -36,12 +36,27 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    siteName: "Pólis",
+    siteName: SITE_NAME,
     title: "Pólis — Onde a política faz sentido",
-    description:
-      "Jornalismo político contextual, plural e confiável. O Pólis é onde a política faz sentido.",
+    description: SITE_DESCRIPTION,
+  },
+  alternates: {
+    types: {
+      "application/rss+xml": `${SITE_URL}/rss.xml`,
+    },
   },
 };
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/brand/LOGO_MARCA.png`,
+  description: SITE_DESCRIPTION,
+};
+
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export default function RootLayout({
   children,
@@ -54,6 +69,23 @@ export default function RootLayout({
       className={`${inter.variable} ${ebGaramond.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-polis-off-white text-polis-navy">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        {gaId && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaId}');`,
+              }}
+            />
+          </>
+        )}
         {children}
       </body>
     </html>

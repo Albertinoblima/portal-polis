@@ -15,6 +15,7 @@ import {
   getRelatedArticles,
 } from "@/lib/content";
 import { formatDate, withPlaceholderParam } from "@/lib/utils";
+import { SITE_URL } from "@/lib/seo";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -51,9 +52,31 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const author = getAuthors().find((a) => a.id === article.authorId);
   const related = getRelatedArticles(article);
   const plainTextContent = article.content.replace(/<[^>]+>/g, " ");
+  const articleUrl = `${SITE_URL}/materia/${article.slug}/`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: article.title,
+    description: article.subtitle,
+    image: [article.featuredImage],
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt,
+    author: author ? { "@type": "Person", name: author.name } : undefined,
+    publisher: {
+      "@type": "Organization",
+      name: "Pólis",
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/brand/LOGO_MARCA.png` },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+  };
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 md:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Link
         href={editoria ? `/editoria/${editoria.slug}` : "/"}
         className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-polis-slate hover:text-polis-gold"
@@ -100,7 +123,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-polis-navy/10 pt-6">
         <ListenButton text={plainTextContent} />
-        <ShareButtons url={`https://portalpolis.com.br/materia/${article.slug}`} title={article.title} />
+        <ShareButtons url={articleUrl} title={article.title} />
       </div>
 
       {related.length > 0 && (
