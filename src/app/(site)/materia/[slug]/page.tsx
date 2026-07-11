@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
+import { Comments } from "@/components/articles/Comments";
 import { ListenButton } from "@/components/articles/ListenButton";
 import { ShareButtons } from "@/components/articles/ShareButtons";
 import { EditoriaBadge } from "@/components/ui/Badge";
@@ -118,6 +119,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
         </section>
       )}
+
+      <Comments articleId={article.id} />
     </article>
   );
 }

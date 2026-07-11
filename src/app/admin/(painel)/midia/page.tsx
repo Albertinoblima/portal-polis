@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { deleteMedia, getMedia, uploadMedia } from "@/lib/supabase/queries";
+import { deleteMedia, getMedia, updateMediaAltText, uploadMedia } from "@/lib/supabase/queries";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 
 export default function AdminMidiaPage() {
@@ -37,6 +37,10 @@ export default function AdminMidiaPage() {
     refetch();
   }
 
+  async function handleAltTextBlur(id: string, value: string) {
+    await updateMediaAltText(id, value);
+  }
+
   return (
     <>
       <AdminTopbar
@@ -61,17 +65,26 @@ export default function AdminMidiaPage() {
             {(media ?? []).map((item) => (
               <div
                 key={item.id}
-                className="group relative aspect-square overflow-hidden rounded-sm border border-polis-navy/10 bg-white"
+                className="group overflow-hidden rounded-sm border border-polis-navy/10 bg-white"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.url} alt={item.alt_text} className="h-full w-full object-contain p-2" />
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item.id, item.filename)}
-                  className="absolute right-1 top-1 hidden rounded-sm bg-red-700 px-2 py-1 text-xs font-semibold text-white group-hover:block"
-                >
-                  Remover
-                </button>
+                <div className="relative aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.url} alt={item.alt_text} className="h-full w-full object-contain p-2" />
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id, item.filename)}
+                    className="absolute right-1 top-1 hidden rounded-sm bg-red-700 px-2 py-1 text-xs font-semibold text-white group-hover:block"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <input
+                  aria-label={`Texto alternativo de ${item.filename}`}
+                  defaultValue={item.alt_text}
+                  placeholder="Texto alternativo (alt)"
+                  onBlur={(event) => handleAltTextBlur(item.id, event.target.value)}
+                  className="w-full border-t border-polis-navy/10 px-2 py-1 text-xs focus:border-polis-gold focus:outline-none"
+                />
               </div>
             ))}
           </div>

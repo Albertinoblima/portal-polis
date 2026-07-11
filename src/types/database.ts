@@ -289,6 +289,21 @@ export interface Database {
           created_at: string;
         }>
       >;
+      contact_messages: Table<
+        {
+          id: string;
+          name: string;
+          email: string;
+          message: string;
+          handled_at: string | null;
+          created_at: string;
+        },
+        { name: string; email: string; message: string } & Partial<{
+          id: string;
+          handled_at: string | null;
+          created_at: string;
+        }>
+      >;
       audit_logs: Table<
         {
           id: string;
@@ -310,7 +325,25 @@ export interface Database {
           old_value: Record<string, unknown> | null;
           new_value: Record<string, unknown> | null;
           created_at: string;
-        }>
+        }>,
+        Partial<{
+          user_id: string;
+          action: string;
+          entity: string;
+          entity_id: string;
+          old_value: Record<string, unknown> | null;
+          new_value: Record<string, unknown> | null;
+          created_at: string;
+        }>,
+        [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ]
       >;
       site_settings: Table<
         {

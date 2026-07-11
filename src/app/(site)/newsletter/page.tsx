@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Button } from "@/components/ui/Button";
+import { NewsletterForm } from "@/components/forms/NewsletterForm";
 
 export const metadata: Metadata = {
   title: "Newsletter",
@@ -15,22 +15,11 @@ export default function NewsletterPage() {
         redação.
       </p>
 
-      <form className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
-        <input
-          type="email"
-          name="email"
-          required
-          placeholder="seu@email.com"
-          className="w-full rounded-sm border border-polis-navy/20 px-4 py-3 focus:border-polis-gold focus:outline-none"
-        />
-        <Button type="submit" className="whitespace-nowrap">
-          Inscrever-se
-        </Button>
-      </form>
+      <NewsletterForm />
 
       <p className="mt-4 text-xs text-polis-gray">
-        Você receberá um e-mail de confirmação (double opt-in). Pode cancelar a inscrição a
-        qualquer momento.
+        Seus dados são usados apenas para o envio da newsletter. Você pode cancelar a inscrição
+        quando quiser, escrevendo para a nossa redação.
       </p>
     </div>
   );

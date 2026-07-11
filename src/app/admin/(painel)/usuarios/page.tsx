@@ -4,8 +4,9 @@ import { useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getStaffProfiles } from "@/lib/supabase/queries";
+import { getStaffProfiles, toggleProfileActive, updateProfileRole } from "@/lib/supabase/queries";
 import { useAdminSession } from "@/components/admin/AuthProvider";
+import { logAction } from "@/lib/supabase/audit";
 import { supabase } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/database";
 
@@ -32,6 +33,35 @@ export default function AdminUsuariosPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  async function handleRoleChange(id: string, oldRole: UserRole, newRole: UserRole) {
+    await updateProfileRole(id, newRole);
+    await logAction({
+      userId: profile.id,
+      action: "update",
+      entity: "profile_role",
+      entityId: id,
+      oldValue: { role: oldRole },
+      newValue: { role: newRole },
+    });
+    refetch();
+  }
+
+  async function handleToggleActive(id: string, isActive: boolean) {
+    if (id === profile.id) {
+      alert("Você não pode desativar seu próprio usuário.");
+      return;
+    }
+    await toggleProfileActive(id, !isActive);
+    await logAction({
+      userId: profile.id,
+      action: "update",
+      entity: "profile_active",
+      entityId: id,
+      newValue: { is_active: !isActive },
+    });
+    refetch();
+  }
 
   async function handleInvite(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,12 +171,13 @@ export default function AdminUsuariosPage() {
                 <th className="px-5 py-3">E-mail</th>
                 <th className="px-5 py-3">Papel</th>
                 <th className="px-5 py-3">Status</th>
+                {isAdmin && <th className="px-5 py-3">Ações</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-polis-navy/10">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-polis-slate">
+                  <td colSpan={isAdmin ? 5 : 4} className="px-5 py-6 text-center text-polis-slate">
                     Carregando...
                   </td>
                 </tr>
@@ -155,7 +186,26 @@ export default function AdminUsuariosPage() {
                   <tr key={user.id}>
                     <td className="px-5 py-3 font-medium text-polis-navy">{user.name}</td>
                     <td className="px-5 py-3 text-polis-slate">{user.email}</td>
-                    <td className="px-5 py-3 text-polis-slate">{roleLabels[user.role]}</td>
+                    <td className="px-5 py-3 text-polis-slate">
+                      {isAdmin ? (
+                        <select
+                          aria-label={`Papel de ${user.name}`}
+                          value={user.role}
+                          onChange={(event) =>
+                            handleRoleChange(user.id, user.role, event.target.value as UserRole)
+                          }
+                          className="rounded-sm border border-polis-navy/20 px-2 py-1 text-sm focus:border-polis-gold focus:outline-none"
+                        >
+                          {INVITABLE_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {roleLabels[r]}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        roleLabels[user.role]
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -165,6 +215,17 @@ export default function AdminUsuariosPage() {
                         {user.is_active ? "Ativo" : "Inativo"}
                       </span>
                     </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(user.id, user.is_active)}
+                          className="text-xs font-semibold text-polis-navy hover:text-polis-gold"
+                        >
+                          {user.is_active ? "Desativar" : "Ativar"}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

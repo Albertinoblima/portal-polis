@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { slugify } from "@/lib/utils";
-import type { ArticleStatus, BannerPosition } from "@/types/database";
+import type { ArticleStatus, BannerPosition, UserRole } from "@/types/database";
 
 export async function getEditorias() {
   const { data, error } = await supabase.from("editorias").select("*").order("name");
@@ -230,6 +230,54 @@ export async function updateSiteSettings(input: {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function getTags() {
+  const { data, error } = await supabase.from("tags").select("*").order("name");
+  if (error) throw error;
+  return data;
+}
+
+export async function createTag(input: { name: string; slug: string }) {
+  const { data, error } = await supabase.from("tags").insert(input).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateTag(id: string, input: Partial<{ name: string; slug: string }>) {
+  const { data, error } = await supabase.from("tags").update(input).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteTag(id: string) {
+  const { error } = await supabase.from("tags").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getAuditLogs(limit = 100) {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*, user:profiles(id, name)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfileRole(id: string, role: UserRole) {
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function toggleProfileActive(id: string, isActive: boolean) {
+  const { error } = await supabase.from("profiles").update({ is_active: isActive }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateMediaAltText(id: string, altText: string) {
+  const { error } = await supabase.from("media").update({ alt_text: altText }).eq("id", id);
+  if (error) throw error;
 }
 
 export async function triggerSiteRebuild() {

@@ -11,9 +11,14 @@ const navItems = [
   { href: "/admin/dashboard/", label: "Dashboard" },
   { href: "/admin/materias/", label: "Matérias" },
   { href: "/admin/categorias/", label: "Categorias e Editorias" },
+  { href: "/admin/tags/", label: "Tags" },
   { href: "/admin/midia/", label: "Biblioteca de Mídia" },
   { href: "/admin/banners/", label: "Banners e Destaques" },
+  { href: "/admin/comentarios/", label: "Comentários" },
+  { href: "/admin/newsletter/", label: "Newsletter" },
+  { href: "/admin/mensagens/", label: "Mensagens de Contato" },
   { href: "/admin/usuarios/", label: "Usuários" },
+  { href: "/admin/auditoria/", label: "Auditoria" },
   { href: "/admin/configuracoes/", label: "Configurações" },
 ];
 
