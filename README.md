@@ -111,8 +111,27 @@ Outros comandos:
 npm run build          # build de produção (export estático em ./out)
 npm run start          # sobe o build de produção
 npm run lint            # ESLint
+npm run typecheck       # tsc --noEmit
+npm run test            # testes unitários/componente (Vitest + Testing Library)
+npm run test:e2e        # smoke tests E2E (Playwright, serve ./out estático)
 npm run sync-content    # busca conteúdo publicado no Supabase e atualiza src/content/*.json
 ```
+
+## Testes
+
+- **Unitários/componente** (`npm run test`, Vitest + Testing Library): cobrem as funções puras
+  de `src/lib/utils.ts` e `src/lib/content.ts` (slugify, formatação de data, busca, filtros por
+  editoria/autor) e um teste de renderização do `ArticleCard`. Não é cobertura completa — é a
+  base para expandir conforme o projeto cresce.
+- **E2E** (`npm run test:e2e`, Playwright): builda o export estático e sobe um servidor mínimo
+  (`scripts/serve-static.mjs`) para rodar smoke tests reais — home carrega, navegação para uma
+  matéria funciona, `/admin/*` redireciona para login sem sessão, e `sitemap.xml`/`robots.txt`/
+  `rss.xml` respondem. Requer `npx playwright install --with-deps chromium` na primeira vez.
+- O CI (`.github/workflows/deploy.yml`) roda lint, typecheck, testes unitários e o smoke E2E
+  antes de todo deploy — um deploy só sai se os quatro passarem.
+- Não implementado ainda: cobertura ampla (>80%) dos módulos críticos, testes de API/componente
+  mais profundos, k6 (performance) e OWASP ZAP (segurança), conforme sugerido no plano de QA
+  original. Ficam como próximo passo, não como algo já entregue.
 
 ## Configurando o Supabase (obrigatório para o painel funcionar de verdade)
 
