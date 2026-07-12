@@ -16,7 +16,7 @@ import {
   getRelatedArticles,
 } from "@/lib/content";
 import { formatDate, withPlaceholderParam } from "@/lib/utils";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -32,14 +32,33 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const article = getArticleBySlug(slug);
   if (!article) return {};
 
+  const articleUrl = `${SITE_URL}/materia/${article.slug}/`;
+
   return {
     title: article.seoTitle ?? article.title,
     description: article.seoDescription ?? article.subtitle,
+    alternates: {
+      canonical: articleUrl,
+    },
     openGraph: {
       type: "article",
+      siteName: SITE_NAME,
+      locale: "pt_BR",
+      url: articleUrl,
       title: article.title,
       description: article.subtitle,
-      images: [article.featuredImage],
+      // WhatsApp/Facebook exigem width/height para renderizar a prévia de
+      // forma confiável — sem eles, o crawler às vezes falha silenciosamente
+      // mesmo com a imagem acessível. 1200x630 é a proporção padrão de
+      // mercado (1.91:1); não precisa bater pixel a pixel com o arquivo real.
+      images: [
+        {
+          url: article.featuredImage,
+          width: 1200,
+          height: 630,
+          alt: article.featuredImageAlt || article.title,
+        },
+      ],
     },
   };
 }

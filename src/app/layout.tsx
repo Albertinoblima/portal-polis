@@ -39,6 +39,18 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Portal Pólis — Onde a política faz sentido",
     description: SITE_DESCRIPTION,
+    // Fallback para páginas sem imagem própria (Home, Sobre, Contato, etc.) —
+    // sem isso, compartilhar essas páginas no WhatsApp/redes não mostra
+    // nenhuma prévia de imagem. Páginas com imagem específica (matérias)
+    // sobrescrevem este array no próprio generateMetadata.
+    images: [
+      {
+        url: "/brand/LOGO_COMPLETA.png",
+        width: 1254,
+        height: 1254,
+        alt: SITE_NAME,
+      },
+    ],
   },
   alternates: {
     types: {
