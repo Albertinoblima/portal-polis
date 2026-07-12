@@ -34,7 +34,7 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
       {header}
 
       {runningTitle && (
-        <div className="flex shrink-0 items-center justify-between border-b border-polis-rule/20 px-6 py-2 font-serif text-xs uppercase tracking-[0.2em] text-polis-ink-soft">
+        <div className="flex shrink-0 items-center justify-between border-b border-polis-rule/20 px-6 py-2 font-serif text-xs uppercase tracking-[0.2em] text-polis-ink">
           <span>{runningTitle}</span>
           <span>{sectionLabel}</span>
         </div>
@@ -52,7 +52,7 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
         {children}
       </div>
 
-      <div className="flex h-10 shrink-0 items-center justify-between border-t border-polis-rule/20 px-6 text-[11px] tracking-wide text-polis-ink-soft">
+      <div className="flex h-10 shrink-0 items-center justify-between border-t border-polis-rule/20 px-6 text-[11px] tracking-wide text-polis-ink">
         <span>{sectionLabel}</span>
         <span>
           Página {pageNumber} de {totalPages}
