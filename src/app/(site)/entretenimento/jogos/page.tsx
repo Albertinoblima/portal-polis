@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SnakeIcon, TicTacToeIcon } from "@/components/games/GameIcons";
 
 export const metadata: Metadata = {
   title: "Jogos",
@@ -10,7 +11,12 @@ const GAMES = [
   {
     href: "/entretenimento/jogos/jogo-da-velha",
     title: "Jogo da Velha",
-    description: "Desafie o computador ou chame alguém para jogar ao seu lado.",
+    icon: TicTacToeIcon,
+  },
+  {
+    href: "/entretenimento/jogos/cobrinha",
+    title: "Jogo da Cobrinha",
+    icon: SnakeIcon,
   },
 ];
 
@@ -29,17 +35,17 @@ export default function JogosPage() {
           <h1 className="font-serif text-4xl font-bold text-polis-ink">Jogos</h1>
           <p className="mt-3 text-polis-ink-soft">Escolha um joguinho para passar o tempo.</p>
 
-          <div className="mt-10 grid w-full gap-6">
+          <div className="mt-10 grid w-full grid-cols-2 gap-6 sm:grid-cols-3">
             {GAMES.map((game) => (
               <Link
                 key={game.href}
                 href={game.href}
-                className="group flex flex-col items-center gap-2 border border-polis-ink/30 px-6 py-8 transition-colors hover:border-polis-gold-muted"
+                className="group flex flex-col items-center gap-3 border border-polis-ink/30 px-4 py-6 transition-colors hover:border-polis-gold-muted"
               >
-                <span className="font-serif text-2xl font-bold text-polis-ink group-hover:text-polis-gold-ink">
+                <game.icon className="h-12 w-12 text-polis-ink group-hover:text-polis-gold-ink" />
+                <span className="font-serif text-base font-bold text-polis-ink group-hover:text-polis-gold-ink">
                   {game.title}
                 </span>
-                <span className="text-sm text-polis-ink-soft">{game.description}</span>
               </Link>
             ))}
           </div>
