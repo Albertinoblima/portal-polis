@@ -4,7 +4,8 @@ import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper
 
 export const metadata: Metadata = {
   title: "Entretenimento",
-  description: "A seção de entretenimento do Portal Pólis — jogos e palavras cruzadas entre uma matéria e outra.",
+  description:
+    "A seção de entretenimento do Portal Pólis — jogos, palavras cruzadas e caça-palavras entre uma matéria e outra.",
 };
 
 const SECTIONS = [
@@ -17,6 +18,11 @@ const SECTIONS = [
     href: "/entretenimento/palavras-cruzadas",
     title: "Palavras Cruzadas",
     description: "Uma edição nova todo dia, com correção automática.",
+  },
+  {
+    href: "/entretenimento/caca-palavras",
+    title: "Caça-Palavras",
+    description: "Uma edição nova todo dia, com progresso salvo automaticamente.",
   },
 ];
 
@@ -34,7 +40,7 @@ export default function EntretenimentoPage() {
             seção de entretenimento.
           </p>
 
-          <div className="mx-auto mt-10 grid w-full gap-6 sm:grid-cols-2">
+          <div className="mx-auto mt-10 grid w-full gap-6 sm:grid-cols-3">
             {SECTIONS.map((section) => (
               <Link
                 key={section.href}

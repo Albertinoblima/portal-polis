@@ -134,3 +134,87 @@ como molde para copiar o formato.
 - Inventar a numeração sem seguir a varredura linha-a-linha — quebra a expectativa de quem já
   joga palavras cruzadas.
 - Respostas com acento, cedilha ou espaço.
+
+## Caça-Palavras (Entretenimento) — como criar uma nova edição
+
+O Portal Pólis publica um caça-palavras por dia em `/entretenimento/caca-palavras`. Ao contrário
+das palavras cruzadas, a grade **não é montada à mão** — um motor determinístico
+(`buildWordSearchGrid`) posiciona as palavras sozinho nas 8 direções (incluindo de trás para
+frente) e preenche o resto com letras aleatórias. Publicar uma edição nova é só escrever a lista
+de palavras; nenhum posicionamento manual é necessário.
+
+### Onde tudo mora (Caça-Palavras)
+
+| Arquivo | Papel |
+|---|---|
+| `src/lib/wordsearch.ts` | **Único arquivo que você edita.** Tipos, o array `WORDSEARCHES` (o conteúdo de cada edição) e o motor que monta a grade a partir da lista de palavras. |
+| `src/components/games/WordSearch.tsx` | UI interativa (arrastar/tocar para selecionar, cronômetro, revelar). Não precisa mexer aqui para publicar uma edição nova. |
+| `src/app/(site)/entretenimento/caca-palavras/page.tsx` | Rota pública. Sempre renderiza a edição mais recente já publicada. |
+
+### Modelo de dados (Caça-Palavras)
+
+```ts
+interface WordSearchPuzzle {
+  slug: string;   // identificador único, kebab-case (ex.: "reforma-tributaria")
+  date: string;   // "YYYY-MM-DD" — data de publicação
+  theme: string;  // tema exibido no cabeçalho da página
+  size: number;   // lado da grade (ela é sempre quadrada: size x size)
+  words: string[]; // MAIÚSCULAS, SEM acento/cedilha/espaço — mesma regra das cruzadas
+}
+```
+
+`getLatestWordSearch()` segue exatamente a mesma regra do `getLatestCrossword()`: a edição do dia
+é sempre a de `date` mais recente com `date <= hoje`, e fica no ar até a próxima ser publicada.
+**Para publicar a edição de amanhã, basta acrescentar um novo objeto ao array `WORDSEARCHES`** com
+a data de amanhã — não precisa remover as anteriores.
+
+### Como o motor posiciona as palavras (`buildWordSearchGrid`)
+
+A grade é gerada por um PRNG determinístico (mulberry32, semeado a partir de um hash do `slug`) —
+**não** usa `Math.random()`. Isso é proposital: a mesma semente sempre produz exatamente a mesma
+grade, então o HTML renderizado no servidor bate com a primeira renderização no cliente. Se algum
+dia trocar essa lógica por algo que usa `Math.random()`/`Date.now()` direto no cálculo da grade,
+vai quebrar a hidratação do React (isso já aconteceu uma vez no Jogo da Cobrinha — ver histórico
+do componente `Snake.tsx` para o sintoma).
+
+O motor tenta até 500 posições aleatórias (linha, coluna, uma das 8 direções) por palavra,
+aceitando um encaixe quando todas as casas estão livres ou já têm exatamente a mesma letra (o que
+cria cruzamentos naturais entre palavras, como nas cruzadas). **Se não conseguir posicionar uma
+palavra depois de 500 tentativas, `buildWordSearchGrid()` lança uma exceção** — isso é
+intencional (falha alto e cedo, em vez de publicar silenciosamente um caça-palavras com uma
+palavra faltando). Se isso acontecer ao adicionar uma edição, aumente `size` ou reduza/encurte a
+lista de palavras.
+
+### Passo a passo para montar uma edição nova (Caça-Palavras)
+
+1. **Escolha o tema e de 8 a 14 palavras** relacionadas, todas em `MAIÚSCULAS SEM ACENTO` (mesma
+   normalização das cruzadas: "eleição" → `ELEICAO`).
+
+2. **Escolha `size`** de forma que a maior palavra caiba com folga — regra prática:
+   `size >= palavra_mais_longa + 2`. Para ~10-14 palavras de até 12 letras, `14` costuma bastar
+   (é o valor usado na edição de referência, tema "Democracia").
+
+3. **Acrescente o objeto ao array `WORDSEARCHES`** em `src/lib/wordsearch.ts`, com a data de
+   publicação desejada.
+
+4. **Valide antes de considerar pronto:**
+
+   ```bash
+   npm run typecheck
+   npm run lint
+   npm run dev
+   ```
+
+   Depois, no navegador, abra `/entretenimento/caca-palavras/` — se a página renderizar sem erro
+   no console, o motor conseguiu posicionar todas as palavras (se não conseguisse, teria lançado a
+   exceção descrita acima e a página quebraria). Clique em **"Revelar todas"** para conferir
+   visualmente se cada palavra da lista corresponde a uma linha reta na grade.
+
+### O que evitar (Caça-Palavras)
+
+- Palavras muito parecidas ou uma sendo substring de outra em posições que possam se sobrepor de
+  forma ambígua — não quebra o jogo (a checagem de acerto compara o conjunto exato de casas, não
+  só a string), mas pode confundir o jogador visualmente.
+- Grades enormes (20+) só para "caber mais palavras" — prefira o tamanho compacto da edição de
+  referência; grades grandes demais ficam cansativas de escanear visualmente.
+- Respostas com acento, cedilha ou espaço.
