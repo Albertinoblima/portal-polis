@@ -343,6 +343,23 @@ export interface Database {
           created_at: string;
         }>
       >;
+      game_players: Table<
+        {
+          id: string;
+          name: string;
+          email: string | null;
+          game: string;
+          wants_newsletter: boolean;
+          created_at: string;
+        },
+        { name: string } & Partial<{
+          id: string;
+          email: string | null;
+          game: string;
+          wants_newsletter: boolean;
+          created_at: string;
+        }>
+      >;
       audit_logs: Table<
         {
           id: string;

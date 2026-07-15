@@ -63,7 +63,7 @@ PORTAL-POLIS/
 ├── scripts/
 │   └── sync-content.mjs           Supabase → src/content/*.json (roda em CI antes do build)
 ├── supabase/
-│   ├── migrations/0001_init.sql   Schema completo: tabelas, RLS, funções de papel
+│   ├── migrations/                Schema versionado: tabelas, RLS, funções de papel
 │   ├── seed.sql                   Seed inicial (editorias, tags)
 │   └── functions/
 │       ├── invite-user/           Edge Function: convida novo membro da equipe (admin only)
@@ -71,8 +71,8 @@ PORTAL-POLIS/
 ├── src/
 │   ├── app/
 │   │   ├── (site)/                 Rotas públicas (Home, Matéria, Editoria, Busca, páginas
-│   │   │                            institucionais, ...) — layout "jornal impresso" com
-│   │   │                            page-flip (ver src/components/newspaper/)
+│   │   │                            institucionais, Entretenimento, ...) — layout "jornal
+│   │   │                            impresso" com page-flip (ver src/components/newspaper/)
 │   │   └── admin/                  Painel administrativo
 │   │       ├── login/, esqueci-senha/, redefinir-senha/   (sem sidebar)
 │   │       └── (painel)/           Rotas protegidas por AuthProvider + AdminSidebar
@@ -83,6 +83,8 @@ PORTAL-POLIS/
 │   │   ├── newspaper/               NavBar, Newspaper, PageFlipEngine, PageChrome, Masthead (site público)
 │   │   ├── layout/                  ThemeToggle (claro/escuro do site público)
 │   │   ├── articles/                ArticleCard, ListenButton (TTS), ShareButtons, SearchResults
+│   │   ├── games/                   TicTacToe, Crossword (seção Entretenimento — ver CLAUDE.md)
+│   │   ├── forms/                   ContactForm, NewsletterForm, GameRegistrationForm
 │   │   ├── admin/                   AuthProvider, Sidebar, Topbar, KpiCard, ArticleEditorForm
 │   │   └── ui/                      Button, Badge (Design System)
 │   ├── content/                    Conteúdo público (gerado por sync-content.mjs em CI;
@@ -90,6 +92,7 @@ PORTAL-POLIS/
 │   ├── hooks/                      useSession, useSupabaseQuery
 │   ├── lib/
 │   │   ├── content.ts               Camada de leitura do site público (lê src/content/*.json)
+│   │   ├── crosswords.ts            Dados + motor de grade das Palavras Cruzadas (ver CLAUDE.md)
 │   │   └── supabase/                 client.ts, auth.ts, queries.ts, audit.ts (admin, runtime)
 │   └── types/                      types/index.ts (conteúdo público) e types/database.ts (Supabase)
 ├── .github/workflows/deploy.yml    CI: lint → sync-content → build → deploy no GitHub Pages
@@ -216,6 +219,25 @@ centrais:
   diretamente, sem passar pela UI.
 - Só `admin` convida novos usuários e só `admin`/`editor_chief` leem a newsletter e os
   audit logs.
+
+## Entretenimento
+
+Todo jornal impresso tem uma seção de passatempos — o Pólis também. Em `/entretenimento` (menu
+"Entretenimento" na navegação, com os submenus "Jogos" e "Palavras Cruzadas"):
+
+- **Jogos** (`/entretenimento/jogos`): hoje só o Jogo da Velha (`/entretenimento/jogos/jogo-da-velha`),
+  contra o computador (IA por minimax, imbatível) ou com outra pessoa no mesmo dispositivo, com
+  cadastro leve de jogador (nome + e-mail opcional) e opt-in de newsletter integrado à tabela
+  `newsletter_subscribers` já existente. Placar por partida salvo no navegador.
+- **Palavras Cruzadas** (`/entretenimento/palavras-cruzadas`): uma edição nova por dia, com
+  tabuleiro interativo (digitação com avanço automático, conferência de respostas, revelar
+  solução, cronômetro e progresso salvo no navegador). Todo o conteúdo é estático — sem tabela no
+  Supabase — definido em `src/lib/crosswords.ts`.
+
+**Publicando a próxima palavra cruzada:** o processo completo (como montar a grade, verificar
+interseções e numerar as dicas corretamente) está documentado em [`CLAUDE.md`](./CLAUDE.md), para
+que qualquer sessão do Claude Code — nova ou retomada — saiba reproduzi-lo sem precisar
+reexplicar.
 
 ## Identidade visual
 

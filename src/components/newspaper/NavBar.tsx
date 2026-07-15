@@ -17,9 +17,15 @@ const INSTITUTIONAL_LINKS = [
   { href: "/lgpd", label: "LGPD" },
 ];
 
+const ENTERTAINMENT_LINKS = [
+  { href: "/entretenimento/jogos", label: "Jogos" },
+  { href: "/entretenimento/palavras-cruzadas", label: "Palavras Cruzadas" },
+];
+
 export function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isInstitutionalOpen, setIsInstitutionalOpen] = useState(false);
+  const [isEntertainmentOpen, setIsEntertainmentOpen] = useState(false);
 
   return (
     <div className="relative z-30 flex h-12 shrink-0 items-center justify-between gap-4 border-b border-polis-rule/20 bg-polis-paper px-4 text-polis-ink md:px-6">
@@ -50,6 +56,32 @@ export function NavBar() {
         >
           Sobre
         </Link>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsEntertainmentOpen((open) => !open)}
+            aria-expanded={isEntertainmentOpen}
+            className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-polis-ink-soft hover:text-polis-gold-ink"
+          >
+            Entretenimento
+            <ChevronIcon open={isEntertainmentOpen} />
+          </button>
+          {isEntertainmentOpen && (
+            <ul className="absolute right-0 top-full z-10 mt-2 w-52 rounded-sm border border-polis-rule/20 bg-polis-paper py-2 shadow-md">
+              {ENTERTAINMENT_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setIsEntertainmentOpen(false)}
+                    className="block px-4 py-1.5 text-xs text-polis-ink-soft hover:text-polis-gold-ink"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="relative">
           <button
             type="button"
@@ -124,6 +156,16 @@ export function NavBar() {
                 Sobre
               </Link>
             </li>
+            <li className="mt-2 border-t border-polis-rule/20 pt-2 text-[11px] font-semibold uppercase tracking-wide text-polis-ink-soft">
+              Entretenimento
+            </li>
+            {ENTERTAINMENT_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="block py-1 text-sm" onClick={() => setIsMenuOpen(false)}>
+                  {link.label}
+                </Link>
+              </li>
+            ))}
             <li className="mt-2 border-t border-polis-rule/20 pt-2 text-[11px] font-semibold uppercase tracking-wide text-polis-ink-soft">
               Institucional
             </li>
