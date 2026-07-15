@@ -35,3 +35,15 @@ export function SnakeIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function BlocksIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      <rect x="19" y="10" width="9" height="9" fill="currentColor" />
+      <rect x="9" y="20" width="9" height="9" fill="currentColor" opacity="0.85" />
+      <rect x="19" y="20" width="9" height="9" fill="currentColor" />
+      <rect x="29" y="20" width="9" height="9" fill="currentColor" opacity="0.85" />
+      <rect x="19" y="30" width="9" height="9" fill="currentColor" opacity="0.6" />
+    </svg>
+  );
+}

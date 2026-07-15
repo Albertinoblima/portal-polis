@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { SnakeIcon, TicTacToeIcon } from "@/components/games/GameIcons";
+import { BlocksIcon, SnakeIcon, TicTacToeIcon } from "@/components/games/GameIcons";
 
 export const metadata: Metadata = {
   title: "Jogos",
@@ -17,6 +17,11 @@ const GAMES = [
     href: "/entretenimento/jogos/cobrinha",
     title: "Jogo da Cobrinha",
     icon: SnakeIcon,
+  },
+  {
+    href: "/entretenimento/jogos/blocos",
+    title: "Jogo dos Blocos",
+    icon: BlocksIcon,
   },
 ];
 
