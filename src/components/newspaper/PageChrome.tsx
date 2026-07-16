@@ -8,7 +8,8 @@ interface PageChromeProps {
   totalPages: number;
   sectionLabel: string;
   columns?: 1 | 2 | 3;
-  runningTitle?: string;
+  /** Normalmente um rótulo curto, mas aceita qualquer nó — ex.: um link "‹ Voltar" de verdade. */
+  runningTitle?: ReactNode;
   /**
    * Altura em px da área de colunas, calculada em Newspaper.tsx a partir do
    * espaço realmente disponível (altura da página menos cabeçalho/rodapé
@@ -18,8 +19,13 @@ interface PageChromeProps {
    * altura definida e acabam se dimensionando pelo próprio conteúdo,
    * estourando a página (visto em blocos com imagem `fill`, por exemplo).
    * Um valor em px explícito resolve isso para qualquer filho.
+   *
+   * Omitido (usado fora do livro de folhear, ex.: páginas de jogos que não
+   * têm um orçamento de pixels fixo por página) — a área de conteúdo vira
+   * `flex-1` com rolagem própria, sem `columns` (que não faz sentido sem um
+   * orçamento de altura fixo para equilibrar as colunas).
    */
-  contentHeightPx: number;
+  contentHeightPx?: number;
 }
 
 export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function PageChrome(
@@ -40,17 +46,21 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
         </div>
       )}
 
-      <div
-        className="overflow-hidden px-6 py-5"
-        style={{
-          height: contentHeightPx,
-          columnCount: columns,
-          columnGap: "2.25rem",
-          columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
-        }}
-      >
-        {children}
-      </div>
+      {contentHeightPx !== undefined ? (
+        <div
+          className="overflow-hidden px-6 py-5"
+          style={{
+            height: contentHeightPx,
+            columnCount: columns,
+            columnGap: "2.25rem",
+            columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
+          }}
+        >
+          {children}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      )}
 
       <div className="flex h-10 shrink-0 items-center justify-between border-t border-polis-rule/20 px-6 text-[11px] tracking-wide text-polis-ink">
         <span>{sectionLabel}</span>

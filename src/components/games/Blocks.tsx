@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { cellKey } from "@/lib/grid";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { GameOverlay } from "@/components/games/GameOverlay";
 
 type PieceType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 
@@ -122,20 +125,6 @@ function lockPiece(piece: PieceState, board: boolean[][]): LockResult {
   return { board: cleaned, gameOver: false, cleared };
 }
 
-function loadHighScore(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = window.localStorage.getItem(HIGH_SCORE_KEY);
-    return raw ? Number(raw) || 0 : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function cellKey(row: number, col: number): string {
-  return `${row}:${col}`;
-}
-
 export function Blocks() {
   const [board, setBoard] = useState<boolean[][]>(() => emptyBoard());
   const [current, setCurrent] = useState<PieceState | null>(null);
@@ -144,31 +133,22 @@ export function Blocks() {
   const [score, setScore] = useState(0);
   const [lines, setLines] = useState(0);
   const [level, setLevel] = useState(1);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useLocalStorageState(HIGH_SCORE_KEY, 0);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [clearFlash, setClearFlash] = useState(false);
 
   const bagRef = useRef<PieceType[]>([]);
   const speedRef = useRef(START_SPEED);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Lido depois de montar (não no render inicial) para o HTML do servidor
-    // e a primeira renderização no cliente baterem — ver a mesma técnica em
-    // WordSearch.tsx.
-    const timer = window.setTimeout(() => setHighScore(loadHighScore()), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  const endGame = useCallback((finalScore: number) => {
-    setStatus("gameover");
-    setHighScore((prev) => {
-      const next = Math.max(prev, finalScore);
-      try {
-        window.localStorage.setItem(HIGH_SCORE_KEY, String(next));
-      } catch {
-        // localStorage indisponível (modo privado, etc.) — recorde some ao fechar a aba.
-      }
-      return next;
-    });
-  }, []);
+  const endGame = useCallback(
+    (finalScore: number) => {
+      setStatus("gameover");
+      setIsNewHighScore(finalScore > highScore);
+      setHighScore((prev) => Math.max(prev, finalScore));
+    },
+    [highScore, setHighScore]
+  );
 
   const advanceAfterLock = useCallback(
     (pieceToLock: PieceState, bonus = 0) => {
@@ -185,6 +165,7 @@ export function Blocks() {
         newScore += LINE_SCORE[result.cleared] * level;
         setLines(newLines);
         setLevel(newLevel);
+        setClearFlash(true);
         speedRef.current = Math.max(MIN_SPEED, START_SPEED - (newLevel - 1) * SPEED_STEP_PER_LEVEL);
       }
       if (newScore !== score) setScore(newScore);
@@ -220,6 +201,8 @@ export function Blocks() {
     setCurrent({ type, rotation: 0, ...spawnPosition(type) });
     setNextType(preview);
     setStatus("playing");
+    setIsNewHighScore(false);
+    containerRef.current?.focus();
   }
 
   const togglePause = useCallback(() => {
@@ -277,6 +260,11 @@ export function Blocks() {
   }, [status, current, board, advanceAfterLock]);
 
   useEffect(() => {
+    // Escuta no contêiner do jogo (não em `window`) para que os controles não
+    // "vazem" para outros campos da página — ver o mesmo raciocínio em Snake.tsx.
+    const container = containerRef.current;
+    if (!container) return;
+
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "p" || event.key === "P" || event.key === "Escape") {
         event.preventDefault();
@@ -315,9 +303,15 @@ export function Blocks() {
           break;
       }
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    container.addEventListener("keydown", handleKeyDown);
+    return () => container.removeEventListener("keydown", handleKeyDown);
   }, [status, togglePause, tryMove, tryRotate, hardDrop]);
+
+  useEffect(() => {
+    if (!clearFlash) return;
+    const timer = window.setTimeout(() => setClearFlash(false), 250);
+    return () => window.clearTimeout(timer);
+  }, [clearFlash]);
 
   const currentCells = useMemo(() => (current ? pieceCells(current) : []), [current]);
 
@@ -346,17 +340,26 @@ export function Blocks() {
     status === "idle" ? "Pronto para jogar?" : status === "paused" ? "Pausado" : status === "gameover" ? "Fim de jogo!" : null;
 
   return (
-    <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-5 sm:flex-row sm:items-start sm:justify-center">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted sm:flex-row sm:items-start sm:justify-center"
+    >
       <div className="flex flex-col items-center gap-4">
         <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo dos Blocos</h1>
 
-        <div className="w-full rounded-2xl border-4 border-polis-ink bg-polis-ink p-3 shadow-lg">
+        <div
+          className={cn(
+            "w-full border-2 bg-polis-ink p-px transition-colors duration-200 sm:w-auto",
+            clearFlash ? "border-polis-gold" : "border-polis-ink"
+          )}
+        >
           <div
-            className="relative mx-auto w-[200px] overflow-hidden rounded-sm bg-[#9ead86] sm:w-[240px]"
+            className="relative mx-auto w-[200px] overflow-hidden sm:w-[240px]"
             style={{ aspectRatio: `${COLS} / ${ROWS}` }}
           >
             <div
-              className="grid h-full w-full"
+              className="grid h-full w-full gap-px bg-polis-ink"
               style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${ROWS}, minmax(0, 1fr))` }}
             >
               {board.map((rowCells, r) =>
@@ -368,8 +371,9 @@ export function Blocks() {
                     <div
                       key={key}
                       className={cn(
-                        filled && "bg-[#20281a]",
-                        isGhost && "border border-[#20281a]/40"
+                        "bg-polis-paper",
+                        filled && (clearFlash ? "bg-polis-gold" : "bg-polis-ink"),
+                        isGhost && "border border-polis-ink/40"
                       )}
                     />
                   );
@@ -378,17 +382,13 @@ export function Blocks() {
             </div>
 
             {overlayMessage && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#9ead86]/90 px-3 text-center">
-                <p className="font-serif text-lg font-bold text-[#20281a]">{overlayMessage}</p>
-                {status === "gameover" && <p className="text-xs text-[#2b331f]">Você fez {score} pontos.</p>}
-                <button
-                  type="button"
-                  onClick={startGame}
-                  className="border border-[#20281a] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#20281a] transition-colors hover:bg-[#20281a] hover:text-[#9ead86]"
-                >
-                  {status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
-                </button>
-              </div>
+              <GameOverlay
+                title={overlayMessage}
+                subtitle={status === "gameover" ? `Você fez ${score} pontos.` : undefined}
+                actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
+                onAction={status === "paused" ? togglePause : startGame}
+                isNewHighScore={status === "gameover" && isNewHighScore}
+              />
             )}
           </div>
         </div>

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { buildCrosswordGrid, type CrosswordEntry, type CrosswordPuzzle } from "@/lib/crosswords";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
+import { cellKey } from "@/lib/grid";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 
 type Direction = "across" | "down";
 
@@ -17,10 +19,6 @@ interface StoredProgress {
   completed: boolean;
 }
 
-function cellKey(row: number, col: number): string {
-  return `${row}:${col}`;
-}
-
 function progressKey(slug: string): string {
   return `polis:crossword:${slug}`;
 }
@@ -29,39 +27,31 @@ function emptyAnswers(rows: number, cols: number): string[][] {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ""));
 }
 
-function loadProgress(slug: string, rows: number, cols: number): StoredProgress {
-  const empty = emptyAnswers(rows, cols);
-  if (typeof window === "undefined") return { answers: empty, elapsedSeconds: 0, completed: false };
-  try {
-    const raw = window.localStorage.getItem(progressKey(slug));
-    if (!raw) return { answers: empty, elapsedSeconds: 0, completed: false };
-    const parsed = JSON.parse(raw) as StoredProgress;
-    if (parsed.answers.length !== rows || parsed.answers[0]?.length !== cols) {
-      return { answers: empty, elapsedSeconds: 0, completed: false };
-    }
-    return parsed;
-  } catch {
-    return { answers: empty, elapsedSeconds: 0, completed: false };
-  }
-}
-
-function formatTime(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
 interface CrosswordProps {
   puzzle: CrosswordPuzzle;
 }
 
 export function Crossword({ puzzle }: CrosswordProps) {
   const { rows, cols, cells } = useMemo(() => buildCrosswordGrid(puzzle), [puzzle]);
-  const initial = useMemo(() => loadProgress(puzzle.slug, rows, cols), [puzzle.slug, rows, cols]);
 
-  const [answers, setAnswers] = useState<string[][]>(initial.answers);
-  const [elapsedSeconds, setElapsedSeconds] = useState(initial.elapsedSeconds);
-  const [completed, setCompleted] = useState(initial.completed);
+  const defaultProgress = useMemo<StoredProgress>(
+    () => ({ answers: emptyAnswers(rows, cols), elapsedSeconds: 0, completed: false }),
+    [rows, cols]
+  );
+
+  const [progress, setProgress] = useLocalStorageState<StoredProgress>(progressKey(puzzle.slug), defaultProgress, {
+    deserialize: (raw) => {
+      const parsed = JSON.parse(raw) as StoredProgress;
+      // Descarta progresso salvo de uma edição com dimensões diferentes
+      // (grade mudou de tamanho) em vez de tentar encaixar respostas erradas.
+      if (parsed.answers.length !== rows || parsed.answers[0]?.length !== cols) {
+        return defaultProgress;
+      }
+      return parsed;
+    },
+  });
+  const { answers, elapsedSeconds, completed } = progress;
+
   const [selected, setSelected] = useState<Position | null>(null);
   const [direction, setDirection] = useState<Direction>("across");
   const [checkResults, setCheckResults] = useState<boolean[][] | null>(null);
@@ -95,17 +85,6 @@ export function Crossword({ puzzle }: CrosswordProps) {
       return row === entry.row && col >= entry.col && col < entry.col + entry.answer.length;
     }
     return col === entry.col && row >= entry.row && row < entry.row + entry.answer.length;
-  }
-
-  function persist(nextAnswers: string[][], nextElapsed: number, nextCompleted: boolean) {
-    try {
-      window.localStorage.setItem(
-        progressKey(puzzle.slug),
-        JSON.stringify({ answers: nextAnswers, elapsedSeconds: nextElapsed, completed: nextCompleted })
-      );
-    } catch {
-      // localStorage indisponível (modo privado, etc.) — progresso segue só em memória.
-    }
   }
 
   function isFullyCorrect(candidate: string[][]): boolean {
@@ -156,12 +135,10 @@ export function Crossword({ puzzle }: CrosswordProps) {
     const letter = value.slice(-1).toUpperCase().replace(/[^A-Z]/g, "");
     const next = answers.map((r) => [...r]);
     next[row][col] = letter;
-    setAnswers(next);
     setCheckResults(null);
 
     const done = isFullyCorrect(next);
-    setCompleted(done);
-    persist(next, elapsedSeconds, done);
+    setProgress({ answers: next, elapsedSeconds, completed: done });
 
     if (letter) {
       const nextPos = moveInDirection({ row, col }, direction, 1);
@@ -178,8 +155,7 @@ export function Crossword({ puzzle }: CrosswordProps) {
       if (prev) {
         const next = answers.map((r) => [...r]);
         next[prev.row][prev.col] = "";
-        setAnswers(next);
-        persist(next, elapsedSeconds, false);
+        setProgress({ answers: next, elapsedSeconds, completed: false });
         setSelected(prev);
         focusCell(prev.row, prev.col);
       }
@@ -218,24 +194,17 @@ export function Crossword({ puzzle }: CrosswordProps) {
 
   function handleReveal() {
     const next = cells.map((rowCells) => rowCells.map((cell) => cell.letter ?? ""));
-    setAnswers(next);
     setCheckResults(null);
-    setCompleted(true);
-    persist(next, elapsedSeconds, true);
+    setProgress({ answers: next, elapsedSeconds, completed: true });
   }
 
   useEffect(() => {
     if (completed) return;
     const interval = window.setInterval(() => {
-      setElapsedSeconds((seconds) => {
-        const next = seconds + 1;
-        persist(answers, next, completed);
-        return next;
-      });
+      setProgress((prev) => ({ ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }));
     }, 1000);
     return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completed]);
+  }, [completed, setProgress]);
 
   const currentClueEntry = selected ? entryFor(selected, direction) : undefined;
   const acrossEntries = puzzle.entries.filter((e) => e.direction === "across").sort((a, b) => a.number - b.number);

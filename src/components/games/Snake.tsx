@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { GameOverlay } from "@/components/games/GameOverlay";
 
 interface Point {
   x: number;
@@ -67,28 +69,21 @@ function randomFood(snake: Point[]): Point {
   return candidate;
 }
 
-function loadHighScore(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = window.localStorage.getItem(HIGH_SCORE_KEY);
-    return raw ? Number(raw) || 0 : 0;
-  } catch {
-    return 0;
-  }
-}
-
 export function Snake() {
   const [snake, setSnake] = useState<Point[]>(INITIAL_SNAKE);
   const [food, setFood] = useState<Point>(INITIAL_FOOD);
   const [status, setStatus] = useState<Status>("idle");
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState<number>(() => loadHighScore());
+  const [highScore, setHighScore] = useLocalStorageState(HIGH_SCORE_KEY, 0);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [eatenPulse, setEatenPulse] = useState<Point | null>(null);
 
   const directionRef = useRef<Direction>(INITIAL_DIRECTION);
   const nextDirectionRef = useRef<Direction>(INITIAL_DIRECTION);
   const speedRef = useRef(START_SPEED);
   const scoreRef = useRef(0);
   const touchStartRef = useRef<Point | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -99,6 +94,8 @@ export function Snake() {
     nextDirectionRef.current = INITIAL_DIRECTION;
     speedRef.current = START_SPEED;
     setStatus("playing");
+    setIsNewHighScore(false);
+    containerRef.current?.focus();
   }, []);
 
   const queueDirection = useCallback(
@@ -115,6 +112,12 @@ export function Snake() {
   }, []);
 
   useEffect(() => {
+    // Escuta no contêiner do jogo (não em `window`) para que setas/espaço só
+    // afetem a cobra quando o tabuleiro estiver focado — assim não "vazam"
+    // para outros campos da página (ex.: um campo de busca).
+    const container = containerRef.current;
+    if (!container) return;
+
     function handleKeyDown(event: KeyboardEvent) {
       const direction = KEY_TO_DIRECTION[event.key];
       if (direction) {
@@ -127,8 +130,8 @@ export function Snake() {
         togglePause();
       }
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    container.addEventListener("keydown", handleKeyDown);
+    return () => container.removeEventListener("keydown", handleKeyDown);
   }, [queueDirection, togglePause]);
 
   useEffect(() => {
@@ -148,15 +151,8 @@ export function Snake() {
 
       if (collided) {
         setStatus("gameover");
-        setHighScore((prev) => {
-          const next = Math.max(prev, scoreRef.current);
-          try {
-            window.localStorage.setItem(HIGH_SCORE_KEY, String(next));
-          } catch {
-            // localStorage indisponível (modo privado, etc.) — recorde some ao fechar a aba.
-          }
-          return next;
-        });
+        setIsNewHighScore(scoreRef.current > highScore);
+        setHighScore((prev) => Math.max(prev, scoreRef.current));
         return;
       }
 
@@ -166,13 +162,20 @@ export function Snake() {
       if (ateFood) {
         scoreRef.current += 1;
         setScore(scoreRef.current);
+        setEatenPulse(food);
         setFood(randomFood(newSnake));
         speedRef.current = Math.max(MIN_SPEED, speedRef.current - SPEED_STEP);
       }
     }, speedRef.current);
 
     return () => window.clearTimeout(timer);
-  }, [status, snake, food]);
+  }, [status, snake, food, highScore, setHighScore]);
+
+  useEffect(() => {
+    if (!eatenPulse) return;
+    const timer = window.setTimeout(() => setEatenPulse(null), 300);
+    return () => window.clearTimeout(timer);
+  }, [eatenPulse]);
 
   function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     const touch = event.touches[0];
@@ -206,7 +209,11 @@ export function Snake() {
           : null;
 
   return (
-    <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-5">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted"
+    >
       <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Cobrinha</h1>
 
       <div className="flex w-full items-center justify-around border-y border-polis-rule/30 py-2 text-sm text-polis-ink">
@@ -218,9 +225,9 @@ export function Snake() {
         </span>
       </div>
 
-      <div className="w-full rounded-2xl border-4 border-polis-ink bg-polis-ink p-3 shadow-lg">
+      <div className="w-full border-2 border-polis-ink">
         <div
-          className="relative w-full overflow-hidden rounded-sm bg-[#9ead86]"
+          className="relative w-full overflow-hidden bg-polis-paper-soft"
           style={{ aspectRatio: `${COLS} / ${ROWS}` }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -228,7 +235,7 @@ export function Snake() {
           {snake.map((segment, index) => (
             <div
               key={index}
-              className={cn("absolute rounded-[1px]", index === 0 ? "bg-[#20281a]" : "bg-[#2b331f]")}
+              className={cn("absolute", index === 0 ? "bg-polis-ink" : "bg-polis-ink/85")}
               style={{
                 width: `${100 / COLS}%`,
                 height: `${100 / ROWS}%`,
@@ -239,7 +246,7 @@ export function Snake() {
           ))}
 
           <div
-            className="absolute rounded-full bg-[#2b331f]"
+            className="absolute rounded-full bg-polis-gold-ink"
             style={{
               width: `${100 / COLS}%`,
               height: `${100 / ROWS}%`,
@@ -248,18 +255,26 @@ export function Snake() {
             }}
           />
 
+          {eatenPulse && (
+            <div
+              className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-polis-gold/70"
+              style={{
+                width: `${100 / COLS}%`,
+                height: `${100 / ROWS}%`,
+                left: `${(eatenPulse.x / COLS) * 100}%`,
+                top: `${(eatenPulse.y / ROWS) * 100}%`,
+              }}
+            />
+          )}
+
           {overlayMessage && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#9ead86]/90 text-center">
-              <p className="font-serif text-xl font-bold text-[#20281a]">{overlayMessage}</p>
-              {status === "gameover" && <p className="text-sm text-[#2b331f]">Você fez {score} pontos.</p>}
-              <button
-                type="button"
-                onClick={startGame}
-                className="border border-[#20281a] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#20281a] transition-colors hover:bg-[#20281a] hover:text-[#9ead86]"
-              >
-                {status === "idle" ? "Jogar" : "Jogar novamente"}
-              </button>
-            </div>
+            <GameOverlay
+              title={overlayMessage}
+              subtitle={status === "gameover" ? `Você fez ${score} pontos.` : undefined}
+              actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
+              onAction={status === "paused" ? togglePause : startGame}
+              isNewHighScore={status === "gameover" && isNewHighScore}
+            />
           )}
         </div>
       </div>

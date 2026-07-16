@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GameRegistrationForm, type GameRegistrationSlot } from "@/components/forms/GameRegistrationForm";
 import { cn } from "@/lib/utils";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 
 type Cell = "X" | "O" | null;
 type Mode = "cpu" | "local";
@@ -70,16 +71,6 @@ function scoreKey(mode: Mode, nameX: string, nameO: string): string {
   return `polis:tictactoe:${mode}:${nameX.toLowerCase()}:${nameO.toLowerCase()}`;
 }
 
-function loadScore(key: string): Score {
-  if (typeof window === "undefined") return EMPTY_SCORE;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Score) : EMPTY_SCORE;
-  } catch {
-    return EMPTY_SCORE;
-  }
-}
-
 export function TicTacToe() {
   const [stage, setStage] = useState<Stage>("mode");
   const [mode, setMode] = useState<Mode | null>(null);
@@ -88,7 +79,9 @@ export function TicTacToe() {
   const [board, setBoard] = useState<Cell[]>(EMPTY_BOARD);
   const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
   const [startingPlayer, setStartingPlayer] = useState<"X" | "O">("X");
-  const [score, setScore] = useState<Score>(EMPTY_SCORE);
+  // A chave só fica "real" depois do cadastro (quando mode/nomes são
+  // definidos) — o hook recarrega sozinho sempre que a chave muda.
+  const [score, setScore] = useLocalStorageState<Score>(scoreKey(mode ?? "local", nameX, nameO), EMPTY_SCORE);
 
   const outcome = calculateWinner(board);
   const draw = !outcome && isDraw(board);
@@ -105,7 +98,9 @@ export function TicTacToe() {
     const o = mode === "cpu" ? "Computador" : names[1]?.trim() || "Jogador 2";
     setNameX(x);
     setNameO(o);
-    setScore(loadScore(scoreKey(mode ?? "local", x, o)));
+    // Mudar nameX/nameO muda a chave usada por useLocalStorageState acima,
+    // que recarrega sozinho o placar salvo para este par assim que a chave
+    // muda — não precisa carregar manualmente aqui.
     setStartingPlayer("X");
     setCurrentPlayer("X");
     setBoard(EMPTY_BOARD);
@@ -113,22 +108,13 @@ export function TicTacToe() {
   }
 
   function registerResult(result: "X" | "O" | "draw") {
-    setScore((prev) => {
-      const next: Score =
-        result === "draw"
-          ? { ...prev, draws: prev.draws + 1 }
-          : result === "X"
-            ? { ...prev, x: prev.x + 1 }
-            : { ...prev, o: prev.o + 1 };
-      if (mode) {
-        try {
-          window.localStorage.setItem(scoreKey(mode, nameX, nameO), JSON.stringify(next));
-        } catch {
-          // localStorage indisponível (modo privado, etc.) — placar segue só em memória.
-        }
-      }
-      return next;
-    });
+    setScore((prev) =>
+      result === "draw"
+        ? { ...prev, draws: prev.draws + 1 }
+        : result === "X"
+          ? { ...prev, x: prev.x + 1 }
+          : { ...prev, o: prev.o + 1 }
+    );
   }
 
   function commitMove(index: number, player: "X" | "O") {
@@ -163,7 +149,9 @@ export function TicTacToe() {
     setStage("mode");
     setMode(null);
     setBoard(EMPTY_BOARD);
-    setScore(EMPTY_SCORE);
+    // Não zera `score` aqui: como ele agora também persiste em localStorage,
+    // isso sobrescreveria o placar salvo do par com zeros. O placar da tela
+    // de "mode" nem é exibido; o par seguinte recarrega o dele sozinho.
   }
 
   useEffect(() => {

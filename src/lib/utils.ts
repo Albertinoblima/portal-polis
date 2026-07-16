@@ -10,6 +10,13 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Formata segundos como "MM:SS", para cronômetros de jogos (Palavras Cruzadas, Caça-Palavras). */
+export function formatTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function slugify(value: string): string {
   return value
     .normalize("NFD")

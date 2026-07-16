@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildWordSearchGrid, type WordSearchCell, type WordSearchPuzzle } from "@/lib/wordsearch";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
+import { cellKey as coordsKey } from "@/lib/grid";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+
+interface Progress {
+  foundWords: Set<string>;
+  elapsedSeconds: number;
+}
 
 interface StoredProgress {
   foundWords: string[];
@@ -10,7 +17,7 @@ interface StoredProgress {
 }
 
 function cellKey(cell: WordSearchCell): string {
-  return `${cell.row}:${cell.col}`;
+  return coordsKey(cell.row, cell.col);
 }
 
 function cellSetKey(cells: WordSearchCell[]): string {
@@ -41,38 +48,6 @@ function lineCells(start: WordSearchCell, end: WordSearchCell): WordSearchCell[]
 
 function progressKey(slug: string): string {
   return `polis:wordsearch:${slug}`;
-}
-
-function loadProgress(slug: string): StoredProgress {
-  if (typeof window === "undefined") return { foundWords: [], elapsedSeconds: 0 };
-  try {
-    const raw = window.localStorage.getItem(progressKey(slug));
-    if (!raw) return { foundWords: [], elapsedSeconds: 0 };
-    const parsed = JSON.parse(raw) as Partial<StoredProgress>;
-    return {
-      foundWords: Array.isArray(parsed.foundWords) ? parsed.foundWords : [],
-      elapsedSeconds: typeof parsed.elapsedSeconds === "number" ? parsed.elapsedSeconds : 0,
-    };
-  } catch {
-    return { foundWords: [], elapsedSeconds: 0 };
-  }
-}
-
-function persistProgress(slug: string, foundWords: Set<string>, elapsedSeconds: number) {
-  try {
-    window.localStorage.setItem(
-      progressKey(slug),
-      JSON.stringify({ foundWords: [...foundWords], elapsedSeconds })
-    );
-  } catch {
-    // localStorage indisponível (modo privado, etc.) — progresso segue só em memória.
-  }
-}
-
-function formatTime(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function segmentFor(cells: WordSearchCell[]) {
@@ -110,49 +85,39 @@ export function WordSearch({ puzzle }: WordSearchProps) {
     return map;
   }, [grid]);
 
-  // Começa "zerado" (igual ao HTML renderizado no servidor, que nunca tem
-  // acesso ao localStorage do leitor) e só troca para o progresso salvo
-  // depois de montar no cliente — ler localStorage direto no render (como um
-  // useMemo síncrono) faria o cliente hidratar com um valor diferente do que
-  // o servidor mandou, gerando o erro "hydration mismatch" do React.
-  const [foundWords, setFoundWords] = useState<Set<string>>(() => new Set());
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
+  const [progress, setProgress] = useLocalStorageState<Progress>(
+    progressKey(puzzle.slug),
+    { foundWords: new Set(), elapsedSeconds: 0 },
+    {
+      serialize: (value) =>
+        JSON.stringify({ foundWords: [...value.foundWords], elapsedSeconds: value.elapsedSeconds }),
+      deserialize: (raw) => {
+        const parsed = JSON.parse(raw) as Partial<StoredProgress>;
+        return {
+          foundWords: new Set(Array.isArray(parsed.foundWords) ? parsed.foundWords : []),
+          elapsedSeconds: typeof parsed.elapsedSeconds === "number" ? parsed.elapsedSeconds : 0,
+        };
+      },
+    }
+  );
+  const { foundWords, elapsedSeconds } = progress;
+
   const [dragStart, setDragStart] = useState<WordSearchCell | null>(null);
   const [dragCurrent, setDragCurrent] = useState<WordSearchCell | null>(null);
   const [missCells, setMissCells] = useState<WordSearchCell[] | null>(null);
   const [lastFound, setLastFound] = useState<string | null>(null);
 
   const pointerActiveRef = useRef(false);
-  const foundWordsRef = useRef(foundWords);
 
-  const completed = hydrated && foundWords.size === puzzle.words.length;
-
-  useEffect(() => {
-    foundWordsRef.current = foundWords;
-  }, [foundWords]);
+  const completed = foundWords.size === puzzle.words.length;
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const stored = loadProgress(puzzle.slug);
-      setFoundWords(new Set(stored.foundWords));
-      setElapsedSeconds(stored.elapsedSeconds);
-      setHydrated(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [puzzle.slug]);
-
-  useEffect(() => {
-    if (completed || !hydrated) return;
+    if (completed) return;
     const interval = window.setInterval(() => {
-      setElapsedSeconds((seconds) => {
-        const next = seconds + 1;
-        persistProgress(puzzle.slug, foundWordsRef.current, next);
-        return next;
-      });
+      setProgress((prev) => ({ ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }));
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [completed, hydrated, puzzle.slug]);
+  }, [completed, setProgress]);
 
   useEffect(() => {
     if (!missCells) return;
@@ -165,12 +130,11 @@ export function WordSearch({ puzzle }: WordSearchProps) {
     if (!cells || cells.length < 2) return;
 
     const match = placementByKey.get(cellSetKey(cells));
-    if (match && !foundWordsRef.current.has(match.word)) {
-      const next = new Set(foundWordsRef.current);
-      next.add(match.word);
-      setFoundWords(next);
+    if (match && !foundWords.has(match.word)) {
+      const nextFound = new Set(foundWords);
+      nextFound.add(match.word);
+      setProgress({ foundWords: nextFound, elapsedSeconds });
       setLastFound(match.word);
-      persistProgress(puzzle.slug, next, elapsedSeconds);
     } else if (!match) {
       setMissCells(cells);
     }
@@ -218,9 +182,7 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   }
 
   function handleReveal() {
-    const all = new Set(puzzle.words);
-    setFoundWords(all);
-    persistProgress(puzzle.slug, all, elapsedSeconds);
+    setProgress({ foundWords: new Set(puzzle.words), elapsedSeconds });
   }
 
   const dragCells = useMemo(
@@ -254,14 +216,9 @@ export function WordSearch({ puzzle }: WordSearchProps) {
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-lg border-4 border-polis-ink bg-polis-navy p-3 shadow-lg">
-          <div className="mb-2 flex items-center justify-between gap-4 font-mono text-[9px] uppercase tracking-[0.25em] text-polis-gold/60">
-            <span>Busca Lexical</span>
-            <span>Tema: {puzzle.theme}</span>
-          </div>
-
+        <div className="overflow-x-auto border-2 border-polis-ink bg-polis-ink p-px">
           <div
-            className="relative touch-none select-none"
+            className="relative touch-none select-none gap-px bg-polis-ink"
             style={{ display: "grid", gridTemplateColumns: `repeat(${grid.size}, minmax(0, 1fr))` }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -270,14 +227,6 @@ export function WordSearch({ puzzle }: WordSearchProps) {
             role="img"
             aria-label={`Grade de ${grid.size} por ${grid.size} letras. ${foundWords.size} de ${puzzle.words.length} palavras encontradas. Use o mouse ou o toque para arrastar sobre uma palavra.`}
           >
-            <div
-              className="pointer-events-none absolute inset-0 opacity-[0.06]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(180deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px)",
-              }}
-            />
-
             {grid.letters.map((rowLetters, r) =>
               rowLetters.map((letter, c) => {
                 const key = cellKey({ row: r, col: c });
@@ -290,9 +239,9 @@ export function WordSearch({ puzzle }: WordSearchProps) {
                     data-row={r}
                     data-col={c}
                     className={cn(
-                      "flex h-7 w-7 items-center justify-center font-mono text-sm font-bold uppercase text-polis-off-white/70 transition-colors duration-150 sm:h-9 sm:w-9 sm:text-base",
-                      (isDragging || isFound) && "text-polis-gold",
-                      isMiss && "text-red-400"
+                      "flex h-7 w-7 items-center justify-center bg-polis-paper font-serif text-sm font-bold uppercase text-polis-ink-soft transition-colors duration-150 sm:h-9 sm:w-9 sm:text-base",
+                      (isDragging || isFound) && "text-polis-gold-ink",
+                      isMiss && "text-red-700"
                     )}
                   >
                     {letter}
@@ -343,7 +292,7 @@ export function WordSearch({ puzzle }: WordSearchProps) {
               {missCells && missCells.length >= 2 && (
                 <line
                   {...segmentFor(missCells)}
-                  stroke="#f87171"
+                  stroke="#b91c1c"
                   strokeWidth={0.5}
                   strokeLinecap="round"
                   opacity={0.75}
@@ -373,7 +322,7 @@ export function WordSearch({ puzzle }: WordSearchProps) {
 
       <div className="w-full max-w-sm flex-1">
         <h2 className="mb-3 font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-sm">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           {puzzle.words.map((word) => {
             const found = foundWords.has(word);
             return (
