@@ -96,6 +96,15 @@ export interface Article {
   updatedAt: string;
 }
 
+export interface Edition {
+  /** 1 = primeira edição (mais antiga); cresce a cada novo dia com matéria publicada. */
+  number: number;
+  /** "YYYY-MM-DD" — dia de publicação das matérias desta edição. */
+  date: string;
+  /** Matérias publicadas neste dia, da mais recente para a mais antiga. */
+  articles: Article[];
+}
+
 export interface Banner {
   id: string;
   title: string;

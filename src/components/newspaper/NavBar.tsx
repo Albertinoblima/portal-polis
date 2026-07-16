@@ -20,6 +20,7 @@ const INSTITUTIONAL_LINKS = [
 const ENTERTAINMENT_LINKS = [
   { href: "/entretenimento/jogos", label: "Jogos" },
   { href: "/entretenimento/palavras-cruzadas", label: "Palavras Cruzadas" },
+  { href: "/entretenimento/caca-palavras", label: "Caça-Palavras" },
 ];
 
 export function NavBar() {
@@ -55,6 +56,12 @@ export function NavBar() {
           className="text-xs font-medium uppercase tracking-wide text-polis-ink-soft hover:text-polis-gold-ink"
         >
           Sobre
+        </Link>
+        <Link
+          href="/biblioteca"
+          className="text-xs font-medium uppercase tracking-wide text-polis-ink-soft hover:text-polis-gold-ink"
+        >
+          Biblioteca
         </Link>
         <div className="relative">
           <button
@@ -154,6 +161,11 @@ export function NavBar() {
             <li>
               <Link href="/sobre" className="block py-1 text-sm" onClick={() => setIsMenuOpen(false)}>
                 Sobre
+              </Link>
+            </li>
+            <li>
+              <Link href="/biblioteca" className="block py-1 text-sm" onClick={() => setIsMenuOpen(false)}>
+                Biblioteca
               </Link>
             </li>
             <li className="mt-2 border-t border-polis-rule/20 pt-2 text-[11px] font-semibold uppercase tracking-wide text-polis-ink-soft">

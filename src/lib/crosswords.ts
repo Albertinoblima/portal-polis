@@ -135,9 +135,13 @@ function todayIso(): string {
 }
 
 /** A "edição de hoje" é sempre a publicação mais recente com data <= hoje —
- *  assim ela permanece no ar até a próxima ser publicada, como um jornal real. */
-export function getLatestCrossword(puzzles: CrosswordPuzzle[]): CrosswordPuzzle | null {
-  const today = todayIso();
-  const eligible = puzzles.filter((p) => p.date <= today).sort((a, b) => b.date.localeCompare(a.date));
+ *  assim ela permanece no ar até a próxima ser publicada, como um jornal real.
+ *  Aceita uma data de referência opcional (default: hoje) para casar uma
+ *  edição de jornal específica com a cruzada que estava no ar naquela data. */
+export function getLatestCrossword(
+  puzzles: CrosswordPuzzle[],
+  referenceDate: string = todayIso()
+): CrosswordPuzzle | null {
+  const eligible = puzzles.filter((p) => p.date <= referenceDate).sort((a, b) => b.date.localeCompare(a.date));
   return eligible[0] ?? puzzles[0] ?? null;
 }

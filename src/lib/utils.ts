@@ -10,6 +10,22 @@ export function formatDate(iso: string): string {
   });
 }
 
+/**
+ * Formata uma data "YYYY-MM-DD" pura (sem horário), como as de `Edition`,
+ * `CrosswordPuzzle` e `WordSearchPuzzle`. `new Date("YYYY-MM-DD")` (usado por
+ * `formatDate`) interpreta a string como meia-noite UTC — em fusos com offset
+ * negativo isso volta um dia na hora de exibir. Construir a data a partir dos
+ * componentes locais evita essa conversão.
+ */
+export function formatDateOnly(dateOnly: string): string {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 /** Formata segundos como "MM:SS", para cronômetros de jogos (Palavras Cruzadas, Caça-Palavras). */
 export function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);

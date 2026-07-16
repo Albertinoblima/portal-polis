@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PageChrome } from "@/components/newspaper/PageChrome";
 import { Crossword } from "@/components/games/Crossword";
 import { CROSSWORDS, getLatestCrossword } from "@/lib/crosswords";
-import { formatDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Palavras Cruzadas",
@@ -30,7 +30,7 @@ export default function PalavrasCruzadasPage() {
           <div className="mx-auto mb-8 max-w-4xl text-center">
             <h1 className="font-serif text-4xl font-bold text-polis-ink">Palavras Cruzadas</h1>
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição de {formatDate(puzzle.date)} · Tema: {puzzle.theme}
+              Edição de {formatDateOnly(puzzle.date)} · Tema: {puzzle.theme}
             </p>
             <p className="mx-auto mt-3 max-w-md text-sm text-polis-ink-soft">
               Uma palavra cruzada nova todo dia, no espírito dos passatempos de jornal impresso —

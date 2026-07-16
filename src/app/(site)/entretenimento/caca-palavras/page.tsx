@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PageChrome } from "@/components/newspaper/PageChrome";
 import { WordSearch } from "@/components/games/WordSearch";
 import { WORDSEARCHES, getLatestWordSearch } from "@/lib/wordsearch";
-import { formatDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Caça-Palavras",
@@ -30,7 +30,7 @@ export default function CacaPalavrasPage() {
           <div className="mx-auto mb-8 max-w-4xl text-center">
             <h1 className="font-serif text-4xl font-bold text-polis-ink">Caça-Palavras</h1>
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição de {formatDate(puzzle.date)} · Tema: {puzzle.theme}
+              Edição de {formatDateOnly(puzzle.date)} · Tema: {puzzle.theme}
             </p>
             <p className="mx-auto mt-3 max-w-md text-sm text-polis-ink-soft">
               Um caça-palavras novo todo dia — arraste sobre as letras para encontrar cada termo,
