@@ -17,9 +17,10 @@ export function formatDate(iso: string): string {
  * negativo isso volta um dia na hora de exibir. Construir a data a partir dos
  * componentes locais evita essa conversão.
  */
-export function formatDateOnly(dateOnly: string): string {
+export function formatDateOnly(dateOnly: string, options?: { weekday?: boolean }): string {
   const [year, month, day] = dateOnly.split("-").map(Number);
   return new Date(year, month - 1, day).toLocaleDateString("pt-BR", {
+    weekday: options?.weekday ? "long" : undefined,
     day: "2-digit",
     month: "long",
     year: "numeric",

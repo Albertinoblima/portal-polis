@@ -12,6 +12,7 @@ import {
   getPublishedArticles,
   getRelatedArticles,
 } from "@/lib/content";
+import { getEditionForArticle } from "@/lib/editions";
 import { withPlaceholderParam } from "@/lib/utils";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
@@ -69,6 +70,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const author = getAuthors().find((a) => a.id === article.authorId);
   const related = getRelatedArticles(article);
   const articleUrl = `${SITE_URL}/materia/${article.slug}/`;
+  const owningEdition = getEditionForArticle(article);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -125,7 +127,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Newspaper sectionLabel={editoria?.name ?? "Matéria"} runningTitle={article.title} showMasthead blocks={blocks} />
+      <Newspaper
+        sectionLabel={editoria?.name ?? "Matéria"}
+        runningTitle={article.title}
+        showMasthead
+        edition={owningEdition ? { number: owningEdition.number, date: owningEdition.date } : undefined}
+        blocks={blocks}
+      />
     </>
   );
 }

@@ -8,7 +8,7 @@ import { Crossword } from "@/components/games/Crossword";
 import { WordSearch } from "@/components/games/WordSearch";
 import { getEditoriaById, getAuthors } from "@/lib/content";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
-import { formatDate, formatDateOnly } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 interface ArticleBlockOptions {
   editoria?: Editoria;
@@ -87,18 +87,32 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
  * edições seguidas; `/edicao/[number]` usa uma só).
  */
 export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
+  const topStory = edition.articles[0];
+
   const blocks: NewspaperBlock[] = [
     {
       type: "node",
+      columns: 1,
       node: (
-        <div className="flex h-full flex-col items-center justify-center text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-polis-gold-ink">
-            Edição nº {edition.number}
-          </p>
-          <h2 className="mt-2 font-serif text-3xl font-bold text-polis-ink md:text-5xl">
-            {formatDateOnly(edition.date)}
-          </h2>
-          <ol className="mx-auto mt-8 max-w-md list-decimal space-y-2 text-left text-sm text-polis-ink">
+        <div className="grid h-full grid-cols-1 items-center gap-8 sm:grid-cols-2">
+          {topStory ? (
+            <Link
+              href={`/materia/${topStory.slug}`}
+              className="relative block aspect-[4/3] overflow-hidden rounded-sm bg-polis-ink/5"
+            >
+              <Image
+                src={topStory.featuredImage}
+                alt={topStory.featuredImageAlt}
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-contain p-6 grayscale"
+                priority
+              />
+            </Link>
+          ) : (
+            <div />
+          )}
+          <ol className="mx-auto max-w-md list-decimal space-y-2 text-left text-sm text-polis-ink">
             {edition.articles.map((article) => (
               <li key={article.id}>
                 <Link href={`/materia/${article.slug}`} className="hover:text-polis-gold-ink hover:underline">

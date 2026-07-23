@@ -1,4 +1,4 @@
-import type { Edition } from "@/types";
+import type { Article, Edition } from "@/types";
 import { getPublishedArticles } from "@/lib/content";
 import { CROSSWORDS, getLatestCrossword, type CrosswordPuzzle } from "@/lib/crosswords";
 import { WORDSEARCHES, getLatestWordSearch, type WordSearchPuzzle } from "@/lib/wordsearch";
@@ -39,6 +39,12 @@ export function getEditionByNumber(number: number): Edition | null {
 export function getLatestEdition(): Edition | null {
   const editions = getAllEditionsAscending();
   return editions[editions.length - 1] ?? null;
+}
+
+/** Encontra a edição (dia) à qual uma matéria pertence, pela data de publicação. */
+export function getEditionForArticle(article: Article): Edition | null {
+  const key = dateKey(article.publishedAt);
+  return getAllEditionsAscending().find((edition) => edition.date === key) ?? null;
 }
 
 /** Casa a edição com a cruzada que estava no ar na data de publicação dela. */

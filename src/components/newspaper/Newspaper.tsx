@@ -27,6 +27,8 @@ interface NewspaperProps {
   sectionLabel: string;
   runningTitle?: string;
   showMasthead?: boolean;
+  /** Edição a exibir no timbre (Masthead). Se omitido, usa a edição mais recente. */
+  edition?: { number: number; date: string };
   blocks: NewspaperBlock[];
 }
 
@@ -54,7 +56,7 @@ interface PreparedPage {
   isMasthead?: boolean;
 }
 
-export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, blocks }: NewspaperProps) {
+export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, edition, blocks }: NewspaperProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlipHandle>(null);
   const isClient = useIsClient();
@@ -207,12 +209,12 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, bl
           columns={page.columns}
           contentHeightPx={page.contentHeightPx}
           runningTitle={index === 0 || page.isMasthead ? undefined : runningTitle}
-          header={page.isMasthead ? <Masthead sectionLabel={sectionLabel} /> : undefined}
+          header={page.isMasthead ? <Masthead sectionLabel={sectionLabel} edition={edition} /> : undefined}
         >
           {page.content}
         </PageChrome>
       )),
-    [preparedPages, sectionLabel, runningTitle]
+    [preparedPages, sectionLabel, runningTitle, edition]
   );
 
   useEffect(() => {

@@ -29,5 +29,12 @@ export default async function EdicaoPage({ params }: EdicaoPageProps) {
   const edition = getEditionByNumber(Number(number));
   if (!edition) notFound();
 
-  return <Newspaper sectionLabel={`Edição nº ${edition.number}`} showMasthead blocks={buildEditionBlocks(edition)} />;
+  return (
+    <Newspaper
+      sectionLabel={`Edição nº ${edition.number}`}
+      showMasthead
+      edition={{ number: edition.number, date: edition.date }}
+      blocks={buildEditionBlocks(edition)}
+    />
+  );
 }
