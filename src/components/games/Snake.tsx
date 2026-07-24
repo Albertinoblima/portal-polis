@@ -13,14 +13,17 @@ interface Point {
 
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 type Status = "idle" | "playing" | "paused" | "gameover";
+type SnakeMode = "competitivo" | "treino";
 
 const COLS = 20;
 const ROWS = 12;
 const START_SPEED = 160;
+const TRAINING_SPEED = 180;
 const MIN_SPEED = 70;
 const SPEED_STEP = 4;
 const HIGH_SCORE_KEY = "polis:cobrinha:recorde";
 const HIGH_TIME_KEY = "polis:cobrinha:melhor-tempo";
+const MODE_KEY = "polis:cobrinha:modo";
 const TIME_ACCELERATION_INTERVAL = 20;
 const TIME_ACCELERATION_STEP = 2;
 
@@ -73,15 +76,24 @@ function randomFood(snake: Point[]): Point {
   return candidate;
 }
 
+function highScoreKeyForMode(mode: SnakeMode): string {
+  return `${HIGH_SCORE_KEY}:${mode}`;
+}
+
+function highTimeKeyForMode(mode: SnakeMode): string {
+  return `${HIGH_TIME_KEY}:${mode}`;
+}
+
 export function Snake() {
+  const [mode, setMode] = useLocalStorageState<SnakeMode>(MODE_KEY, "competitivo");
   const [snake, setSnake] = useState<Point[]>(INITIAL_SNAKE);
   const [food, setFood] = useState<Point>(INITIAL_FOOD);
   const [status, setStatus] = useState<Status>("idle");
   const [score, setScore] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [speedMs, setSpeedMs] = useState(START_SPEED);
-  const [highScore, setHighScore] = useLocalStorageState(HIGH_SCORE_KEY, 0);
-  const [bestTime, setBestTime] = useLocalStorageState(HIGH_TIME_KEY, 0);
+  const [highScore, setHighScore] = useLocalStorageState(highScoreKeyForMode(mode), 0);
+  const [bestTime, setBestTime] = useLocalStorageState(highTimeKeyForMode(mode), 0);
   const [isNewHighScore, setIsNewHighScore] = useState(false);
   const [isNewBestTime, setIsNewBestTime] = useState(false);
   const [eatenPulse, setEatenPulse] = useState<Point | null>(null);
@@ -94,6 +106,7 @@ export function Snake() {
   const touchStartRef = useRef<Point | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactLandscape = useCompactLandscape(true);
+  const isTrainingMode = mode === "treino";
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -104,13 +117,14 @@ export function Snake() {
     scoreRef.current = 0;
     directionRef.current = INITIAL_DIRECTION;
     nextDirectionRef.current = INITIAL_DIRECTION;
-    speedRef.current = START_SPEED;
-    setSpeedMs(START_SPEED);
+    const initialSpeed = isTrainingMode ? TRAINING_SPEED : START_SPEED;
+    speedRef.current = initialSpeed;
+    setSpeedMs(initialSpeed);
     setStatus("playing");
     setIsNewHighScore(false);
     setIsNewBestTime(false);
     containerRef.current?.focus();
-  }, []);
+  }, [isTrainingMode]);
 
   const queueDirection = useCallback(
     (direction: Direction) => {
@@ -185,13 +199,15 @@ export function Snake() {
         setScore(scoreRef.current);
         setEatenPulse(food);
         setFood(randomFood(newSnake));
-        speedRef.current = Math.max(MIN_SPEED, speedRef.current - SPEED_STEP);
-        setSpeedMs(speedRef.current);
+        if (!isTrainingMode) {
+          speedRef.current = Math.max(MIN_SPEED, speedRef.current - SPEED_STEP);
+          setSpeedMs(speedRef.current);
+        }
       }
     }, speedRef.current);
 
     return () => window.clearTimeout(timer);
-  }, [status, snake, food, highScore, bestTime, setHighScore, setBestTime]);
+  }, [status, snake, food, highScore, bestTime, isTrainingMode, setHighScore, setBestTime]);
 
   useEffect(() => {
     if (!eatenPulse) return;
@@ -206,14 +222,14 @@ export function Snake() {
       elapsedRef.current += 1;
       setElapsedSeconds(elapsedRef.current);
 
-      if (elapsedRef.current % TIME_ACCELERATION_INTERVAL === 0) {
+      if (!isTrainingMode && elapsedRef.current % TIME_ACCELERATION_INTERVAL === 0) {
         speedRef.current = Math.max(MIN_SPEED, speedRef.current - TIME_ACCELERATION_STEP);
         setSpeedMs(speedRef.current);
       }
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [status]);
+  }, [status, isTrainingMode]);
 
   function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     const touch = event.touches[0];
@@ -247,6 +263,7 @@ export function Snake() {
           : null;
 
   const canPause = status === "playing" || status === "paused";
+  const canChangeMode = status === "idle" || status === "gameover";
   const boardWidthClass = isCompactLandscape ? "w-[min(100%,22rem)]" : "w-full";
   const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
 
@@ -261,6 +278,41 @@ export function Snake() {
     >
       <div className={cn("flex w-full flex-col items-center gap-5", isCompactLandscape && "max-w-[24rem] gap-3")}>
         <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Cobrinha</h1>
+
+        <div className="flex w-full max-w-[300px] gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("competitivo")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "competitivo"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Competitivo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("treino")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "treino"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Treino
+          </button>
+        </div>
+
+        <p className="text-center text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
+          {isTrainingMode
+            ? "Modo treino: velocidade fixa para praticar rota e reflexo"
+            : "Modo competitivo: aceleração por comida e por tempo"}
+        </p>
 
         <div
           className={cn(
@@ -397,8 +449,12 @@ export function Snake() {
         <p className="font-semibold uppercase tracking-[0.14em] text-polis-ink">Guia Rápido</p>
         <ul className="mt-2 space-y-1.5 leading-relaxed">
           <li>Evite as bordas e o próprio corpo da cobra.</li>
-          <li>Cada comida aumenta os pontos e acelera o ritmo.</li>
-          <li>O tempo também acelera a partida a cada 20 segundos.</li>
+          <li>
+            {isTrainingMode
+              ? "No treino, o ritmo fica constante para focar na técnica."
+              : "Cada comida aumenta os pontos e acelera o ritmo."}
+          </li>
+          {!isTrainingMode && <li>O tempo também acelera a partida a cada 20 segundos.</li>}
           <li>Pausa estratégica ajuda em velocidades altas.</li>
         </ul>
       </aside>
