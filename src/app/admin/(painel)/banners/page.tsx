@@ -42,15 +42,14 @@ export default function AdminBannersPage() {
       <AdminTopbar
         title="Banners e Destaques"
         description="Gerencie os destaques exibidos na Home."
-      />
-
-      <div className="p-6">
-        <div className="mb-4 flex justify-end">
+        actions={
           <Button type="button" onClick={() => setIsCreating((v) => !v)}>
             {isCreating ? "Cancelar" : "+ Novo Banner"}
           </Button>
-        </div>
+        }
+      />
 
+      <div className="p-6">
         {isCreating && (
           <form
             onSubmit={handleCreate}

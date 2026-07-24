@@ -134,6 +134,33 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+export interface SiteSettings {
+  siteName: string;
+  tagline: string;
+  defaultSeoTitle: string;
+  defaultSeoDescription: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  colorPrimary: string;
+  colorAccent: string;
+  colorPaper: string;
+  fontHeading: "eb-garamond" | "playfair-display" | "merriweather";
+  fontBody: "inter" | "source-sans-3" | "ibm-plex-sans";
+  navLinks: NavLink[];
+  footerLinks: NavLink[];
+  socialLinks: SocialLink[];
+}
+
 export interface ContactMessage {
   id: string;
   name: string;

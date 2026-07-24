@@ -15,6 +15,18 @@ export type ArticleStatus =
 
 export type CommentStatus = "pending" | "approved" | "rejected";
 export type BannerPosition = "home_hero" | "home_secondary" | "sidebar";
+export type HeadingFont = "eb-garamond" | "playfair-display" | "merriweather";
+export type BodyFont = "inter" | "source-sans-3" | "ibm-plex-sans";
+
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export interface SocialLink {
+  platform: string;
+  url: string;
+}
 
 interface Relationship {
   foreignKeyName: string;
@@ -408,6 +420,16 @@ export interface Database {
           tagline: string;
           default_seo_title: string;
           default_seo_description: string;
+          logo_url: string | null;
+          favicon_url: string | null;
+          color_primary: string;
+          color_accent: string;
+          color_paper: string;
+          font_heading: HeadingFont;
+          font_body: BodyFont;
+          nav_links: NavLink[];
+          footer_links: NavLink[];
+          social_links: SocialLink[];
           updated_at: string;
         },
         Partial<{
@@ -416,6 +438,16 @@ export interface Database {
           tagline: string;
           default_seo_title: string;
           default_seo_description: string;
+          logo_url: string | null;
+          favicon_url: string | null;
+          color_primary: string;
+          color_accent: string;
+          color_paper: string;
+          font_heading: HeadingFont;
+          font_body: BodyFont;
+          nav_links: NavLink[];
+          footer_links: NavLink[];
+          social_links: SocialLink[];
           updated_at: string;
         }>
       >;

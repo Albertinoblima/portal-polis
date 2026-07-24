@@ -1,6 +1,15 @@
 import { supabase } from "@/lib/supabase/client";
 import { slugify } from "@/lib/utils";
-import type { ArticleStatus, BannerPosition, CommentStatus, UserRole } from "@/types/database";
+import type {
+  ArticleStatus,
+  BannerPosition,
+  BodyFont,
+  CommentStatus,
+  HeadingFont,
+  NavLink,
+  SocialLink,
+  UserRole,
+} from "@/types/database";
 
 export async function getEditorias() {
   const { data, error } = await supabase.from("editorias").select("*").order("name");
@@ -221,6 +230,28 @@ export async function updateSiteSettings(input: {
   tagline: string;
   default_seo_title: string;
   default_seo_description: string;
+}) {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .update(input)
+    .eq("id", 1)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateSiteAppearance(input: {
+  logo_url: string | null;
+  favicon_url: string | null;
+  color_primary: string;
+  color_accent: string;
+  color_paper: string;
+  font_heading: HeadingFont;
+  font_body: BodyFont;
+  nav_links: NavLink[];
+  footer_links: NavLink[];
+  social_links: SocialLink[];
 }) {
   const { data, error } = await supabase
     .from("site_settings")

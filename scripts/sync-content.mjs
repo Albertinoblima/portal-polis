@@ -34,11 +34,12 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const [editorias, authors, articles, banners] = await Promise.all([
+  const [editorias, authors, articles, banners, settings] = await Promise.all([
     fetchEditorias(supabase),
     fetchAuthors(supabase),
     fetchArticles(supabase),
     fetchBanners(supabase),
+    fetchSettings(supabase),
   ]);
 
   await Promise.all([
@@ -46,10 +47,11 @@ async function main() {
     writeJson("authors.json", authors),
     writeJson("articles.json", articles),
     writeJson("banners.json", banners),
+    writeJson("settings.json", settings),
   ]);
 
   console.log(
-    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${articles.length} matérias publicadas, ${banners.length} banners ativos.`
+    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${articles.length} matérias publicadas, ${banners.length} banners ativos, configurações de aparência atualizadas.`
   );
 }
 
@@ -153,6 +155,37 @@ async function fetchBanners(supabase) {
     endDate: row.end_date ?? undefined,
     isActive: row.is_active,
   }));
+}
+
+async function fetchSettings(supabase) {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select(
+      `site_name, tagline, default_seo_title, default_seo_description,
+       logo_url, favicon_url, color_primary, color_accent, color_paper,
+       font_heading, font_body, nav_links, footer_links, social_links`
+    )
+    .eq("id", 1)
+    .single();
+
+  if (error) throw new Error(`Falha ao buscar configurações do site: ${error.message}`);
+
+  return {
+    siteName: data.site_name,
+    tagline: data.tagline,
+    defaultSeoTitle: data.default_seo_title,
+    defaultSeoDescription: data.default_seo_description,
+    logoUrl: data.logo_url ?? undefined,
+    faviconUrl: data.favicon_url ?? undefined,
+    colorPrimary: data.color_primary,
+    colorAccent: data.color_accent,
+    colorPaper: data.color_paper,
+    fontHeading: data.font_heading,
+    fontBody: data.font_body,
+    navLinks: data.nav_links ?? [],
+    footerLinks: data.footer_links ?? [],
+    socialLinks: data.social_links ?? [],
+  };
 }
 
 async function writeJson(filename, data) {

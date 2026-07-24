@@ -1,0 +1,21 @@
+{
+  "siteName": "Portal Pólis",
+  "tagline": "Onde a política faz sentido",
+  "defaultSeoTitle": "Pólis — Onde a política faz sentido",
+  "defaultSeoDescription": "Jornalismo político contextual, plural e confiável. O Portal Pólis é onde a política faz sentido.",
+  "colorPrimary": "#0a192f",
+  "colorAccent": "#c9a227",
+  "colorPaper": "#f4f1e9",
+  "fontHeading": "eb-garamond",
+  "fontBody": "inter",
+  "navLinks": [],
+  "footerLinks": [
+    { "href": "/contato", "label": "Contato" },
+    { "href": "/newsletter", "label": "Newsletter" },
+    { "href": "/termos-de-uso", "label": "Termos de Uso" },
+    { "href": "/politica-de-privacidade", "label": "Política de Privacidade" },
+    { "href": "/politica-de-cookies", "label": "Política de Cookies" },
+    { "href": "/lgpd", "label": "LGPD" }
+  ],
+  "socialLinks": []
+}

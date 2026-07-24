@@ -16,7 +16,16 @@ import {
 import { useAdminSession } from "@/components/admin/AuthProvider";
 import { logAction } from "@/lib/supabase/audit";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/admin/Card";
+import { RichTextEditor } from "@/components/admin/editor/RichTextEditor";
 import { slugify } from "@/lib/utils";
+
+interface Draft {
+  title: string;
+  subtitle: string;
+  content: string;
+  savedAt: string;
+}
 
 interface ArticleEditorFormProps {
   articleId?: string;
@@ -56,6 +65,10 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   const [savingAction, setSavingAction] = useState<ArticleStatus | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [pendingDraft, setPendingDraft] = useState<Draft | null>(null);
+  const [isDraftPromptResolved, setIsDraftPromptResolved] = useState(false);
+  const draftKey = `polis-draft-${articleId ?? "new"}`;
+
   useEffect(() => {
     let isMounted = true;
 
@@ -88,6 +101,16 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
         setTagsInput(tagNames.join(", "));
       }
 
+      const storedDraft = window.localStorage.getItem(draftKey);
+      if (storedDraft) {
+        try {
+          setPendingDraft(JSON.parse(storedDraft) as Draft);
+        } catch {
+          window.localStorage.removeItem(draftKey);
+        }
+      }
+      setIsDraftPromptResolved(!storedDraft);
+
       setLoading(false);
     }
 
@@ -95,7 +118,36 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     return () => {
       isMounted = false;
     };
-  }, [articleId]);
+  }, [articleId, draftKey]);
+
+  // Rascunho automático em localStorage — protege contra perda de texto se a
+  // aba fechar antes de salvar. Só começa a gravar depois que o aviso de
+  // "recuperar rascunho" (se houver um pendente) for resolvido pelo usuário,
+  // para não sobrescrever o rascunho anterior antes de perguntar.
+  useEffect(() => {
+    if (!isDraftPromptResolved || loading) return;
+    const timeout = setTimeout(() => {
+      const draft: Draft = { title, subtitle, content, savedAt: new Date().toISOString() };
+      window.localStorage.setItem(draftKey, JSON.stringify(draft));
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [title, subtitle, content, isDraftPromptResolved, loading, draftKey]);
+
+  function handleRestoreDraft() {
+    if (!pendingDraft) return;
+    setTitle(pendingDraft.title);
+    setSubtitle(pendingDraft.subtitle);
+    setContent(pendingDraft.content);
+    setSlugEdited(true);
+    setPendingDraft(null);
+    setIsDraftPromptResolved(true);
+  }
+
+  function handleDiscardDraft() {
+    window.localStorage.removeItem(draftKey);
+    setPendingDraft(null);
+    setIsDraftPromptResolved(true);
+  }
 
   function handleTitleChange(value: string) {
     setTitle(value);
@@ -127,7 +179,8 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     setFormError(null);
 
     try {
-      const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+      const plainTextContent = content.replace(/<[^>]+>/g, " ").trim();
+      const wordCount = plainTextContent ? plainTextContent.split(/\s+/).filter(Boolean).length : 0;
       const readingTime = Math.max(1, Math.round(wordCount / 200));
 
       const input = {
@@ -175,6 +228,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
         }
       }
 
+      window.localStorage.removeItem(draftKey);
       router.push("/admin/materias/");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Não foi possível salvar a matéria.");
@@ -190,6 +244,31 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   return (
     <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[2fr_1fr]">
       <div className="space-y-5">
+        {pendingDraft && (
+          <div className="flex items-center justify-between gap-4 rounded-sm border border-polis-gold bg-polis-gold/10 px-4 py-3 text-sm text-polis-navy">
+            <span>
+              Encontramos um rascunho não salvo de{" "}
+              {new Date(pendingDraft.savedAt).toLocaleString("pt-BR")}. Deseja recuperá-lo?
+            </span>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={handleRestoreDraft}
+                className="rounded-sm bg-polis-navy px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                Recuperar rascunho
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="rounded-sm border border-polis-navy/30 px-3 py-1.5 text-xs font-semibold text-polis-navy"
+              >
+                Descartar
+              </button>
+            </div>
+          </div>
+        )}
+
         <div>
           <label htmlFor="title" className="block text-sm font-semibold text-polis-navy">
             Título
@@ -252,16 +331,13 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
             </div>
           </div>
           {editorMode === "visual" ? (
-            <div
-              contentEditable
-              role="textbox"
-              aria-multiline="true"
-              aria-label="Conteúdo da matéria"
-              suppressContentEditableWarning
-              onBlur={(event) => setContent(event.currentTarget.innerHTML)}
-              dangerouslySetInnerHTML={{ __html: content }}
-              className="prose prose-sm mt-2 min-h-[320px] w-full max-w-none rounded-sm border border-polis-navy/20 px-4 py-3 focus:border-polis-gold focus:outline-none"
-            />
+            <div className="mt-2">
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                onImageUpload={(file) => uploadMedia(file, profile.id, title).then((media) => media.url)}
+              />
+            </div>
           ) : (
             <textarea
               aria-label="Conteúdo da matéria em HTML"
@@ -360,7 +436,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
           </p>
         )}
 
-        <div className="rounded-sm border border-polis-navy/10 bg-white p-4">
+        <Card>
           <h3 className="text-sm font-semibold text-polis-navy">Publicação</h3>
           <p className="mt-1 text-xs text-polis-gray">Status atual: {currentStatus}</p>
 
@@ -409,9 +485,9 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
               </Button>
             )}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-sm border border-polis-navy/10 bg-white p-4">
+        <Card>
           <h3 className="text-sm font-semibold text-polis-navy">Imagem de Destaque</h3>
           {featuredImage && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -431,7 +507,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
             placeholder="Texto alternativo (acessibilidade)"
             className="mt-2 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-xs focus:border-polis-gold focus:outline-none"
           />
-        </div>
+        </Card>
       </aside>
     </div>
   );

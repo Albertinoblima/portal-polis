@@ -4,18 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getEditorias } from "@/lib/content";
+import { getSiteSettings } from "@/lib/settings";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 const editorias = getEditorias();
+const siteSettings = getSiteSettings();
+const logoUrl = siteSettings.logoUrl ?? "/brand/LOGO_MARCA.png";
 
-const INSTITUTIONAL_LINKS = [
-  { href: "/contato", label: "Contato" },
-  { href: "/newsletter", label: "Newsletter" },
-  { href: "/termos-de-uso", label: "Termos de Uso" },
-  { href: "/politica-de-privacidade", label: "Política de Privacidade" },
-  { href: "/politica-de-cookies", label: "Política de Cookies" },
-  { href: "/lgpd", label: "LGPD" },
-];
+const INSTITUTIONAL_LINKS = siteSettings.footerLinks;
 
 const ENTERTAINMENT_LINKS = [
   { href: "/entretenimento/jogos", label: "Jogos" },
@@ -31,8 +27,8 @@ export function NavBar() {
   return (
     <div className="relative z-30 flex h-12 shrink-0 items-center justify-between gap-4 border-b border-polis-rule/20 bg-polis-paper px-4 text-polis-ink md:px-6">
       <Link href="/" className="flex items-center gap-2">
-        <Image src="/brand/LOGO_MARCA.png" alt="Portal Pólis" width={24} height={24} className="h-6 w-6" priority />
-        <span className="hidden font-serif text-sm font-bold sm:inline">Portal Pólis</span>
+        <Image src={logoUrl} alt={siteSettings.siteName} width={24} height={24} className="h-6 w-6" priority />
+        <span className="hidden font-serif text-sm font-bold sm:inline">{siteSettings.siteName}</span>
       </Link>
 
       <nav className="hidden items-center gap-5 lg:flex">
@@ -57,12 +53,15 @@ export function NavBar() {
         >
           Sobre
         </Link>
-        <Link
-          href="/biblioteca"
-          className="text-xs font-medium uppercase tracking-wide text-polis-ink-soft hover:text-polis-gold-ink"
-        >
-          Biblioteca
-        </Link>
+        {siteSettings.navLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="text-xs font-medium uppercase tracking-wide text-polis-ink-soft hover:text-polis-gold-ink"
+          >
+            {link.label}
+          </Link>
+        ))}
         <div className="relative">
           <button
             type="button"
@@ -163,11 +162,13 @@ export function NavBar() {
                 Sobre
               </Link>
             </li>
-            <li>
-              <Link href="/biblioteca" className="block py-1 text-sm" onClick={() => setIsMenuOpen(false)}>
-                Biblioteca
-              </Link>
-            </li>
+            {siteSettings.navLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="block py-1 text-sm" onClick={() => setIsMenuOpen(false)}>
+                  {link.label}
+                </Link>
+              </li>
+            ))}
             <li className="mt-2 border-t border-polis-rule/20 pt-2 text-[11px] font-semibold uppercase tracking-wide text-polis-ink-soft">
               Entretenimento
             </li>
