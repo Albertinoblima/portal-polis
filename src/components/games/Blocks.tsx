@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { cellKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { GameOverlay } from "@/components/games/GameOverlay";
 import { useCompactLandscape } from "@/hooks/useCompactLandscape";
 
 type PieceType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
+type BlocksMode = "competitivo" | "treino" | "desafio";
 
 interface PieceShape {
   /** Lado do quadro-guia (bounding box) onde a peça gira. */
@@ -29,11 +30,24 @@ type Status = "idle" | "playing" | "paused" | "gameover";
 const ROWS = 20;
 const COLS = 10;
 const START_SPEED = 800;
+const TRAINING_SPEED = 900;
+const CHALLENGE_START_SPEED = 760;
 const MIN_SPEED = 120;
 const SPEED_STEP_PER_LEVEL = 60;
 const LINES_PER_LEVEL = 10;
 const LINE_SCORE = [0, 100, 300, 500, 800];
 const HIGH_SCORE_KEY = "polis:blocos:recorde";
+const BEST_LINES_KEY = "polis:blocos:melhor-linhas";
+const MODE_KEY = "polis:blocos:modo";
+const CHALLENGE_BEST_TIER_KEY = "polis:blocos:desafio:melhor-tier";
+const CHALLENGE_TIME_ACCELERATION_INTERVAL = 25;
+const CHALLENGE_TIME_ACCELERATION_STEP = 25;
+
+const CHALLENGE_TIERS = [
+  { label: "Bronze", lines: 12 },
+  { label: "Prata", lines: 24 },
+  { label: "Ouro", lines: 40 },
+] as const;
 
 const PIECES: Record<PieceType, PieceShape> = {
   I: { size: 4, cells: [[1, 0], [1, 1], [1, 2], [1, 3]] },
@@ -106,6 +120,21 @@ function peekBag(bagRef: { current: PieceType[] }): PieceType {
   return bagRef.current[0];
 }
 
+function highScoreKeyForMode(mode: BlocksMode): string {
+  return `${HIGH_SCORE_KEY}:${mode}`;
+}
+
+function bestLinesKeyForMode(mode: BlocksMode): string {
+  return `${BEST_LINES_KEY}:${mode}`;
+}
+
+function reachedChallengeTierIndex(lines: number): number {
+  for (let i = CHALLENGE_TIERS.length - 1; i >= 0; i--) {
+    if (lines >= CHALLENGE_TIERS[i].lines) return i;
+  }
+  return -1;
+}
+
 interface LockResult {
   board: boolean[][];
   gameOver: boolean;
@@ -127,6 +156,7 @@ function lockPiece(piece: PieceState, board: boolean[][]): LockResult {
 }
 
 export function Blocks() {
+  const [mode, setMode] = useLocalStorageState<BlocksMode>(MODE_KEY, "competitivo");
   const [board, setBoard] = useState<boolean[][]>(() => emptyBoard());
   const [current, setCurrent] = useState<PieceState | null>(null);
   const [nextType, setNextType] = useState<PieceType | null>(null);
@@ -134,41 +164,72 @@ export function Blocks() {
   const [score, setScore] = useState(0);
   const [lines, setLines] = useState(0);
   const [level, setLevel] = useState(1);
-  const [highScore, setHighScore] = useLocalStorageState(HIGH_SCORE_KEY, 0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [speedMs, setSpeedMs] = useState(START_SPEED);
+  const [highScore, setHighScore] = useLocalStorageState(highScoreKeyForMode(mode), 0);
+  const [bestLines, setBestLines] = useLocalStorageState(bestLinesKeyForMode(mode), 0);
+  const [bestChallengeTier, setBestChallengeTier] = useLocalStorageState(CHALLENGE_BEST_TIER_KEY, -1);
   const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [isNewBestLines, setIsNewBestLines] = useState(false);
+  const [isNewChallengeTier, setIsNewChallengeTier] = useState(false);
   const [clearFlash, setClearFlash] = useState(false);
 
   const bagRef = useRef<PieceType[]>([]);
   const speedRef = useRef(START_SPEED);
+  const elapsedRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactLandscape = useCompactLandscape(true);
+  const isTrainingMode = mode === "treino";
+  const isChallengeMode = mode === "desafio";
 
   const endGame = useCallback(
-    (finalScore: number) => {
+    (finalScore: number, finalLines: number) => {
+      const reachedTier = isChallengeMode ? reachedChallengeTierIndex(finalLines) : -1;
       setStatus("gameover");
       setIsNewHighScore(finalScore > highScore);
+      setIsNewBestLines(finalLines > bestLines);
+      if (isChallengeMode) {
+        setIsNewChallengeTier(reachedTier > bestChallengeTier);
+        setBestChallengeTier((prev) => Math.max(prev, reachedTier));
+      } else {
+        setIsNewChallengeTier(false);
+      }
       setHighScore((prev) => Math.max(prev, finalScore));
+      setBestLines((prev) => Math.max(prev, finalLines));
     },
-    [highScore, setHighScore]
+    [
+      isChallengeMode,
+      highScore,
+      bestLines,
+      bestChallengeTier,
+      setHighScore,
+      setBestLines,
+      setBestChallengeTier,
+    ]
   );
 
   const advanceAfterLock = useCallback(
     (pieceToLock: PieceState, bonus = 0) => {
       const result = lockPiece(pieceToLock, board);
       if (result.gameOver) {
-        endGame(score);
+        endGame(score, lines);
         return;
       }
 
       let newScore = score + bonus;
+      let newLines = lines;
+      let newLevel = level;
       if (result.cleared > 0) {
-        const newLines = lines + result.cleared;
-        const newLevel = Math.floor(newLines / LINES_PER_LEVEL) + 1;
+        newLines = lines + result.cleared;
+        newLevel = Math.floor(newLines / LINES_PER_LEVEL) + 1;
         newScore += LINE_SCORE[result.cleared] * level;
         setLines(newLines);
         setLevel(newLevel);
         setClearFlash(true);
-        speedRef.current = Math.max(MIN_SPEED, START_SPEED - (newLevel - 1) * SPEED_STEP_PER_LEVEL);
+        if (!isTrainingMode && !isChallengeMode) {
+          speedRef.current = Math.max(MIN_SPEED, START_SPEED - (newLevel - 1) * SPEED_STEP_PER_LEVEL);
+          setSpeedMs(speedRef.current);
+        }
       }
       if (newScore !== score) setScore(newScore);
 
@@ -180,14 +241,14 @@ export function Blocks() {
 
       if (!canPlace(result.board, pieceCells(spawned))) {
         setCurrent(spawned);
-        endGame(newScore);
+        endGame(newScore, newLines);
         return;
       }
 
       setCurrent(spawned);
       setNextType(preview);
     },
-    [board, score, lines, level, nextType, endGame]
+    [board, score, lines, level, nextType, endGame, isTrainingMode, isChallengeMode]
   );
 
   function startGame() {
@@ -196,7 +257,11 @@ export function Blocks() {
     setScore(0);
     setLines(0);
     setLevel(1);
-    speedRef.current = START_SPEED;
+    setElapsedSeconds(0);
+    elapsedRef.current = 0;
+    const initialSpeed = isTrainingMode ? TRAINING_SPEED : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
+    speedRef.current = initialSpeed;
+    setSpeedMs(initialSpeed);
 
     const type = takeFromBag(bagRef);
     const preview = peekBag(bagRef);
@@ -204,6 +269,8 @@ export function Blocks() {
     setNextType(preview);
     setStatus("playing");
     setIsNewHighScore(false);
+    setIsNewBestLines(false);
+    setIsNewChallengeTier(false);
     containerRef.current?.focus();
   }
 
@@ -260,6 +327,22 @@ export function Blocks() {
 
     return () => window.clearTimeout(timer);
   }, [status, current, board, advanceAfterLock]);
+
+  useEffect(() => {
+    if (status !== "playing") return;
+
+    const timer = window.setInterval(() => {
+      elapsedRef.current += 1;
+      setElapsedSeconds(elapsedRef.current);
+
+      if (isChallengeMode && elapsedRef.current % CHALLENGE_TIME_ACCELERATION_INTERVAL === 0) {
+        speedRef.current = Math.max(MIN_SPEED, speedRef.current - CHALLENGE_TIME_ACCELERATION_STEP);
+        setSpeedMs(speedRef.current);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [status, isChallengeMode]);
 
   useEffect(() => {
     // Escuta no contêiner do jogo (não em `window`) para que os controles não
@@ -341,6 +424,12 @@ export function Blocks() {
   const overlayMessage =
     status === "idle" ? "Pronto para jogar?" : status === "paused" ? "Pausado" : status === "gameover" ? "Fim de jogo!" : null;
   const boardWidth = isCompactLandscape ? "w-[190px]" : "w-[200px] sm:w-[240px]";
+  const canChangeMode = status === "idle" || status === "gameover";
+  const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
+  const challengeTierIndex = reachedChallengeTierIndex(lines);
+  const bestTierLabel = bestChallengeTier >= 0 ? CHALLENGE_TIERS[bestChallengeTier]?.label : "-";
+  const nextTier = CHALLENGE_TIERS[challengeTierIndex + 1] ?? null;
+  const challengeProgress = nextTier ? Math.min(100, (lines / nextTier.lines) * 100) : 100;
 
   return (
     <div
@@ -354,9 +443,80 @@ export function Blocks() {
       <div className={cn("flex flex-col items-center gap-4", isCompactLandscape && "gap-2.5")}>
         <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo dos Blocos</h1>
 
-        <div className="flex w-full max-w-[260px] items-center justify-between border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink">
+        <div className="flex w-full max-w-[300px] gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("competitivo")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "competitivo"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Competitivo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("treino")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "treino"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Treino
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("desafio")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "desafio"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Desafio
+          </button>
+        </div>
+
+        <p className="text-center text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
+          {isTrainingMode
+            ? "Modo treino: ritmo fixo para prática de encaixe"
+            : isChallengeMode
+              ? "Modo desafio: metas de linhas com aceleração temporal"
+              : "Modo competitivo: progressão clássica por nível"}
+        </p>
+
+        {isChallengeMode && (
+          <div className="w-full max-w-[300px] border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
+            <div className="flex items-center justify-between">
+              <span>
+                Medalha: <strong className="text-polis-ink">{challengeTierIndex >= 0 ? CHALLENGE_TIERS[challengeTierIndex].label : "-"}</strong>
+              </span>
+              <span>
+                Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
+              <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
+            </div>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
+              {nextTier ? `Próxima medalha (${nextTier.label}) em ${nextTier.lines} linhas` : "Meta máxima atingida"}
+            </p>
+          </div>
+        )}
+
+        <div className="grid w-full max-w-[300px] grid-cols-2 items-center gap-y-1 border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink">
           <span>Nível {level}</span>
           <span>Pontos {score}</span>
+          <span>Linhas {lines}</span>
+          <span>Tempo {formatTime(elapsedSeconds)}</span>
         </div>
 
         <div
@@ -395,10 +555,17 @@ export function Blocks() {
             {overlayMessage && (
               <GameOverlay
                 title={overlayMessage}
-                subtitle={status === "gameover" ? `Você fez ${score} pontos.` : undefined}
+                subtitle={
+                  status === "gameover"
+                    ? `${isChallengeMode && challengeTierIndex >= 0
+                      ? `Medalha: ${CHALLENGE_TIERS[challengeTierIndex].label}. `
+                      : ""
+                    }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
+                    : undefined
+                }
                 actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
                 onAction={status === "paused" ? togglePause : startGame}
-                isNewHighScore={status === "gameover" && isNewHighScore}
+                isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestLines || isNewChallengeTier)}
               />
             )}
           </div>
@@ -407,6 +574,10 @@ export function Blocks() {
         <p className={cn("max-w-xs text-center text-xs text-polis-ink-soft", isCompactLandscape && "text-[11px] leading-snug")}>
           Setas (ou WASD) movem e giram, espaço derruba na hora, P pausa. Use os botões abaixo no
           toque.
+        </p>
+
+        <p className="text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
+          Ritmo atual: <strong className="text-polis-ink">{speedCellsPerSecond} casas/s</strong>
         </p>
 
         <div className={cn("grid grid-cols-3 gap-2", isCompactLandscape && "gap-1.5")}>
@@ -479,10 +650,14 @@ export function Blocks() {
           <dd className="text-right font-semibold">{score}</dd>
           <dt className="text-polis-ink-soft">Recorde</dt>
           <dd className="text-right font-semibold">{highScore}</dd>
+          <dt className="text-polis-ink-soft">Melhor linhas</dt>
+          <dd className="text-right font-semibold">{bestLines}</dd>
           <dt className="text-polis-ink-soft">Linhas</dt>
           <dd className="text-right font-semibold">{lines}</dd>
           <dt className="text-polis-ink-soft">Nível</dt>
           <dd className="text-right font-semibold">{level}</dd>
+          <dt className="text-polis-ink-soft">Tempo</dt>
+          <dd className="text-right font-semibold">{formatTime(elapsedSeconds)}</dd>
         </dl>
       </div>
     </div>
