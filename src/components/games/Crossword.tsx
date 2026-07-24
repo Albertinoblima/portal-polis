@@ -35,6 +35,7 @@ interface CrosswordProps {
 
 export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
   const isEmbedded = layout === "embedded";
+  const [isCompactLandscape, setIsCompactLandscape] = useState(false);
   const { rows, cols, cells } = useMemo(() => buildCrosswordGrid(puzzle), [puzzle]);
 
   const defaultProgress = useMemo<StoredProgress>(
@@ -226,6 +227,19 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
     return () => emitGameInteractionLock(false, "crossword");
   }, []);
 
+  useEffect(() => {
+    if (!isEmbedded || typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(orientation: landscape) and (max-height: 560px)");
+    const handleChange = () => setIsCompactLandscape(mediaQuery.matches);
+    handleChange();
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [isEmbedded]);
+
+  const compactLandscape = isEmbedded && isCompactLandscape;
+
   function handleBoardPointerDownCapture(event: React.PointerEvent<HTMLDivElement>) {
     emitGameInteractionLock(true, "crossword");
     event.stopPropagation();
@@ -239,10 +253,10 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
   const acrossEntries = puzzle.entries.filter((e) => e.direction === "across").sort((a, b) => a.number - b.number);
   const downEntries = puzzle.entries.filter((e) => e.direction === "down").sort((a, b) => a.number - b.number);
   const boardMaxPx = useMemo(() => {
-    const preferredCell = isEmbedded ? 35 : 40;
-    const hardCap = isEmbedded ? 520 : 640;
+    const preferredCell = isEmbedded ? (compactLandscape ? 30 : 35) : 40;
+    const hardCap = isEmbedded ? (compactLandscape ? 440 : 520) : 640;
     return Math.min(cols * preferredCell, hardCap);
-  }, [cols, isEmbedded]);
+  }, [cols, compactLandscape, isEmbedded]);
   const activeBoardPx = boardWidth > 0 ? Math.min(boardWidth, boardMaxPx) : boardMaxPx;
   const cellPx = Math.max(28, Math.floor(activeBoardPx / cols));
 
@@ -250,13 +264,16 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
     <div
       className={cn(
         "mx-auto flex w-full flex-col gap-8",
-        isEmbedded ? "max-w-3xl" : "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+        compactLandscape && "max-w-none flex-row items-start gap-3",
+        isEmbedded && !compactLandscape && "max-w-3xl",
+        !isEmbedded && "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
       )}
     >
-      <div className="flex flex-col items-center gap-4">
+      <div className={cn("flex flex-col items-center gap-4", compactLandscape && "min-w-0 flex-1 gap-2.5")}>
         <div
           className={cn(
             "flex items-center gap-4 text-sm text-polis-ink-soft",
+            compactLandscape && "gap-2 text-[11px] tracking-[0.12em]",
             isEmbedded &&
             "w-full justify-center border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
           )}
@@ -333,6 +350,7 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
         <p
           className={cn(
             "text-center text-sm text-polis-ink-soft",
+            compactLandscape && "min-h-0 max-w-none px-2 py-1 text-[12px] leading-snug",
             isEmbedded
               ? "min-h-12 w-full max-w-xl border-y border-polis-rule/15 bg-polis-paper-soft/20 px-3 py-2 leading-relaxed"
               : "min-h-10 max-w-xs"
@@ -349,6 +367,7 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
             onClick={handleCheck}
             className={cn(
               "border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink",
+              compactLandscape && "px-3 py-1.5 text-[11px]",
               isEmbedded && "min-w-32"
             )}
           >
@@ -359,6 +378,7 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
             onClick={handleReveal}
             className={cn(
               "text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink",
+              compactLandscape && "px-3 py-1.5 text-[11px]",
               isEmbedded &&
               "border border-polis-rule/25 px-3 py-2 no-underline transition-colors hover:border-polis-gold-muted"
             )}
@@ -371,7 +391,10 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
       <div
         className={cn(
           "grid w-full flex-1 grid-cols-1 gap-6 text-sm",
-          isEmbedded ? "max-w-3xl border-t border-polis-rule/20 pt-4 md:grid-cols-2" : "max-w-md sm:grid-cols-2"
+          compactLandscape &&
+          "max-h-[19rem] max-w-[45%] overflow-y-auto border-l border-polis-rule/20 pl-3 pr-1 pt-0",
+          isEmbedded && !compactLandscape && "max-w-3xl border-t border-polis-rule/20 pt-4 md:grid-cols-2",
+          !isEmbedded && "max-w-md sm:grid-cols-2"
         )}
       >
         <div>

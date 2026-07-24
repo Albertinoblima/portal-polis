@@ -75,6 +75,7 @@ interface WordSearchProps {
 export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   const grid = useMemo(() => buildWordSearchGrid(puzzle), [puzzle]);
   const isEmbedded = layout === "embedded";
+  const [isCompactLandscape, setIsCompactLandscape] = useState(false);
 
   const placementByKey = useMemo(() => {
     const map = new Map<string, (typeof grid.placements)[number]>();
@@ -144,6 +145,19 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   useEffect(() => {
     return () => emitGameInteractionLock(false, "wordsearch");
   }, []);
+
+  useEffect(() => {
+    if (!isEmbedded || typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(orientation: landscape) and (max-height: 560px)");
+    const handleChange = () => setIsCompactLandscape(mediaQuery.matches);
+    handleChange();
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [isEmbedded]);
+
+  const compactLandscape = isEmbedded && isCompactLandscape;
 
   function tryFinalize(start: WordSearchCell, end: WordSearchCell) {
     const cells = lineCells(start, end);
@@ -219,10 +233,10 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   const dragCellKeys = useMemo(() => new Set(dragCells.map(cellKey)), [dragCells]);
   const missCellKeys = useMemo(() => new Set((missCells ?? []).map(cellKey)), [missCells]);
   const boardMaxPx = useMemo(() => {
-    const preferredCell = isEmbedded ? 32 : 38;
-    const hardCap = isEmbedded ? 500 : 620;
+    const preferredCell = isEmbedded ? (compactLandscape ? 27 : 32) : 38;
+    const hardCap = isEmbedded ? (compactLandscape ? 420 : 500) : 620;
     return Math.min(grid.size * preferredCell, hardCap);
-  }, [grid.size, isEmbedded]);
+  }, [compactLandscape, grid.size, isEmbedded]);
   const activeBoardPx = boardWidth > 0 ? Math.min(boardWidth, boardMaxPx) : boardMaxPx;
   const cellPx = Math.max(26, Math.floor(activeBoardPx / grid.size));
   const foundCellKeys = useMemo(() => {
@@ -239,13 +253,16 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
     <div
       className={cn(
         "mx-auto flex w-full flex-col gap-6",
-        isEmbedded ? "max-w-3xl" : "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+        compactLandscape && "max-w-none flex-row items-start gap-3",
+        isEmbedded && !compactLandscape && "max-w-3xl",
+        !isEmbedded && "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
       )}
     >
-      <div className="flex flex-col items-center gap-3">
+      <div className={cn("flex flex-col items-center gap-3", compactLandscape && "min-w-0 flex-1 gap-2")}>
         <div
           className={cn(
             "flex items-center gap-4 text-sm text-polis-ink-soft",
+            compactLandscape && "gap-2 text-[11px] tracking-[0.12em]",
             isEmbedded &&
             "w-full justify-center border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
           )}
@@ -361,11 +378,13 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
         <p
           className={cn(
             "text-center text-xs text-polis-ink-soft",
+            compactLandscape && "max-w-none text-[11px] leading-snug",
             isEmbedded ? "max-w-xl leading-relaxed" : "max-w-xs"
           )}
         >
-          Arraste (ou toque em uma casa e depois na outra ponta) sobre as letras para marcar uma
-          palavra — nas 8 direções, inclusive de trás para frente.
+          {compactLandscape
+            ? "Arraste ou toque nas duas pontas da palavra para marcar."
+            : "Arraste (ou toque em uma casa e depois na outra ponta) sobre as letras para marcar uma palavra — nas 8 direções, inclusive de trás para frente."}
         </p>
 
         <button
@@ -373,6 +392,7 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
           onClick={handleReveal}
           className={cn(
             "text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink",
+            compactLandscape && "py-0.5 text-[11px]",
             isEmbedded &&
             "border border-polis-rule/25 px-3 py-1 no-underline transition-colors hover:border-polis-gold-muted"
           )}
@@ -384,7 +404,10 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
       <div
         className={cn(
           "w-full flex-1",
-          isEmbedded ? "max-w-3xl border-t border-polis-rule/20 pt-4" : "max-w-sm"
+          compactLandscape &&
+          "max-h-[17rem] max-w-[44%] overflow-y-auto border-l border-polis-rule/20 pl-3 pr-1",
+          isEmbedded && !compactLandscape && "max-w-3xl border-t border-polis-rule/20 pt-4",
+          !isEmbedded && "max-w-sm"
         )}
       >
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -398,6 +421,7 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
         <div
           className={cn(
             "grid gap-2 text-sm",
+            compactLandscape && "gap-1.5 text-[12px]",
             isEmbedded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 gap-x-4 gap-y-2"
           )}
         >
@@ -408,6 +432,7 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
                 key={word}
                 className={cn(
                   "flex items-center gap-2",
+                  compactLandscape && "min-h-7 px-2 py-0.5 text-[11px] tracking-[0.06em]",
                   isEmbedded &&
                   "min-h-9 border border-polis-rule/15 bg-polis-paper-soft/25 px-2.5 py-1 text-[12px] tracking-[0.08em]",
                   found ? "text-polis-gold-ink" : "text-polis-ink-soft"
