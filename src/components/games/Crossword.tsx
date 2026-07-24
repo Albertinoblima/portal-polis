@@ -5,6 +5,7 @@ import { buildCrosswordGrid, type CrosswordEntry, type CrosswordPuzzle } from "@
 import { cn, formatTime } from "@/lib/utils";
 import { cellKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { emitGameInteractionLock } from "./gameInteraction";
 
 type Direction = "across" | "down";
 
@@ -29,9 +30,11 @@ function emptyAnswers(rows: number, cols: number): string[][] {
 
 interface CrosswordProps {
   puzzle: CrosswordPuzzle;
+  layout?: "full" | "embedded";
 }
 
-export function Crossword({ puzzle }: CrosswordProps) {
+export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
+  const isEmbedded = layout === "embedded";
   const { rows, cols, cells } = useMemo(() => buildCrosswordGrid(puzzle), [puzzle]);
 
   const defaultProgress = useMemo<StoredProgress>(
@@ -55,6 +58,8 @@ export function Crossword({ puzzle }: CrosswordProps) {
   const [selected, setSelected] = useState<Position | null>(null);
   const [direction, setDirection] = useState<Direction>("across");
   const [checkResults, setCheckResults] = useState<boolean[][] | null>(null);
+  const boardWrapperRef = useRef<HTMLDivElement>(null);
+  const [boardWidth, setBoardWidth] = useState(0);
 
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
@@ -206,12 +211,48 @@ export function Crossword({ puzzle }: CrosswordProps) {
     return () => window.clearInterval(interval);
   }, [completed, setProgress]);
 
+  useEffect(() => {
+    const node = boardWrapperRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setBoardWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => emitGameInteractionLock(false, "crossword");
+  }, []);
+
+  function handleBoardPointerDownCapture(event: React.PointerEvent<HTMLDivElement>) {
+    emitGameInteractionLock(true, "crossword");
+    event.stopPropagation();
+  }
+
+  function handleBoardPointerEndCapture() {
+    emitGameInteractionLock(false, "crossword");
+  }
+
   const currentClueEntry = selected ? entryFor(selected, direction) : undefined;
   const acrossEntries = puzzle.entries.filter((e) => e.direction === "across").sort((a, b) => a.number - b.number);
   const downEntries = puzzle.entries.filter((e) => e.direction === "down").sort((a, b) => a.number - b.number);
+  const boardMaxPx = useMemo(() => {
+    const preferredCell = isEmbedded ? 35 : 40;
+    const hardCap = isEmbedded ? 520 : 640;
+    return Math.min(cols * preferredCell, hardCap);
+  }, [cols, isEmbedded]);
+  const activeBoardPx = boardWidth > 0 ? Math.min(boardWidth, boardMaxPx) : boardMaxPx;
+  const cellPx = Math.max(28, Math.floor(activeBoardPx / cols));
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-center">
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-col gap-8",
+        isEmbedded ? "max-w-3xl" : "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+      )}
+    >
       <div className="flex flex-col items-center gap-4">
         <div className="flex items-center gap-4 text-sm text-polis-ink-soft">
           <span>
@@ -224,15 +265,19 @@ export function Crossword({ puzzle }: CrosswordProps) {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div ref={boardWrapperRef} className="w-full">
           <div
-            className="grid gap-[2px] border-2 border-polis-ink bg-polis-ink"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            className="mx-auto grid gap-[2px] border-2 border-polis-ink bg-polis-ink"
+            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, width: `min(100%, ${boardMaxPx}px)` }}
+            onPointerDownCapture={handleBoardPointerDownCapture}
+            onPointerUpCapture={handleBoardPointerEndCapture}
+            onPointerCancelCapture={handleBoardPointerEndCapture}
+            onPointerOutCapture={handleBoardPointerEndCapture}
           >
             {cells.map((rowCells, r) =>
               rowCells.map((cell, c) => {
                 if (!cell.letter) {
-                  return <div key={cellKey(r, c)} className="h-9 w-9 bg-polis-ink sm:h-10 sm:w-10" />;
+                  return <div key={cellKey(r, c)} className="aspect-square w-full bg-polis-ink" />;
                 }
 
                 const isSelected = selected?.row === r && selected?.col === c;
@@ -240,9 +285,12 @@ export function Crossword({ puzzle }: CrosswordProps) {
                 const result = checkResults?.[r]?.[c];
 
                 return (
-                  <div key={cellKey(r, c)} className="relative h-9 w-9 bg-polis-paper sm:h-10 sm:w-10">
+                  <div key={cellKey(r, c)} className="relative aspect-square w-full bg-polis-paper">
                     {cell.number && (
-                      <span className="pointer-events-none absolute left-0.5 top-0 select-none text-[8px] font-semibold text-polis-ink-soft">
+                      <span
+                        className="pointer-events-none absolute left-0.5 top-0 select-none font-semibold text-polis-ink-soft"
+                        style={{ fontSize: `${Math.max(8, Math.floor(cellPx * 0.2))}px` }}
+                      >
                         {cell.number}
                       </span>
                     )}
@@ -261,12 +309,13 @@ export function Crossword({ puzzle }: CrosswordProps) {
                       onChange={(event) => handleChange(r, c, event.target.value)}
                       onKeyDown={(event) => handleKeyDown(r, c, event)}
                       className={cn(
-                        "h-full w-full bg-transparent text-center font-serif text-lg font-bold uppercase text-polis-ink outline-none",
+                        "h-full w-full bg-transparent text-center font-serif font-bold uppercase text-polis-ink outline-none",
                         isSelected && "bg-polis-gold/30",
                         !isSelected && isHighlighted && "bg-polis-gold/10",
                         result === true && "text-polis-gold-ink",
                         result === false && "text-red-700"
                       )}
+                      style={{ fontSize: `${Math.max(16, Math.floor(cellPx * 0.52))}px` }}
                     />
                   </div>
                 );
@@ -299,7 +348,12 @@ export function Crossword({ puzzle }: CrosswordProps) {
         </div>
       </div>
 
-      <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-6 text-sm sm:grid-cols-2">
+      <div
+        className={cn(
+          "grid w-full flex-1 grid-cols-1 gap-6 text-sm",
+          isEmbedded ? "max-w-3xl" : "max-w-md sm:grid-cols-2"
+        )}
+      >
         <div>
           <h2 className="mb-2 font-serif text-lg font-bold text-polis-ink">Horizontais</h2>
           <ul className="space-y-2">

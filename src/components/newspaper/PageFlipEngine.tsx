@@ -10,6 +10,7 @@ import {
   type ReactElement,
 } from "react";
 import { PageFlip, type WidgetEvent } from "page-flip";
+import { GAME_INTERACTION_EVENT } from "@/components/games/gameInteraction";
 
 export interface PageFlipHandle {
   flipNext: () => void;
@@ -51,6 +52,7 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const pageElementsRef = useRef<HTMLElement[]>([]);
     const pageFlipRef = useRef<PageFlip | null>(null);
+    const gameInteractionLockedRef = useRef(false);
 
     // Renderizado de forma síncrona (sem passar por estado/efeito) para que o
     // HTML de cada folha já exista no SSR/SSG — essencial para SEO e para
@@ -135,6 +137,7 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
       const SWIPE_MIN_DISTANCE_PX = 40;
       const SWIPE_MAX_VERTICAL_DRIFT_PX = 100;
       let touchStart: { x: number; y: number } | null = null;
+      const activeGameLocks = new Set<string>();
 
       // Não filtramos toques que começam num <a>/<button> aqui (ao contrário
       // do checkTarget da biblioteca): cards de matéria ocupam quase a folha
@@ -144,11 +147,21 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
       // link segue intocado — só um deslocamento horizontal de verdade conta
       // como intenção de virar página.
       const handleTouchStart = (event: TouchEvent) => {
+        if (gameInteractionLockedRef.current) {
+          event.stopPropagation();
+          touchStart = null;
+          return;
+        }
         const touch = event.changedTouches[0];
         touchStart = touch ? { x: touch.clientX, y: touch.clientY } : null;
       };
 
       const handleTouchEnd = (event: TouchEvent) => {
+        if (gameInteractionLockedRef.current) {
+          event.stopPropagation();
+          touchStart = null;
+          return;
+        }
         if (!touchStart) return;
         const touch = event.changedTouches[0];
         if (!touch) return;
@@ -164,13 +177,28 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
         else pageFlipRef.current?.flipPrev();
       };
 
-      container.addEventListener("touchstart", handleTouchStart, { passive: true });
-      container.addEventListener("touchend", handleTouchEnd, { passive: true });
+      const handleGameInteractionLock = (event: Event) => {
+        const customEvent = event as CustomEvent<{ locked?: boolean; source?: string }>;
+        const source = customEvent.detail?.source;
+        if (!source) return;
+
+        if (customEvent.detail?.locked) activeGameLocks.add(source);
+        else activeGameLocks.delete(source);
+
+        gameInteractionLockedRef.current = activeGameLocks.size > 0;
+      };
+
+      container.addEventListener("touchstart", handleTouchStart, { capture: true, passive: true });
+      container.addEventListener("touchend", handleTouchEnd, { capture: true, passive: true });
+      window.addEventListener(GAME_INTERACTION_EVENT, handleGameInteractionLock as EventListener);
 
       return () => {
         flip.off("flip");
-        container.removeEventListener("touchstart", handleTouchStart);
-        container.removeEventListener("touchend", handleTouchEnd);
+        container.removeEventListener("touchstart", handleTouchStart, true);
+        container.removeEventListener("touchend", handleTouchEnd, true);
+        window.removeEventListener(GAME_INTERACTION_EVENT, handleGameInteractionLock as EventListener);
+        activeGameLocks.clear();
+        gameInteractionLockedRef.current = false;
         if (pageFlipRef.current === flip) pageFlipRef.current = null;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps

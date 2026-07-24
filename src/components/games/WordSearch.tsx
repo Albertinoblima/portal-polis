@@ -5,6 +5,7 @@ import { buildWordSearchGrid, type WordSearchCell, type WordSearchPuzzle } from 
 import { cn, formatTime } from "@/lib/utils";
 import { cellKey as coordsKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { emitGameInteractionLock } from "./gameInteraction";
 
 interface Progress {
   foundWords: Set<string>;
@@ -68,10 +69,12 @@ function cellFromPoint(clientX: number, clientY: number): WordSearchCell | null 
 
 interface WordSearchProps {
   puzzle: WordSearchPuzzle;
+  layout?: "full" | "embedded";
 }
 
-export function WordSearch({ puzzle }: WordSearchProps) {
+export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   const grid = useMemo(() => buildWordSearchGrid(puzzle), [puzzle]);
+  const isEmbedded = layout === "embedded";
 
   const placementByKey = useMemo(() => {
     const map = new Map<string, (typeof grid.placements)[number]>();
@@ -106,6 +109,8 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   const [dragCurrent, setDragCurrent] = useState<WordSearchCell | null>(null);
   const [missCells, setMissCells] = useState<WordSearchCell[] | null>(null);
   const [lastFound, setLastFound] = useState<string | null>(null);
+  const boardWrapperRef = useRef<HTMLDivElement>(null);
+  const [boardWidth, setBoardWidth] = useState(0);
 
   const pointerActiveRef = useRef(false);
 
@@ -125,6 +130,21 @@ export function WordSearch({ puzzle }: WordSearchProps) {
     return () => window.clearTimeout(timer);
   }, [missCells]);
 
+  useEffect(() => {
+    const node = boardWrapperRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setBoardWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => emitGameInteractionLock(false, "wordsearch");
+  }, []);
+
   function tryFinalize(start: WordSearchCell, end: WordSearchCell) {
     const cells = lineCells(start, end);
     if (!cells || cells.length < 2) return;
@@ -143,6 +163,8 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     const cell = cellFromPoint(event.clientX, event.clientY);
     if (!cell) return;
+    emitGameInteractionLock(true, "wordsearch");
+    event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
 
     if (dragStart && !pointerActiveRef.current) {
@@ -161,6 +183,9 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!pointerActiveRef.current) return;
+    event.stopPropagation();
+
     if (!pointerActiveRef.current || !dragStart) return;
     const cell = cellFromPoint(event.clientX, event.clientY);
     if (!cell) return;
@@ -168,6 +193,8 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   }
 
   function handlePointerUp() {
+    emitGameInteractionLock(false, "wordsearch");
+
     if (!pointerActiveRef.current) return;
     pointerActiveRef.current = false;
 
@@ -191,6 +218,13 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   );
   const dragCellKeys = useMemo(() => new Set(dragCells.map(cellKey)), [dragCells]);
   const missCellKeys = useMemo(() => new Set((missCells ?? []).map(cellKey)), [missCells]);
+  const boardMaxPx = useMemo(() => {
+    const preferredCell = isEmbedded ? 32 : 38;
+    const hardCap = isEmbedded ? 500 : 620;
+    return Math.min(grid.size * preferredCell, hardCap);
+  }, [grid.size, isEmbedded]);
+  const activeBoardPx = boardWidth > 0 ? Math.min(boardWidth, boardMaxPx) : boardMaxPx;
+  const cellPx = Math.max(26, Math.floor(activeBoardPx / grid.size));
   const foundCellKeys = useMemo(() => {
     const set = new Set<string>();
     for (const word of foundWords) {
@@ -202,7 +236,12 @@ export function WordSearch({ puzzle }: WordSearchProps) {
   }, [foundWords, placementByWord]);
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 lg:flex-row lg:items-start lg:justify-center">
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-col gap-6",
+        isEmbedded ? "max-w-3xl" : "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+      )}
+    >
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-4 text-sm text-polis-ink-soft">
           <span>
@@ -216,89 +255,96 @@ export function WordSearch({ puzzle }: WordSearchProps) {
           )}
         </div>
 
-        <div className="overflow-x-auto border-2 border-polis-ink bg-polis-ink p-px">
+        <div ref={boardWrapperRef} className="w-full">
           <div
-            className="relative touch-none select-none gap-px bg-polis-ink"
-            style={{ display: "grid", gridTemplateColumns: `repeat(${grid.size}, minmax(0, 1fr))` }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            role="img"
-            aria-label={`Grade de ${grid.size} por ${grid.size} letras. ${foundWords.size} de ${puzzle.words.length} palavras encontradas. Use o mouse ou o toque para arrastar sobre uma palavra.`}
+            className="mx-auto border-2 border-polis-ink bg-polis-ink p-px"
+            style={{ width: `min(100%, ${boardMaxPx}px)` }}
           >
-            {grid.letters.map((rowLetters, r) =>
-              rowLetters.map((letter, c) => {
-                const key = cellKey({ row: r, col: c });
-                const isFound = foundCellKeys.has(key);
-                const isDragging = dragCellKeys.has(key);
-                const isMiss = missCellKeys.has(key);
-                return (
-                  <div
-                    key={key}
-                    data-row={r}
-                    data-col={c}
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center bg-polis-paper font-serif text-sm font-bold uppercase text-polis-ink-soft transition-colors duration-150 sm:h-9 sm:w-9 sm:text-base",
-                      (isDragging || isFound) && "text-polis-gold-ink",
-                      isMiss && "text-red-700"
-                    )}
-                  >
-                    {letter}
-                  </div>
-                );
-              })
-            )}
-
-            <svg
-              viewBox={`0 0 ${grid.size} ${grid.size}`}
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 h-full w-full"
+            <div
+              className="relative touch-none select-none gap-px bg-polis-ink"
+              style={{ display: "grid", gridTemplateColumns: `repeat(${grid.size}, minmax(0, 1fr))` }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+              role="img"
+              aria-label={`Grade de ${grid.size} por ${grid.size} letras. ${foundWords.size} de ${puzzle.words.length} palavras encontradas. Use o mouse ou o toque para arrastar sobre uma palavra.`}
             >
-              {[...foundWords].map((word) => {
-                const placement = placementByWord.get(word);
-                if (!placement || placement.cells.length < 2) return null;
-                const seg = segmentFor(placement.cells);
-                return (
-                  <line
-                    key={word}
-                    x1={seg.x1}
-                    y1={seg.y1}
-                    x2={seg.x2}
-                    y2={seg.y2}
-                    stroke="#c9a227"
-                    strokeWidth={0.45}
-                    strokeLinecap="round"
-                    opacity={0.5}
-                  />
-                );
-              })}
-              {dragCells.length >= 2 &&
-                (() => {
-                  const seg = segmentFor(dragCells);
+              {grid.letters.map((rowLetters, r) =>
+                rowLetters.map((letter, c) => {
+                  const key = cellKey({ row: r, col: c });
+                  const isFound = foundCellKeys.has(key);
+                  const isDragging = dragCellKeys.has(key);
+                  const isMiss = missCellKeys.has(key);
+                  return (
+                    <div
+                      key={key}
+                      data-row={r}
+                      data-col={c}
+                      className={cn(
+                        "flex aspect-square w-full items-center justify-center bg-polis-paper font-serif font-bold uppercase text-polis-ink-soft transition-colors duration-150",
+                        (isDragging || isFound) && "text-polis-gold-ink",
+                        isMiss && "text-red-700"
+                      )}
+                      style={{ fontSize: `${Math.max(13, Math.floor(cellPx * 0.45))}px` }}
+                    >
+                      {letter}
+                    </div>
+                  );
+                })
+              )}
+
+              <svg
+                viewBox={`0 0 ${grid.size} ${grid.size}`}
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 h-full w-full"
+              >
+                {[...foundWords].map((word) => {
+                  const placement = placementByWord.get(word);
+                  if (!placement || placement.cells.length < 2) return null;
+                  const seg = segmentFor(placement.cells);
                   return (
                     <line
+                      key={word}
                       x1={seg.x1}
                       y1={seg.y1}
                       x2={seg.x2}
                       y2={seg.y2}
                       stroke="#c9a227"
-                      strokeWidth={0.55}
+                      strokeWidth={0.45}
                       strokeLinecap="round"
-                      opacity={0.85}
+                      opacity={0.5}
                     />
                   );
-                })()}
-              {missCells && missCells.length >= 2 && (
-                <line
-                  {...segmentFor(missCells)}
-                  stroke="#b91c1c"
-                  strokeWidth={0.5}
-                  strokeLinecap="round"
-                  opacity={0.75}
-                />
-              )}
-            </svg>
+                })}
+                {dragCells.length >= 2 &&
+                  (() => {
+                    const seg = segmentFor(dragCells);
+                    return (
+                      <line
+                        x1={seg.x1}
+                        y1={seg.y1}
+                        x2={seg.x2}
+                        y2={seg.y2}
+                        stroke="#c9a227"
+                        strokeWidth={0.55}
+                        strokeLinecap="round"
+                        opacity={0.85}
+                      />
+                    );
+                  })()}
+                {missCells && missCells.length >= 2 && (
+                  <line
+                    {...segmentFor(missCells)}
+                    stroke="#b91c1c"
+                    strokeWidth={0.5}
+                    strokeLinecap="round"
+                    opacity={0.75}
+                  />
+                )}
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -320,9 +366,9 @@ export function WordSearch({ puzzle }: WordSearchProps) {
         </button>
       </div>
 
-      <div className="w-full max-w-sm flex-1">
+      <div className={cn("w-full flex-1", isEmbedded ? "max-w-3xl" : "max-w-sm")}>
         <h2 className="mb-3 font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div className={cn("grid gap-x-4 gap-y-2 text-sm", isEmbedded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2")}>
           {puzzle.words.map((word) => {
             const found = foundWords.has(word);
             return (

@@ -149,7 +149,7 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
             </p>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <Crossword puzzle={crossword} />
+            <Crossword puzzle={crossword} layout="embedded" />
           </div>
         </div>
       ),
@@ -169,7 +169,7 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
             </p>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <WordSearch puzzle={wordSearch} />
+            <WordSearch puzzle={wordSearch} layout="embedded" />
           </div>
         </div>
       ),
