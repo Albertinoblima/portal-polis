@@ -497,8 +497,9 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
               className="mt-3 h-32 w-full rounded-sm object-cover"
             />
           )}
-          <label className="mt-3 flex h-20 cursor-pointer items-center justify-center rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
-            {isUploading ? "Enviando..." : "Clique para enviar uma imagem"}
+          <label className="mt-3 flex h-20 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
+            <span>{isUploading ? "Enviando..." : "Clique para enviar uma imagem"}</span>
+            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 20MB</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
           <input

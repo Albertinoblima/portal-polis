@@ -160,7 +160,17 @@ export async function getMedia() {
   return data;
 }
 
+// Precisa bater com o file_size_limit configurado no bucket "media"
+// (supabase/migrations/0007_media_bucket_limits.sql) — mudar um sem o outro
+// deixa a mensagem de erro do app e o limite real do Supabase incoerentes.
+export const MAX_MEDIA_UPLOAD_BYTES = 20 * 1024 * 1024; // 20MB
+
 export async function uploadMedia(file: File, uploadedBy: string, altText: string) {
+  if (file.size > MAX_MEDIA_UPLOAD_BYTES) {
+    const maxMb = Math.round(MAX_MEDIA_UPLOAD_BYTES / (1024 * 1024));
+    throw new Error(`Arquivo muito grande (máximo ${maxMb}MB).`);
+  }
+
   const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
   const { error: uploadError } = await supabase.storage.from("media").upload(path, file);
   if (uploadError) throw uploadError;
