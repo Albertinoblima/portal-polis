@@ -1,18 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-async function startSnake(page: Parameters<typeof test>[0]["page"]) {
+async function startSnake(page: Page) {
     await page.goto("/entretenimento/jogos/cobrinha/");
     await expect(page.getByRole("heading", { level: 1, name: "Jogo da Cobrinha" })).toBeVisible();
     await page.getByRole("button", { name: "Jogar" }).click();
 }
 
-async function startBlocks(page: Parameters<typeof test>[0]["page"]) {
+async function startBlocks(page: Page) {
     await page.goto("/entretenimento/jogos/blocos/");
     await expect(page.getByRole("heading", { level: 1, name: "Jogo dos Blocos" })).toBeVisible();
     await page.getByRole("button", { name: "Jogar" }).click();
 }
 
-async function startTicTacToeCpu(page: Parameters<typeof test>[0]["page"]) {
+async function startTicTacToeCpu(page: Page) {
     await page.goto("/entretenimento/jogos/jogo-da-velha/");
     await expect(page.getByRole("heading", { level: 1, name: "Jogo da Velha" })).toBeVisible();
     await page.getByRole("button", { name: "Contra o computador" }).click();
