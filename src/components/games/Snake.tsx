@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { GameOverlay } from "@/components/games/GameOverlay";
+import { useCompactLandscape } from "@/hooks/useCompactLandscape";
 
 interface Point {
   x: number;
@@ -84,6 +85,7 @@ export function Snake() {
   const scoreRef = useRef(0);
   const touchStartRef = useRef<Point | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isCompactLandscape = useCompactLandscape(true);
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -208,108 +210,148 @@ export function Snake() {
           ? "Fim de jogo!"
           : null;
 
+  const canPause = status === "playing" || status === "paused";
+  const boardWidthClass = isCompactLandscape ? "w-[min(100%,22rem)]" : "w-full";
+
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted"
+      className={cn(
+        "mx-auto flex h-full max-w-4xl flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted",
+        isCompactLandscape && "justify-start gap-3 sm:flex-row sm:items-start sm:justify-center"
+      )}
     >
-      <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Cobrinha</h1>
+      <div className={cn("flex w-full flex-col items-center gap-5", isCompactLandscape && "max-w-[24rem] gap-3")}>
+        <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Cobrinha</h1>
 
-      <div className="flex w-full items-center justify-around border-y border-polis-rule/30 py-2 text-sm text-polis-ink">
-        <span>
-          Pontos <strong>{score}</strong>
-        </span>
-        <span className="text-polis-ink-soft">
-          Recorde <strong>{highScore}</strong>
-        </span>
-      </div>
-
-      <div className="w-full border-2 border-polis-ink">
         <div
-          className="relative w-full overflow-hidden bg-polis-paper-soft"
-          style={{ aspectRatio: `${COLS} / ${ROWS}` }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+          className={cn(
+            "flex w-full items-center justify-around border-y border-polis-rule/30 py-2 text-sm text-polis-ink",
+            isCompactLandscape &&
+            "border-polis-rule/20 bg-polis-paper-soft/30 py-1.5 text-xs font-semibold uppercase tracking-[0.15em]"
+          )}
         >
-          {snake.map((segment, index) => (
-            <div
-              key={index}
-              className={cn("absolute", index === 0 ? "bg-polis-ink" : "bg-polis-ink/85")}
-              style={{
-                width: `${100 / COLS}%`,
-                height: `${100 / ROWS}%`,
-                left: `${(segment.x / COLS) * 100}%`,
-                top: `${(segment.y / ROWS) * 100}%`,
-              }}
-            />
-          ))}
+          <span>
+            Pontos <strong>{score}</strong>
+          </span>
+          <span className="text-polis-ink-soft">
+            Recorde <strong>{highScore}</strong>
+          </span>
+        </div>
 
+        <div className={cn(boardWidthClass, "border-2 border-polis-ink")}>
           <div
-            className="absolute rounded-full bg-polis-gold-ink"
-            style={{
-              width: `${100 / COLS}%`,
-              height: `${100 / ROWS}%`,
-              left: `${(food.x / COLS) * 100}%`,
-              top: `${(food.y / ROWS) * 100}%`,
-            }}
-          />
+            className="relative w-full overflow-hidden bg-polis-paper-soft touch-none"
+            style={{ aspectRatio: `${COLS} / ${ROWS}` }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {snake.map((segment, index) => (
+              <div
+                key={index}
+                className={cn("absolute", index === 0 ? "bg-polis-ink" : "bg-polis-ink/85")}
+                style={{
+                  width: `${100 / COLS}%`,
+                  height: `${100 / ROWS}%`,
+                  left: `${(segment.x / COLS) * 100}%`,
+                  top: `${(segment.y / ROWS) * 100}%`,
+                }}
+              />
+            ))}
 
-          {eatenPulse && (
             <div
-              className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-polis-gold/70"
+              className="absolute rounded-full bg-polis-gold-ink"
               style={{
                 width: `${100 / COLS}%`,
                 height: `${100 / ROWS}%`,
-                left: `${(eatenPulse.x / COLS) * 100}%`,
-                top: `${(eatenPulse.y / ROWS) * 100}%`,
+                left: `${(food.x / COLS) * 100}%`,
+                top: `${(food.y / ROWS) * 100}%`,
               }}
             />
-          )}
 
-          {overlayMessage && (
-            <GameOverlay
-              title={overlayMessage}
-              subtitle={status === "gameover" ? `Você fez ${score} pontos.` : undefined}
-              actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
-              onAction={status === "paused" ? togglePause : startGame}
-              isNewHighScore={status === "gameover" && isNewHighScore}
-            />
-          )}
+            {eatenPulse && (
+              <div
+                className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-polis-gold/70"
+                style={{
+                  width: `${100 / COLS}%`,
+                  height: `${100 / ROWS}%`,
+                  left: `${(eatenPulse.x / COLS) * 100}%`,
+                  top: `${(eatenPulse.y / ROWS) * 100}%`,
+                }}
+              />
+            )}
+
+            {overlayMessage && (
+              <GameOverlay
+                title={overlayMessage}
+                subtitle={status === "gameover" ? `Você fez ${score} pontos.` : undefined}
+                actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
+                onAction={status === "paused" ? togglePause : startGame}
+                isNewHighScore={status === "gameover" && isNewHighScore}
+              />
+            )}
+          </div>
+        </div>
+
+        <p className={cn("text-center text-xs text-polis-ink-soft", isCompactLandscape && "text-[11px] leading-snug")}>
+          Use setas (ou WASD), arraste na tela ou toque nos botões. Espaço pausa o jogo.
+        </p>
+
+        <div className="flex w-full max-w-[260px] items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={startGame}
+            className="flex-1 border border-polis-ink/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Novo jogo
+          </button>
+          <button
+            type="button"
+            onClick={togglePause}
+            disabled={!canPause}
+            className="flex-1 border border-polis-ink/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+          >
+            {status === "paused" ? "Continuar" : "Pausar"}
+          </button>
+        </div>
+
+        <div className={cn("grid grid-cols-3 gap-2", isCompactLandscape && "gap-1.5")}>
+          <div />
+          <DirectionButton compact={isCompactLandscape} label="Cima" onPress={() => queueDirection("UP")}>
+            ▲
+          </DirectionButton>
+          <div />
+          <DirectionButton compact={isCompactLandscape} label="Esquerda" onPress={() => queueDirection("LEFT")}>
+            ◀
+          </DirectionButton>
+          <div className="flex aspect-square items-center justify-center border border-dashed border-polis-ink/20 text-[10px] uppercase tracking-wide text-polis-ink-soft">
+            eixo
+          </div>
+          <DirectionButton compact={isCompactLandscape} label="Direita" onPress={() => queueDirection("RIGHT")}>
+            ▶
+          </DirectionButton>
+          <div />
+          <DirectionButton compact={isCompactLandscape} label="Baixo" onPress={() => queueDirection("DOWN")}>
+            ▼
+          </DirectionButton>
+          <div />
         </div>
       </div>
 
-      <p className="text-center text-xs text-polis-ink-soft">
-        Use as setas do teclado (ou WASD), arraste o dedo na tela ou toque nos botões abaixo. Espaço
-        pausa o jogo.
-      </p>
-
-      <div className="grid grid-cols-3 gap-2">
-        <div />
-        <DirectionButton label="Cima" onPress={() => queueDirection("UP")}>
-          ▲
-        </DirectionButton>
-        <div />
-        <DirectionButton label="Esquerda" onPress={() => queueDirection("LEFT")}>
-          ◀
-        </DirectionButton>
-        <button
-          type="button"
-          onClick={togglePause}
-          disabled={status === "idle" || status === "gameover"}
-          className="flex aspect-square items-center justify-center border border-polis-ink/30 text-[10px] font-semibold uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-        >
-          {status === "paused" ? "Continuar" : "Pausar"}
-        </button>
-        <DirectionButton label="Direita" onPress={() => queueDirection("RIGHT")}>
-          ▶
-        </DirectionButton>
-        <div />
-        <DirectionButton label="Baixo" onPress={() => queueDirection("DOWN")}>
-          ▼
-        </DirectionButton>
-        <div />
-      </div>
+      <aside
+        className={cn(
+          "w-full max-w-xs border border-polis-rule/20 bg-polis-paper-soft/20 px-4 py-3 text-xs text-polis-ink-soft",
+          isCompactLandscape ? "max-w-[15rem]" : "hidden"
+        )}
+      >
+        <p className="font-semibold uppercase tracking-[0.14em] text-polis-ink">Guia Rápido</p>
+        <ul className="mt-2 space-y-1.5 leading-relaxed">
+          <li>Evite as bordas e o próprio corpo da cobra.</li>
+          <li>Cada comida aumenta os pontos e acelera o ritmo.</li>
+          <li>Pausa estratégica ajuda em velocidades altas.</li>
+        </ul>
+      </aside>
     </div>
   );
 }
@@ -317,10 +359,12 @@ export function Snake() {
 function DirectionButton({
   label,
   onPress,
+  compact = false,
   children,
 }: {
   label: string;
   onPress: () => void;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -328,7 +372,10 @@ function DirectionButton({
       type="button"
       aria-label={label}
       onClick={onPress}
-      className="flex aspect-square items-center justify-center border border-polis-ink/30 text-lg text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+      className={cn(
+        "flex aspect-square items-center justify-center border border-polis-ink/30 text-lg text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink",
+        compact && "text-base"
+      )}
     >
       {children}
     </button>

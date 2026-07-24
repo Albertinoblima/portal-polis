@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GameRegistrationForm, type GameRegistrationSlot } from "@/components/forms/GameRegistrationForm";
 import { cn } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { useCompactLandscape } from "@/hooks/useCompactLandscape";
 
 type Cell = "X" | "O" | null;
 type Mode = "cpu" | "local";
@@ -79,6 +80,7 @@ export function TicTacToe() {
   const [board, setBoard] = useState<Cell[]>(EMPTY_BOARD);
   const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
   const [startingPlayer, setStartingPlayer] = useState<"X" | "O">("X");
+  const isCompactLandscape = useCompactLandscape(stage === "playing");
   // A chave só fica "real" depois do cadastro (quando mode/nomes são
   // definidos) — o hook recarrega sozinho sempre que a chave muda.
   const [score, setScore] = useLocalStorageState<Score>(scoreKey(mode ?? "local", nameX, nameO), EMPTY_SCORE);
@@ -168,21 +170,21 @@ export function TicTacToe() {
 
   if (stage === "mode") {
     return (
-      <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-6 text-center">
+      <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center gap-6 text-center">
         <h1 className="font-serif text-4xl font-bold text-polis-ink">Jogo da Velha</h1>
-        <p className="text-polis-ink-soft">Escolha como deseja jogar esta partida.</p>
+        <p className="max-w-md text-polis-ink-soft">Escolha como deseja jogar esta partida.</p>
         <div className="flex w-full flex-col gap-4 sm:flex-row">
           <button
             type="button"
             onClick={() => selectMode("cpu")}
-            className="flex-1 border border-polis-ink/30 px-6 py-5 font-serif text-lg font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            className="flex-1 border border-polis-ink/30 bg-polis-paper-soft/20 px-6 py-5 font-serif text-lg font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
           >
             Contra o computador
           </button>
           <button
             type="button"
             onClick={() => selectMode("local")}
-            className="flex-1 border border-polis-ink/30 px-6 py-5 font-serif text-lg font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            className="flex-1 border border-polis-ink/30 bg-polis-paper-soft/20 px-6 py-5 font-serif text-lg font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
           >
             Com outra pessoa
           </button>
@@ -196,9 +198,9 @@ export function TicTacToe() {
       mode === "cpu"
         ? [{ label: "Seu nome", symbol: "X" }]
         : [
-            { label: "Jogador 1", symbol: "X" },
-            { label: "Jogador 2", symbol: "O" },
-          ];
+          { label: "Jogador 1", symbol: "X" },
+          { label: "Jogador 2", symbol: "O" },
+        ];
 
     return (
       <div className="mx-auto flex h-full max-w-md flex-col justify-center gap-6">
@@ -221,68 +223,96 @@ export function TicTacToe() {
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-5">
-      <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Velha</h1>
+    <div
+      className={cn(
+        "mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-5",
+        isCompactLandscape && "justify-start gap-3 sm:flex-row sm:items-start"
+      )}
+    >
+      <div className={cn("flex w-full flex-col items-center gap-5", isCompactLandscape && "max-w-[22rem] gap-3")}>
+        <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Velha</h1>
 
-      <div className="flex w-full items-center justify-around border-y border-polis-rule/30 py-2 text-sm">
-        <span className="text-polis-ink">
-          {nameX} (X) <strong>{score.x}</strong>
-        </span>
-        <span className="text-polis-ink-soft">
-          Empates <strong>{score.draws}</strong>
-        </span>
-        <span className="text-polis-ink">
-          {nameO} (O) <strong>{score.o}</strong>
-        </span>
-      </div>
+        <div
+          className={cn(
+            "flex w-full items-center justify-around border-y border-polis-rule/30 py-2 text-sm",
+            isCompactLandscape &&
+            "border-polis-rule/20 bg-polis-paper-soft/30 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]"
+          )}
+        >
+          <span className="text-polis-ink">
+            {nameX} (X) <strong>{score.x}</strong>
+          </span>
+          <span className="text-polis-ink-soft">
+            Empates <strong>{score.draws}</strong>
+          </span>
+          <span className="text-polis-ink">
+            {nameO} (O) <strong>{score.o}</strong>
+          </span>
+        </div>
 
-      <div className="grid w-full max-w-xs grid-cols-3 gap-[3px] border-2 border-polis-ink bg-polis-ink sm:max-w-sm">
-        {board.map((cell, index) => (
+        <div className={cn("grid w-full grid-cols-3 gap-[3px] border-2 border-polis-ink bg-polis-ink", isCompactLandscape ? "max-w-[17rem]" : "max-w-xs sm:max-w-sm")}>
+          {board.map((cell, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => handleCellClick(index)}
+              disabled={cell !== null || gameOver || isCpuTurn}
+              aria-label={`Casa ${index + 1}${cell ? `, ${cell}` : ""}`}
+              className={cn(
+                "flex aspect-square items-center justify-center bg-polis-paper font-serif text-5xl font-bold transition-colors",
+                isCompactLandscape && "text-4xl",
+                outcome?.line.includes(index) ? "bg-polis-gold/15" : "hover:bg-polis-paper-soft",
+                cell === "X" && "text-polis-ink",
+                cell === "O" && "text-polis-gold-ink"
+              )}
+            >
+              {cell}
+            </button>
+          ))}
+        </div>
+
+        <p className={cn("min-h-5 text-center text-sm text-polis-ink-soft", isCompactLandscape && "text-xs")}>
+          {outcome
+            ? `${outcome.winner === "X" ? nameX : nameO} venceu esta partida!`
+            : draw
+              ? "Empate!"
+              : isCpuTurn
+                ? "Computador pensando..."
+                : `Vez de ${currentPlayer === "X" ? nameX : nameO} (${currentPlayer})`}
+        </p>
+
+        <div className="flex gap-4">
           <button
-            key={index}
             type="button"
-            onClick={() => handleCellClick(index)}
-            disabled={cell !== null || gameOver || isCpuTurn}
-            aria-label={`Casa ${index + 1}${cell ? `, ${cell}` : ""}`}
-            className={cn(
-              "flex aspect-square items-center justify-center bg-polis-paper font-serif text-5xl font-bold transition-colors",
-              outcome?.line.includes(index) ? "bg-polis-gold/15" : "hover:bg-polis-paper-soft",
-              cell === "X" && "text-polis-ink",
-              cell === "O" && "text-polis-gold-ink"
-            )}
+            onClick={playAgain}
+            disabled={!gameOver}
+            className="border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
           >
-            {cell}
+            Jogar novamente
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={changePlayers}
+            className="text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink"
+          >
+            Trocar jogadores
+          </button>
+        </div>
       </div>
 
-      <p className="min-h-5 text-center text-sm text-polis-ink-soft">
-        {outcome
-          ? `${outcome.winner === "X" ? nameX : nameO} venceu esta partida!`
-          : draw
-            ? "Empate!"
-            : isCpuTurn
-              ? "Computador pensando..."
-              : `Vez de ${currentPlayer === "X" ? nameX : nameO} (${currentPlayer})`}
-      </p>
-
-      <div className="flex gap-4">
-        <button
-          type="button"
-          onClick={playAgain}
-          disabled={!gameOver}
-          className="border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-        >
-          Jogar novamente
-        </button>
-        <button
-          type="button"
-          onClick={changePlayers}
-          className="text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink"
-        >
-          Trocar jogadores
-        </button>
-      </div>
+      <aside
+        className={cn(
+          "w-full max-w-xs border border-polis-rule/20 bg-polis-paper-soft/20 px-4 py-3 text-xs text-polis-ink-soft",
+          isCompactLandscape ? "max-w-[14rem]" : "hidden"
+        )}
+      >
+        <p className="font-semibold uppercase tracking-[0.14em] text-polis-ink">Guia Rápido</p>
+        <ul className="mt-2 space-y-1.5 leading-relaxed">
+          <li>Controle o centro para ampliar linhas de vitória.</li>
+          <li>Bloqueie jogadas duplas do adversário.</li>
+          <li>Contra a CPU perfeita, o objetivo ideal é empate.</li>
+        </ul>
+      </aside>
     </div>
   );
 }

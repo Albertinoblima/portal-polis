@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { cellKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { GameOverlay } from "@/components/games/GameOverlay";
+import { useCompactLandscape } from "@/hooks/useCompactLandscape";
 
 type PieceType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 
@@ -140,6 +141,7 @@ export function Blocks() {
   const bagRef = useRef<PieceType[]>([]);
   const speedRef = useRef(START_SPEED);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isCompactLandscape = useCompactLandscape(true);
 
   const endGame = useCallback(
     (finalScore: number) => {
@@ -338,15 +340,24 @@ export function Blocks() {
   const nextShape = nextType ? PIECES[nextType] : null;
   const overlayMessage =
     status === "idle" ? "Pronto para jogar?" : status === "paused" ? "Pausado" : status === "gameover" ? "Fim de jogo!" : null;
+  const boardWidth = isCompactLandscape ? "w-[190px]" : "w-[200px] sm:w-[240px]";
 
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted sm:flex-row sm:items-start sm:justify-center"
+      className={cn(
+        "mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted sm:flex-row sm:items-start sm:justify-center",
+        isCompactLandscape && "justify-start gap-3"
+      )}
     >
-      <div className="flex flex-col items-center gap-4">
+      <div className={cn("flex flex-col items-center gap-4", isCompactLandscape && "gap-2.5")}>
         <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo dos Blocos</h1>
+
+        <div className="flex w-full max-w-[260px] items-center justify-between border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink">
+          <span>Nível {level}</span>
+          <span>Pontos {score}</span>
+        </div>
 
         <div
           className={cn(
@@ -355,7 +366,7 @@ export function Blocks() {
           )}
         >
           <div
-            className="relative mx-auto w-[200px] overflow-hidden sm:w-[240px]"
+            className={cn("relative mx-auto overflow-hidden", boardWidth)}
             style={{ aspectRatio: `${COLS} / ${ROWS}` }}
           >
             <div
@@ -393,18 +404,18 @@ export function Blocks() {
           </div>
         </div>
 
-        <p className="max-w-xs text-center text-xs text-polis-ink-soft">
+        <p className={cn("max-w-xs text-center text-xs text-polis-ink-soft", isCompactLandscape && "text-[11px] leading-snug")}>
           Setas (ou WASD) movem e giram, espaço derruba na hora, P pausa. Use os botões abaixo no
           toque.
         </p>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className={cn("grid grid-cols-3 gap-2", isCompactLandscape && "gap-1.5")}>
           <div />
-          <DirectionButton label="Girar" onPress={tryRotate}>
+          <DirectionButton compact={isCompactLandscape} label="Girar" onPress={tryRotate}>
             ⟳
           </DirectionButton>
           <div />
-          <DirectionButton label="Esquerda" onPress={() => tryMove(0, -1)}>
+          <DirectionButton compact={isCompactLandscape} label="Esquerda" onPress={() => tryMove(0, -1)}>
             ◀
           </DirectionButton>
           <button
@@ -415,11 +426,11 @@ export function Blocks() {
           >
             {status === "paused" ? "Continuar" : "Pausar"}
           </button>
-          <DirectionButton label="Direita" onPress={() => tryMove(0, 1)}>
+          <DirectionButton compact={isCompactLandscape} label="Direita" onPress={() => tryMove(0, 1)}>
             ▶
           </DirectionButton>
           <div />
-          <DirectionButton label="Descer" onPress={() => tryMove(1, 0)}>
+          <DirectionButton compact={isCompactLandscape} label="Descer" onPress={() => tryMove(1, 0)}>
             ▼
           </DirectionButton>
           <div />
@@ -429,13 +440,21 @@ export function Blocks() {
           type="button"
           onClick={hardDrop}
           disabled={status !== "playing"}
-          className="w-full max-w-[190px] border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+          className={cn(
+            "w-full max-w-[190px] border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30",
+            isCompactLandscape && "py-1.5 text-[11px]"
+          )}
         >
           Queda rápida
         </button>
       </div>
 
-      <div className="flex w-full max-w-[200px] flex-col gap-4 text-sm text-polis-ink">
+      <div
+        className={cn(
+          "flex w-full max-w-[200px] flex-col gap-4 text-sm text-polis-ink",
+          isCompactLandscape && "max-h-[22rem] overflow-y-auto border-l border-polis-rule/20 pl-3"
+        )}
+      >
         <div>
           <p className="text-xs uppercase tracking-wide text-polis-ink-soft">Próxima</p>
           <div className="mt-1 flex h-16 w-16 items-center justify-center border border-polis-ink/30 bg-polis-paper-soft">
@@ -473,10 +492,12 @@ export function Blocks() {
 function DirectionButton({
   label,
   onPress,
+  compact = false,
   children,
 }: {
   label: string;
   onPress: () => void;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -484,7 +505,10 @@ function DirectionButton({
       type="button"
       aria-label={label}
       onClick={onPress}
-      className="flex aspect-square items-center justify-center border border-polis-ink/30 text-lg text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+      className={cn(
+        "flex aspect-square items-center justify-center border border-polis-ink/30 text-lg text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink",
+        compact && "text-base"
+      )}
     >
       {children}
     </button>

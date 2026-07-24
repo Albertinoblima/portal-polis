@@ -176,5 +176,47 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
     });
   }
 
+  blocks.push({
+    type: "node",
+    columns: 1,
+    node: (
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col justify-center border-y border-polis-rule/20 py-8 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-polis-ink-soft">Entretenimento</p>
+        <h3 className="mt-2 font-serif text-2xl font-bold text-polis-ink">Mais joguinhos do Portal Pólis</h3>
+        <p className="mx-auto mt-3 max-w-xl text-sm text-polis-ink-soft">
+          Continue a leitura com partidas rápidas no estilo retrô: Jogo da Velha, Cobrinha e Blocos.
+        </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          <Link
+            href="/entretenimento/jogos/jogo-da-velha"
+            className="border border-polis-ink/25 bg-polis-paper-soft/20 px-4 py-3 font-serif font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Jogo da Velha
+          </Link>
+          <Link
+            href="/entretenimento/jogos/cobrinha"
+            className="border border-polis-ink/25 bg-polis-paper-soft/20 px-4 py-3 font-serif font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Cobrinha
+          </Link>
+          <Link
+            href="/entretenimento/jogos/blocos"
+            className="border border-polis-ink/25 bg-polis-paper-soft/20 px-4 py-3 font-serif font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Blocos
+          </Link>
+        </div>
+
+        <Link
+          href="/entretenimento/jogos"
+          className="mt-4 text-xs font-semibold uppercase tracking-[0.15em] text-polis-ink-soft underline hover:text-polis-gold-ink"
+        >
+          Ver todos os jogos
+        </Link>
+      </div>
+    ),
+  });
+
   return blocks;
 }
