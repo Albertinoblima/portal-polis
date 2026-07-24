@@ -1,29 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { cn } from "@/lib/utils";
+import { MediaLibraryModal } from "@/components/admin/MediaLibraryModal";
 
 interface EditorToolbarProps {
   editor: Editor;
-  onImageUpload: (file: File) => Promise<string>;
+  uploadedBy: string;
 }
 
-export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
+export function EditorToolbar({ editor, uploadedBy }: EditorToolbarProps) {
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
 
-  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setIsUploadingImage(true);
-    try {
-      const url = await onImageUpload(file);
-      editor.chain().focus().setImage({ src: url }).run();
-    } finally {
-      setIsUploadingImage(false);
-    }
+  function handleImageSelect(selected: { url: string; alt_text: string }) {
+    editor.chain().focus().setImage({ src: selected.url, alt: selected.alt_text }).run();
   }
 
   return (
@@ -101,14 +92,16 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
       <Divider />
 
       <LinkButton editor={editor} />
-      <ToolbarButton
-        label={isUploadingImage ? "Enviando imagem..." : "Inserir imagem"}
-        onClick={() => imageInputRef.current?.click()}
-        disabled={isUploadingImage}
-      >
+      <ToolbarButton label="Inserir imagem" onClick={() => setIsMediaLibraryOpen(true)}>
         🖼
       </ToolbarButton>
-      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+      {isMediaLibraryOpen && (
+        <MediaLibraryModal
+          uploadedBy={uploadedBy}
+          onSelect={handleImageSelect}
+          onClose={() => setIsMediaLibraryOpen(false)}
+        />
+      )}
       <ToolbarButton label="Linha horizontal" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
         —
       </ToolbarButton>

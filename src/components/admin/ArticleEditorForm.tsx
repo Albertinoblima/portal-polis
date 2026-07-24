@@ -11,12 +11,12 @@ import {
   setArticleTags,
   triggerSiteRebuild,
   updateArticle,
-  uploadMedia,
 } from "@/lib/supabase/queries";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 import { logAction } from "@/lib/supabase/audit";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/admin/Card";
+import { MediaLibraryModal } from "@/components/admin/MediaLibraryModal";
 import { RichTextEditor } from "@/components/admin/editor/RichTextEditor";
 import { slugify } from "@/lib/utils";
 
@@ -61,7 +61,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   const [scheduledAt, setScheduledAt] = useState("");
   const [editorMode, setEditorMode] = useState<"visual" | "html">("visual");
 
-  const [isUploading, setIsUploading] = useState(false);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [savingAction, setSavingAction] = useState<ArticleStatus | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -154,19 +154,9 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     if (!slugEdited) setSlug(slugify(value));
   }
 
-  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    setFormError(null);
-    try {
-      const media = await uploadMedia(file, profile.id, featuredImageAlt || title);
-      setFeaturedImage(media.url);
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Falha ao enviar imagem.");
-    } finally {
-      setIsUploading(false);
-    }
+  function handleFeaturedImageSelect(selected: { url: string; alt_text: string }) {
+    setFeaturedImage(selected.url);
+    if (!featuredImageAlt.trim() && selected.alt_text) setFeaturedImageAlt(selected.alt_text);
   }
 
   async function handleSave(status: ArticleStatus) {
@@ -332,11 +322,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
           </div>
           {editorMode === "visual" ? (
             <div className="mt-2">
-              <RichTextEditor
-                value={content}
-                onChange={setContent}
-                onImageUpload={(file) => uploadMedia(file, profile.id, title).then((media) => media.url)}
-              />
+              <RichTextEditor value={content} onChange={setContent} uploadedBy={profile.id} />
             </div>
           ) : (
             <textarea
@@ -497,11 +483,21 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
               className="mt-3 h-32 w-full rounded-sm object-cover"
             />
           )}
-          <label className="mt-3 flex h-20 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
-            <span>{isUploading ? "Enviando..." : "Clique para enviar uma imagem"}</span>
-            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 20MB</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          </label>
+          <button
+            type="button"
+            onClick={() => setIsMediaLibraryOpen(true)}
+            className="mt-3 flex h-20 w-full flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold"
+          >
+            <span>Selecionar da biblioteca de mídia</span>
+            <span className="text-[10px] text-polis-gray/70">ou envie uma imagem nova (até 20MB)</span>
+          </button>
+          {isMediaLibraryOpen && (
+            <MediaLibraryModal
+              uploadedBy={profile.id}
+              onSelect={handleFeaturedImageSelect}
+              onClose={() => setIsMediaLibraryOpen(false)}
+            />
+          )}
           <input
             value={featuredImageAlt}
             onChange={(event) => setFeaturedImageAlt(event.target.value)}
