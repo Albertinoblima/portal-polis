@@ -8,8 +8,16 @@ import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { getArticlesForAdmin, getEditorias } from "@/lib/supabase/queries";
 import { supabase } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
+import { getAnalyticsSnapshot } from "@/lib/analytics";
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  return `${minutes}m ${remaining}s`;
+}
 
 export default function AdminDashboardPage() {
+  const analytics = getAnalyticsSnapshot();
   const { data: articles, loading: loadingArticles } = useSupabaseQuery(getArticlesForAdmin);
   const { data: editorias } = useSupabaseQuery(getEditorias);
   const { data: subscriberCount } = useSupabaseQuery(async () => {
@@ -88,6 +96,73 @@ export default function AdminDashboardPage() {
             )}
           </section>
         </div>
+
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-sans text-lg font-bold text-polis-navy">Google Analytics</h2>
+            {analytics.available && (
+              <span className="text-xs text-polis-slate">
+                Últimos {analytics.periodDays} dias · atualizado em{" "}
+                {analytics.generatedAt && formatDate(analytics.generatedAt)}
+              </span>
+            )}
+          </div>
+          {!analytics.available ? (
+            <div className="rounded-sm border border-polis-navy/10 bg-white p-5">
+              <p className="text-sm text-polis-slate">
+                Analytics ainda não configurado. Defina GA_PROPERTY_ID e GA_SERVICE_ACCOUNT_KEY nos
+                secrets do repositório para começar a receber dados aqui.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  label="Usuários"
+                  value={analytics.totals.activeUsers.toLocaleString("pt-BR")}
+                  hint="Usuários ativos no período"
+                />
+                <KpiCard
+                  label="Sessões"
+                  value={analytics.totals.sessions.toLocaleString("pt-BR")}
+                  hint="Sessões no período"
+                />
+                <KpiCard
+                  label="Pageviews"
+                  value={analytics.totals.screenPageViews.toLocaleString("pt-BR")}
+                  hint="Visualizações de página"
+                />
+                <KpiCard
+                  label="Duração Média"
+                  value={formatDuration(analytics.totals.averageSessionDuration)}
+                  hint={`Taxa de rejeição: ${(analytics.totals.bounceRate * 100).toFixed(1)}%`}
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <section className="rounded-sm border border-polis-navy/10 bg-white p-5">
+                  <h3 className="mb-4 font-sans text-sm font-bold text-polis-navy">Páginas Mais Visitadas</h3>
+                  {analytics.topPages.length === 0 ? (
+                    <p className="text-sm text-polis-slate">Sem dados no período.</p>
+                  ) : (
+                    <BarChart
+                      items={analytics.topPages.map((p) => ({ label: p.path, value: p.views }))}
+                    />
+                  )}
+                </section>
+                <section className="rounded-sm border border-polis-navy/10 bg-white p-5">
+                  <h3 className="mb-4 font-sans text-sm font-bold text-polis-navy">Canais de Aquisição</h3>
+                  {analytics.channels.length === 0 ? (
+                    <p className="text-sm text-polis-slate">Sem dados no período.</p>
+                  ) : (
+                    <BarChart
+                      items={analytics.channels.map((c) => ({ label: c.channel, value: c.sessions }))}
+                    />
+                  )}
+                </section>
+              </div>
+            </>
+          )}
+        </section>
 
         <section className="mt-8">
           <h2 className="mb-4 font-sans text-lg font-bold text-polis-navy">Atividade Recente</h2>

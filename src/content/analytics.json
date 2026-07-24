@@ -1,0 +1,14 @@
+{
+  "available": false,
+  "generatedAt": null,
+  "periodDays": 28,
+  "totals": {
+    "activeUsers": 0,
+    "sessions": 0,
+    "screenPageViews": 0,
+    "averageSessionDuration": 0,
+    "bounceRate": 0
+  },
+  "topPages": [],
+  "channels": []
+}
