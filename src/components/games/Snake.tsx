@@ -13,19 +13,27 @@ interface Point {
 
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 type Status = "idle" | "playing" | "paused" | "gameover";
-type SnakeMode = "competitivo" | "treino";
+type SnakeMode = "competitivo" | "treino" | "desafio";
 
 const COLS = 20;
 const ROWS = 12;
 const START_SPEED = 160;
 const TRAINING_SPEED = 180;
+const CHALLENGE_START_SPEED = 150;
 const MIN_SPEED = 70;
 const SPEED_STEP = 4;
 const HIGH_SCORE_KEY = "polis:cobrinha:recorde";
 const HIGH_TIME_KEY = "polis:cobrinha:melhor-tempo";
 const MODE_KEY = "polis:cobrinha:modo";
+const CHALLENGE_BEST_TIER_KEY = "polis:cobrinha:desafio:melhor-tier";
 const TIME_ACCELERATION_INTERVAL = 20;
 const TIME_ACCELERATION_STEP = 2;
+
+const CHALLENGE_TIERS = [
+  { label: "Bronze", seconds: 120 },
+  { label: "Prata", seconds: 240 },
+  { label: "Ouro", seconds: 360 },
+] as const;
 
 const INITIAL_SNAKE: Point[] = [
   { x: 8, y: 6 },
@@ -84,6 +92,13 @@ function highTimeKeyForMode(mode: SnakeMode): string {
   return `${HIGH_TIME_KEY}:${mode}`;
 }
 
+function reachedChallengeTierIndex(seconds: number): number {
+  for (let i = CHALLENGE_TIERS.length - 1; i >= 0; i--) {
+    if (seconds >= CHALLENGE_TIERS[i].seconds) return i;
+  }
+  return -1;
+}
+
 export function Snake() {
   const [mode, setMode] = useLocalStorageState<SnakeMode>(MODE_KEY, "competitivo");
   const [snake, setSnake] = useState<Point[]>(INITIAL_SNAKE);
@@ -94,8 +109,10 @@ export function Snake() {
   const [speedMs, setSpeedMs] = useState(START_SPEED);
   const [highScore, setHighScore] = useLocalStorageState(highScoreKeyForMode(mode), 0);
   const [bestTime, setBestTime] = useLocalStorageState(highTimeKeyForMode(mode), 0);
+  const [bestChallengeTier, setBestChallengeTier] = useLocalStorageState(CHALLENGE_BEST_TIER_KEY, -1);
   const [isNewHighScore, setIsNewHighScore] = useState(false);
   const [isNewBestTime, setIsNewBestTime] = useState(false);
+  const [isNewChallengeTier, setIsNewChallengeTier] = useState(false);
   const [eatenPulse, setEatenPulse] = useState<Point | null>(null);
 
   const directionRef = useRef<Direction>(INITIAL_DIRECTION);
@@ -107,6 +124,7 @@ export function Snake() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactLandscape = useCompactLandscape(true);
   const isTrainingMode = mode === "treino";
+  const isChallengeMode = mode === "desafio";
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -117,14 +135,15 @@ export function Snake() {
     scoreRef.current = 0;
     directionRef.current = INITIAL_DIRECTION;
     nextDirectionRef.current = INITIAL_DIRECTION;
-    const initialSpeed = isTrainingMode ? TRAINING_SPEED : START_SPEED;
+    const initialSpeed = isTrainingMode ? TRAINING_SPEED : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
     speedRef.current = initialSpeed;
     setSpeedMs(initialSpeed);
     setStatus("playing");
     setIsNewHighScore(false);
     setIsNewBestTime(false);
+    setIsNewChallengeTier(false);
     containerRef.current?.focus();
-  }, [isTrainingMode]);
+  }, [isChallengeMode, isTrainingMode]);
 
   const queueDirection = useCallback(
     (direction: Direction) => {
@@ -183,11 +202,18 @@ export function Snake() {
       const collided = hitWall || body.some((segment) => segment.x === newHead.x && segment.y === newHead.y);
 
       if (collided) {
+        const reachedTier = isChallengeMode ? reachedChallengeTierIndex(elapsedRef.current) : -1;
         setStatus("gameover");
         setIsNewHighScore(scoreRef.current > highScore);
         setIsNewBestTime(elapsedRef.current > bestTime);
         setHighScore((prev) => Math.max(prev, scoreRef.current));
         setBestTime((prev) => Math.max(prev, elapsedRef.current));
+        if (isChallengeMode) {
+          setIsNewChallengeTier(reachedTier > bestChallengeTier);
+          setBestChallengeTier((prev) => Math.max(prev, reachedTier));
+        } else {
+          setIsNewChallengeTier(false);
+        }
         return;
       }
 
@@ -199,7 +225,7 @@ export function Snake() {
         setScore(scoreRef.current);
         setEatenPulse(food);
         setFood(randomFood(newSnake));
-        if (!isTrainingMode) {
+        if (!isTrainingMode && !isChallengeMode) {
           speedRef.current = Math.max(MIN_SPEED, speedRef.current - SPEED_STEP);
           setSpeedMs(speedRef.current);
         }
@@ -207,7 +233,19 @@ export function Snake() {
     }, speedRef.current);
 
     return () => window.clearTimeout(timer);
-  }, [status, snake, food, highScore, bestTime, isTrainingMode, setHighScore, setBestTime]);
+  }, [
+    status,
+    snake,
+    food,
+    highScore,
+    bestTime,
+    bestChallengeTier,
+    isChallengeMode,
+    isTrainingMode,
+    setHighScore,
+    setBestTime,
+    setBestChallengeTier,
+  ]);
 
   useEffect(() => {
     if (!eatenPulse) return;
@@ -266,6 +304,12 @@ export function Snake() {
   const canChangeMode = status === "idle" || status === "gameover";
   const boardWidthClass = isCompactLandscape ? "w-[min(100%,22rem)]" : "w-full";
   const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
+  const currentTierIndex = reachedChallengeTierIndex(elapsedSeconds);
+  const nextTier = CHALLENGE_TIERS[currentTierIndex + 1] ?? null;
+  const challengeProgress = nextTier
+    ? Math.min(100, (elapsedSeconds / nextTier.seconds) * 100)
+    : 100;
+  const bestTierLabel = bestChallengeTier >= 0 ? CHALLENGE_TIERS[bestChallengeTier]?.label : "-";
 
   return (
     <div
@@ -306,13 +350,47 @@ export function Snake() {
           >
             Treino
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("desafio")}
+            disabled={!canChangeMode}
+            className={cn(
+              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+              mode === "desafio"
+                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            )}
+          >
+            Desafio
+          </button>
         </div>
 
         <p className="text-center text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
           {isTrainingMode
             ? "Modo treino: velocidade fixa para praticar rota e reflexo"
-            : "Modo competitivo: aceleração por comida e por tempo"}
+            : isChallengeMode
+              ? "Modo desafio: sobreviva para conquistar medalhas por tempo"
+              : "Modo competitivo: aceleração por comida e por tempo"}
         </p>
+
+        {isChallengeMode && (
+          <div className="w-full max-w-[300px] border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
+            <div className="flex items-center justify-between">
+              <span>
+                Medalha atual: <strong className="text-polis-ink">{currentTierIndex >= 0 ? CHALLENGE_TIERS[currentTierIndex].label : "-"}</strong>
+              </span>
+              <span>
+                Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
+              <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
+            </div>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
+              {nextTier ? `Próxima medalha (${nextTier.label}) em ${formatTime(nextTier.seconds)}` : "Meta máxima atingida"}
+            </p>
+          </div>
+        )}
 
         <div
           className={cn(
@@ -381,11 +459,16 @@ export function Snake() {
               <GameOverlay
                 title={overlayMessage}
                 subtitle={
-                  status === "gameover" ? `Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.` : undefined
+                  status === "gameover"
+                    ? `${isChallengeMode && currentTierIndex >= 0
+                      ? `Medalha: ${CHALLENGE_TIERS[currentTierIndex].label}. `
+                      : ""
+                    }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
+                    : undefined
                 }
                 actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
                 onAction={status === "paused" ? togglePause : startGame}
-                isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestTime)}
+                isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestTime || isNewChallengeTier)}
               />
             )}
           </div>
@@ -452,9 +535,11 @@ export function Snake() {
           <li>
             {isTrainingMode
               ? "No treino, o ritmo fica constante para focar na técnica."
-              : "Cada comida aumenta os pontos e acelera o ritmo."}
+              : isChallengeMode
+                ? "No desafio, a velocidade aumenta com o tempo para testar sobrevivência."
+                : "Cada comida aumenta os pontos e acelera o ritmo."}
           </li>
-          {!isTrainingMode && <li>O tempo também acelera a partida a cada 20 segundos.</li>}
+          {!isTrainingMode && <li>A aceleração por tempo acontece a cada 20 segundos.</li>}
           <li>Pausa estratégica ajuda em velocidades altas.</li>
         </ul>
       </aside>
