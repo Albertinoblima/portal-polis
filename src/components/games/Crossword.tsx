@@ -266,7 +266,7 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
         "mx-auto flex w-full flex-col gap-8",
         compactLandscape && "max-w-none flex-row items-start gap-3",
         isEmbedded && !compactLandscape && "max-w-3xl",
-        !isEmbedded && "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+        !isEmbedded && "max-w-4xl lg:flex-row lg:flex-wrap lg:items-start lg:justify-center"
       )}
     >
       <div className={cn("flex flex-col items-center gap-4", compactLandscape && "min-w-0 flex-1 gap-2.5")}>
@@ -394,7 +394,7 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
           compactLandscape &&
           "max-h-[19rem] max-w-[45%] overflow-y-auto border-l border-polis-rule/20 pl-3 pr-1 pt-0",
           isEmbedded && !compactLandscape && "max-w-3xl border-t border-polis-rule/20 pt-4 md:grid-cols-2",
-          !isEmbedded && "max-w-md sm:grid-cols-2"
+          !isEmbedded && "max-w-md sm:grid-cols-2 lg:min-w-[18rem]"
         )}
       >
         <div>

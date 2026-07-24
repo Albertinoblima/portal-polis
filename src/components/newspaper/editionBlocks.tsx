@@ -63,16 +63,23 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             <span>{article.readingTimeMinutes} min de leitura</span>
           </div>
 
-          <div className="relative mt-4 min-h-0 flex-1 overflow-hidden rounded-sm bg-polis-ink/5">
-            <Image
-              src={article.featuredImage}
-              alt={article.featuredImageAlt}
-              fill
-              sizes="(min-width: 768px) 50vw, 100vw"
-              className="object-contain p-6 grayscale"
-              priority
-            />
-          </div>
+          {article.featuredImage && (
+            // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco é
+            // renderizado dentro de um container com `column-count` (ver
+            // PageChrome.tsx) — filhos com altura percentual não enxergam a
+            // altura do ancestral nesse contexto e colapsam para 0px, deixando
+            // a imagem tecnicamente carregada mas invisível.
+            <div className="relative mt-4 aspect-[4/3] w-full overflow-hidden rounded-sm bg-polis-ink/5">
+              <Image
+                src={article.featuredImage}
+                alt={article.featuredImageAlt}
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-contain p-6 grayscale"
+                priority
+              />
+            </div>
+          )}
         </div>
       ),
     },
@@ -95,7 +102,7 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
       columns: 1,
       node: (
         <div className="grid h-full grid-cols-1 items-center gap-8 sm:grid-cols-2">
-          {topStory ? (
+          {topStory?.featuredImage ? (
             <Link
               href={`/materia/${topStory.slug}`}
               className="relative block aspect-[4/3] overflow-hidden rounded-sm bg-polis-ink/5"

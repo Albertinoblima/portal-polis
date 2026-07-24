@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PageChrome } from "@/components/newspaper/PageChrome";
 import { WordSearch } from "@/components/games/WordSearch";
-import { WORDSEARCHES, getLatestWordSearch } from "@/lib/wordsearch";
+import { WORDSEARCHES, getWordSearchArchive } from "@/lib/wordsearch";
 import { formatDateOnly } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -11,12 +11,14 @@ export const metadata: Metadata = {
 };
 
 export default function CacaPalavrasPage() {
-  const puzzle = getLatestWordSearch(WORDSEARCHES);
+  const archive = getWordSearchArchive(WORDSEARCHES);
+  const puzzle = archive[0] ?? null;
+  const previous = archive[1];
 
   return (
     <PageChrome
       pageNumber={1}
-      totalPages={1}
+      totalPages={Math.max(archive.length, 1)}
       sectionLabel="Caça-Palavras"
       columns={1}
       runningTitle={
@@ -36,6 +38,13 @@ export default function CacaPalavrasPage() {
               Um caça-palavras novo todo dia — arraste sobre as letras para encontrar cada termo,
               nas 8 direções. Progresso salvo automaticamente no seu navegador.
             </p>
+            {previous && (
+              <p className="mt-4 text-xs">
+                <Link href={`/entretenimento/caca-palavras/${previous.slug}/`} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
+                  Ver edições anteriores ›
+                </Link>
+              </p>
+            )}
           </div>
           <WordSearch puzzle={puzzle} />
         </>

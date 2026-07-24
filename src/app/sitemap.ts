@@ -15,6 +15,7 @@ const staticPaths = [
   "entretenimento/jogos",
   "entretenimento/jogos/jogo-da-velha",
   "entretenimento/palavras-cruzadas",
+  "entretenimento/caca-palavras",
   "lgpd",
   "politica-de-privacidade",
   "politica-de-cookies",

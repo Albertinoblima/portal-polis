@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PageChrome } from "@/components/newspaper/PageChrome";
 import { Crossword } from "@/components/games/Crossword";
-import { CROSSWORDS, getLatestCrossword } from "@/lib/crosswords";
+import { CROSSWORDS, getCrosswordArchive } from "@/lib/crosswords";
 import { formatDateOnly } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -11,12 +11,14 @@ export const metadata: Metadata = {
 };
 
 export default function PalavrasCruzadasPage() {
-  const puzzle = getLatestCrossword(CROSSWORDS);
+  const archive = getCrosswordArchive(CROSSWORDS);
+  const puzzle = archive[0] ?? null;
+  const previous = archive[1];
 
   return (
     <PageChrome
       pageNumber={1}
-      totalPages={1}
+      totalPages={Math.max(archive.length, 1)}
       sectionLabel="Palavras Cruzadas"
       columns={1}
       runningTitle={
@@ -36,6 +38,13 @@ export default function PalavrasCruzadasPage() {
               Uma palavra cruzada nova todo dia, no espírito dos passatempos de jornal impresso —
               só que com correção automática e progresso salvo no seu navegador.
             </p>
+            {previous && (
+              <p className="mt-4 text-xs">
+                <Link href={`/entretenimento/palavras-cruzadas/${previous.slug}/`} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
+                  Ver edições anteriores ›
+                </Link>
+              </p>
+            )}
           </div>
           <Crossword puzzle={puzzle} />
         </>

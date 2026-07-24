@@ -35,6 +35,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "SOBERANIA",
     ],
   },
+  {
+    slug: "pernambuco",
+    date: "2026-07-24",
+    theme: "Pernambuco",
+    size: 14,
+    words: [
+      "PERNAMBUCO",
+      "RECIFE",
+      "OLINDA",
+      "FREVO",
+      "MARACATU",
+      "CAPIBARIBE",
+      "CARUARU",
+      "PETROLINA",
+      "FORRO",
+      "JANGADA",
+      "AGRESTE",
+      "SERTAO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
@@ -166,6 +186,16 @@ function todayIso(): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Todas as edições já publicadas (data <= referência), da mais recente para a
+ *  mais antiga — usado pela página de arquivo para listar e navegar entre as
+ *  edições passadas em vez de simplesmente descartá-las quando uma nova sai. */
+export function getWordSearchArchive(
+  puzzles: WordSearchPuzzle[],
+  referenceDate: string = todayIso()
+): WordSearchPuzzle[] {
+  return puzzles.filter((p) => p.date <= referenceDate).sort((a, b) => b.date.localeCompare(a.date));
+}
+
 /** A "edição de hoje" é sempre a publicação mais recente com data <= hoje —
  *  assim ela permanece no ar até a próxima ser publicada, como um jornal real.
  *  Aceita uma data de referência opcional (default: hoje) para casar uma
@@ -174,6 +204,6 @@ export function getLatestWordSearch(
   puzzles: WordSearchPuzzle[],
   referenceDate: string = todayIso()
 ): WordSearchPuzzle | null {
-  const eligible = puzzles.filter((p) => p.date <= referenceDate).sort((a, b) => b.date.localeCompare(a.date));
+  const eligible = getWordSearchArchive(puzzles, referenceDate);
   return eligible[0] ?? puzzles[0] ?? null;
 }

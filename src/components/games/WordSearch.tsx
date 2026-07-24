@@ -255,7 +255,7 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
         "mx-auto flex w-full flex-col gap-6",
         compactLandscape && "max-w-none flex-row items-start gap-3",
         isEmbedded && !compactLandscape && "max-w-3xl",
-        !isEmbedded && "max-w-4xl lg:flex-row lg:items-start lg:justify-center"
+        !isEmbedded && "max-w-4xl lg:flex-row lg:flex-wrap lg:items-start lg:justify-center"
       )}
     >
       <div className={cn("flex flex-col items-center gap-3", compactLandscape && "min-w-0 flex-1 gap-2")}>
@@ -407,7 +407,7 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
           compactLandscape &&
           "max-h-[17rem] max-w-[44%] overflow-y-auto border-l border-polis-rule/20 pl-3 pr-1",
           isEmbedded && !compactLandscape && "max-w-3xl border-t border-polis-rule/20 pt-4",
-          !isEmbedded && "max-w-sm"
+          !isEmbedded && "max-w-sm lg:min-w-[16rem]"
         )}
       >
         <div className="mb-3 flex items-center justify-between gap-3">

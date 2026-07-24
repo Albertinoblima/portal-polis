@@ -84,6 +84,69 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "pernambuco",
+    date: "2026-07-24",
+    theme: "Pernambuco",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 0,
+        col: 7,
+        answer: "CARUARU",
+        clue: "Cidade do Agreste famosa pela festa de São João e pelo Alto do Moura.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 1,
+        col: 0,
+        answer: "CAPIBARIBE",
+        clue: "Rio que corta a cidade do Recife, cenário do Carnaval sobre as águas.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 1,
+        col: 1,
+        answer: "FREVO",
+        clue: "Ritmo acelerado ao som de metais, dançado com passos rápidos e sombrinha no Carnaval do Recife.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 1,
+        col: 3,
+        answer: "JANGADA",
+        clue: "Embarcação tradicional de pescadores do litoral nordestino, feita de troncos amarrados.",
+      },
+      {
+        number: 5,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "PERNAMBUCO",
+        clue: "Estado nordestino cuja capital é o Recife.",
+      },
+      {
+        number: 6,
+        direction: "down",
+        row: 3,
+        col: 5,
+        answer: "MARACATU",
+        clue: "Manifestação afro-brasileira com cortejo de realeza, ao som de alfaias, típica de Pernambuco.",
+      },
+      {
+        number: 7,
+        direction: "down",
+        row: 3,
+        col: 9,
+        answer: "OLINDA",
+        clue: "Cidade histórica vizinha do Recife, Patrimônio Mundial da Unesco, famosa pelos bonecos gigantes de Carnaval.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {
@@ -134,6 +197,16 @@ function todayIso(): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Todas as edições já publicadas (data <= referência), da mais recente para a
+ *  mais antiga — usado pela página de arquivo para listar e navegar entre as
+ *  edições passadas em vez de simplesmente descartá-las quando uma nova sai. */
+export function getCrosswordArchive(
+  puzzles: CrosswordPuzzle[],
+  referenceDate: string = todayIso()
+): CrosswordPuzzle[] {
+  return puzzles.filter((p) => p.date <= referenceDate).sort((a, b) => b.date.localeCompare(a.date));
+}
+
 /** A "edição de hoje" é sempre a publicação mais recente com data <= hoje —
  *  assim ela permanece no ar até a próxima ser publicada, como um jornal real.
  *  Aceita uma data de referência opcional (default: hoje) para casar uma
@@ -142,6 +215,6 @@ export function getLatestCrossword(
   puzzles: CrosswordPuzzle[],
   referenceDate: string = todayIso()
 ): CrosswordPuzzle | null {
-  const eligible = puzzles.filter((p) => p.date <= referenceDate).sort((a, b) => b.date.localeCompare(a.date));
+  const eligible = getCrosswordArchive(puzzles, referenceDate);
   return eligible[0] ?? puzzles[0] ?? null;
 }
