@@ -243,7 +243,13 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
       )}
     >
       <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center gap-4 text-sm text-polis-ink-soft">
+        <div
+          className={cn(
+            "flex items-center gap-4 text-sm text-polis-ink-soft",
+            isEmbedded &&
+            "w-full justify-center border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
+          )}
+        >
           <span>
             Tempo: <strong className="text-polis-ink">{formatTime(elapsedSeconds)}</strong>
           </span>
@@ -352,7 +358,12 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
           {lastFound ? `Palavra encontrada: ${lastFound}.` : ""}
         </p>
 
-        <p className="max-w-xs text-center text-xs text-polis-ink-soft">
+        <p
+          className={cn(
+            "text-center text-xs text-polis-ink-soft",
+            isEmbedded ? "max-w-xl leading-relaxed" : "max-w-xs"
+          )}
+        >
           Arraste (ou toque em uma casa e depois na outra ponta) sobre as letras para marcar uma
           palavra — nas 8 direções, inclusive de trás para frente.
         </p>
@@ -360,21 +371,47 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
         <button
           type="button"
           onClick={handleReveal}
-          className="text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink"
+          className={cn(
+            "text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink",
+            isEmbedded &&
+            "border border-polis-rule/25 px-3 py-1 no-underline transition-colors hover:border-polis-gold-muted"
+          )}
         >
           Revelar todas
         </button>
       </div>
 
-      <div className={cn("w-full flex-1", isEmbedded ? "max-w-3xl" : "max-w-sm")}>
-        <h2 className="mb-3 font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
-        <div className={cn("grid gap-x-4 gap-y-2 text-sm", isEmbedded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2")}>
+      <div
+        className={cn(
+          "w-full flex-1",
+          isEmbedded ? "max-w-3xl border-t border-polis-rule/20 pt-4" : "max-w-sm"
+        )}
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
+          {isEmbedded && (
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-polis-ink-soft">
+              Grade {grid.size}x{grid.size}
+            </span>
+          )}
+        </div>
+        <div
+          className={cn(
+            "grid gap-2 text-sm",
+            isEmbedded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 gap-x-4 gap-y-2"
+          )}
+        >
           {puzzle.words.map((word) => {
             const found = foundWords.has(word);
             return (
               <span
                 key={word}
-                className={cn("flex items-center gap-2", found ? "text-polis-gold-ink" : "text-polis-ink-soft")}
+                className={cn(
+                  "flex items-center gap-2",
+                  isEmbedded &&
+                  "min-h-9 border border-polis-rule/15 bg-polis-paper-soft/25 px-2.5 py-1 text-[12px] tracking-[0.08em]",
+                  found ? "text-polis-gold-ink" : "text-polis-ink-soft"
+                )}
               >
                 <span
                   className={cn(

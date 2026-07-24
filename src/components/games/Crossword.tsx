@@ -254,7 +254,13 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
       )}
     >
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-4 text-sm text-polis-ink-soft">
+        <div
+          className={cn(
+            "flex items-center gap-4 text-sm text-polis-ink-soft",
+            isEmbedded &&
+            "w-full justify-center border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
+          )}
+        >
           <span>
             Tempo: <strong className="text-polis-ink">{formatTime(elapsedSeconds)}</strong>
           </span>
@@ -324,24 +330,38 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
           </div>
         </div>
 
-        <p className="min-h-10 max-w-xs text-center text-sm text-polis-ink-soft">
+        <p
+          className={cn(
+            "text-center text-sm text-polis-ink-soft",
+            isEmbedded
+              ? "min-h-12 w-full max-w-xl border-y border-polis-rule/15 bg-polis-paper-soft/20 px-3 py-2 leading-relaxed"
+              : "min-h-10 max-w-xs"
+          )}
+        >
           {currentClueEntry
             ? `${currentClueEntry.number}. ${currentClueEntry.clue}`
             : "Selecione uma casa do tabuleiro para ver a dica."}
         </p>
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-3">
           <button
             type="button"
             onClick={handleCheck}
-            className="border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+            className={cn(
+              "border border-polis-ink/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink",
+              isEmbedded && "min-w-32"
+            )}
           >
             Conferir
           </button>
           <button
             type="button"
             onClick={handleReveal}
-            className="text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink"
+            className={cn(
+              "text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink",
+              isEmbedded &&
+              "border border-polis-rule/25 px-3 py-2 no-underline transition-colors hover:border-polis-gold-muted"
+            )}
           >
             Revelar solução
           </button>
@@ -351,18 +371,22 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
       <div
         className={cn(
           "grid w-full flex-1 grid-cols-1 gap-6 text-sm",
-          isEmbedded ? "max-w-3xl" : "max-w-md sm:grid-cols-2"
+          isEmbedded ? "max-w-3xl border-t border-polis-rule/20 pt-4 md:grid-cols-2" : "max-w-md sm:grid-cols-2"
         )}
       >
         <div>
           <h2 className="mb-2 font-serif text-lg font-bold text-polis-ink">Horizontais</h2>
-          <ul className="space-y-2">
+          <ul className={cn("space-y-2", isEmbedded && "space-y-1.5")}>
             {acrossEntries.map((entry) => (
               <li key={entry.number}>
                 <button
                   type="button"
                   onClick={() => focusEntry(entry)}
-                  className="text-left text-polis-ink-soft hover:text-polis-gold-ink"
+                  className={cn(
+                    "text-left text-polis-ink-soft hover:text-polis-gold-ink",
+                    isEmbedded &&
+                    "w-full border-b border-polis-rule/10 pb-1.5 text-[13px] leading-relaxed transition-colors"
+                  )}
                 >
                   <strong className="text-polis-ink">{entry.number}.</strong> {entry.clue}
                 </button>
@@ -372,13 +396,17 @@ export function Crossword({ puzzle, layout = "full" }: CrosswordProps) {
         </div>
         <div>
           <h2 className="mb-2 font-serif text-lg font-bold text-polis-ink">Verticais</h2>
-          <ul className="space-y-2">
+          <ul className={cn("space-y-2", isEmbedded && "space-y-1.5")}>
             {downEntries.map((entry) => (
               <li key={entry.number}>
                 <button
                   type="button"
                   onClick={() => focusEntry(entry)}
-                  className="text-left text-polis-ink-soft hover:text-polis-gold-ink"
+                  className={cn(
+                    "text-left text-polis-ink-soft hover:text-polis-gold-ink",
+                    isEmbedded &&
+                    "w-full border-b border-polis-rule/10 pb-1.5 text-[13px] leading-relaxed transition-colors"
+                  )}
                 >
                   <strong className="text-polis-ink">{entry.number}.</strong> {entry.clue}
                 </button>
