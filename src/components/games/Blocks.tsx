@@ -32,21 +32,23 @@ const COLS = 10;
 const START_SPEED = 800;
 const TRAINING_SPEED = 900;
 const CHALLENGE_START_SPEED = 760;
-const MIN_SPEED = 120;
-const SPEED_STEP_PER_LEVEL = 60;
 const LINES_PER_LEVEL = 10;
+const COMPETITIVE_MIN_SPEED = 140;
+const COMPETITIVE_SPEED_STEP = 55;
+const CHALLENGE_MIN_SPEED = 170;
+const CHALLENGE_TIME_ACCELERATION_INTERVAL = 22;
+const CHALLENGE_TIME_ACCELERATION_STEP = 20;
+const CHALLENGE_LINE_ACCELERATION_STEP = 12;
 const LINE_SCORE = [0, 100, 300, 500, 800];
 const HIGH_SCORE_KEY = "polis:blocos:recorde";
 const BEST_LINES_KEY = "polis:blocos:melhor-linhas";
 const MODE_KEY = "polis:blocos:modo";
 const CHALLENGE_BEST_TIER_KEY = "polis:blocos:desafio:melhor-tier";
-const CHALLENGE_TIME_ACCELERATION_INTERVAL = 25;
-const CHALLENGE_TIME_ACCELERATION_STEP = 25;
 
 const CHALLENGE_TIERS = [
-  { label: "Bronze", lines: 12 },
-  { label: "Prata", lines: 24 },
-  { label: "Ouro", lines: 40 },
+  { label: "Bronze", lines: 14 },
+  { label: "Prata", lines: 30 },
+  { label: "Ouro", lines: 46 },
 ] as const;
 
 const PIECES: Record<PieceType, PieceShape> = {
@@ -227,7 +229,11 @@ export function Blocks() {
         setLevel(newLevel);
         setClearFlash(true);
         if (!isTrainingMode && !isChallengeMode) {
-          speedRef.current = Math.max(MIN_SPEED, START_SPEED - (newLevel - 1) * SPEED_STEP_PER_LEVEL);
+          speedRef.current = Math.max(COMPETITIVE_MIN_SPEED, START_SPEED - (newLevel - 1) * COMPETITIVE_SPEED_STEP);
+          setSpeedMs(speedRef.current);
+        }
+        if (isChallengeMode) {
+          speedRef.current = Math.max(CHALLENGE_MIN_SPEED, speedRef.current - result.cleared * CHALLENGE_LINE_ACCELERATION_STEP);
           setSpeedMs(speedRef.current);
         }
       }
@@ -336,7 +342,7 @@ export function Blocks() {
       setElapsedSeconds(elapsedRef.current);
 
       if (isChallengeMode && elapsedRef.current % CHALLENGE_TIME_ACCELERATION_INTERVAL === 0) {
-        speedRef.current = Math.max(MIN_SPEED, speedRef.current - CHALLENGE_TIME_ACCELERATION_STEP);
+        speedRef.current = Math.max(CHALLENGE_MIN_SPEED, speedRef.current - CHALLENGE_TIME_ACCELERATION_STEP);
         setSpeedMs(speedRef.current);
       }
     }, 1000);
