@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Article, Edition, Editoria, User } from "@/types";
 import type { NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { ListenButton } from "@/components/articles/ListenButton";
+import { AudioPlayerButton } from "@/components/articles/AudioPlayerButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
 import { Crossword } from "@/components/games/Crossword";
 import { WordSearch } from "@/components/games/WordSearch";
@@ -51,9 +52,7 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
 
           <div className="mt-3">
             {audioUrl ? (
-              <audio controls preload="none" className="h-9 w-full max-w-sm" src={audioUrl}>
-                Seu navegador não suporta áudio.
-              </audio>
+              <AudioPlayerButton src={audioUrl} />
             ) : (
               // Sem áudio do Piper ainda gerado para esta matéria (build mais
               // recente que a publicação, ou falha silenciosa do TTS) —
