@@ -6,7 +6,8 @@ import { ListenButton } from "@/components/articles/ListenButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
 import { Crossword } from "@/components/games/Crossword";
 import { WordSearch } from "@/components/games/WordSearch";
-import { getEditoriaById, getAuthors, getArticleAudioUrl } from "@/lib/content";
+import { getEditoriaById, getAuthors } from "@/lib/content";
+import { getArticleAudioUrl } from "@/lib/audio";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
 import { formatDate } from "@/lib/utils";
 

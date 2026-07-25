@@ -3,29 +3,6 @@ import editoriasData from "@/content/editorias.json";
 import authorsData from "@/content/authors.json";
 import articlesData from "@/content/articles.json";
 import { slugify } from "@/lib/utils";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-// Gerado por scripts/generate-audio.mjs (Piper TTS) em CI, antes do `next
-// build`. Lido via fs (em vez de `import ... from "@/content/audio-manifest.json"`)
-// porque esse arquivo só existe depois da primeira rodada do script — um
-// import estático quebraria o build antes disso.
-function loadAudioManifest(): Record<string, { file: string }> {
-  try {
-    const manifestPath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "..",
-      "content",
-      "audio-manifest.json"
-    );
-    return JSON.parse(readFileSync(manifestPath, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-const audioManifest = loadAudioManifest();
 
 const editorias = editoriasData as Editoria[];
 const authors = authorsData as User[];
@@ -90,8 +67,4 @@ export function searchArticles(query: string): Article[] {
       a.subtitle.toLowerCase().includes(q) ||
       a.content.toLowerCase().includes(q)
   );
-}
-
-export function getArticleAudioUrl(slug: string): string | undefined {
-  return audioManifest[slug]?.file;
 }
