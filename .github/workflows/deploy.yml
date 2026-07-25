@@ -28,6 +28,8 @@ env:
   NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
   GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
   GA_SERVICE_ACCOUNT_KEY: ${{ secrets.GA_SERVICE_ACCOUNT_KEY }}
+  PIPER_VERSION: "2023.11.14-2"
+  PIPER_VOICE: "pt_BR-faber-medium"
 
 jobs:
   build:
@@ -56,6 +58,49 @@ jobs:
 
       - name: Sync content from Supabase
         run: npm run sync-content
+
+      - name: Cache Piper binary + modelo de voz
+        id: cache-piper
+        uses: actions/cache@v4
+        with:
+          path: piper
+          key: piper-${{ env.PIPER_VERSION }}-${{ env.PIPER_VOICE }}
+
+      - name: Baixar Piper + modelo de voz
+        if: steps.cache-piper.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p piper
+          curl -sL -o piper.tar.gz "https://github.com/rhasspy/piper/releases/download/${PIPER_VERSION}/piper_linux_x86_64.tar.gz"
+          tar -xzf piper.tar.gz -C piper --strip-components=1
+          rm piper.tar.gz
+          curl -sL -o "piper/${PIPER_VOICE}.onnx" "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/${PIPER_VOICE}.onnx"
+          curl -sL -o "piper/${PIPER_VOICE}.onnx.json" "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/${PIPER_VOICE}.onnx.json"
+
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # Evita reprocessar todas as matérias a cada rodada (inclusive no cron de
+      # 30 em 30 min): o script já pula matérias sem mudança via hash, mas só
+      # consegue comparar se o MP3 e o manifesto da rodada anterior
+      # sobreviverem entre execuções — o runner do Actions é efêmero, então
+      # isso precisa de um cache explícito. A chave inclui run_id (sempre um
+      # cache novo é salvo ao final) e restore-keys sem sufixo (sempre
+      # restaura o mais recente disponível).
+      - name: Cache de áudio já gerado
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/assets/audio
+            src/content/audio-manifest.json
+          key: audio-cache-${{ github.run_id }}
+          restore-keys: |
+            audio-cache-
+
+      - name: Gerar áudio das matérias (Piper TTS)
+        run: npm run generate-audio
+        env:
+          PIPER_BIN: ${{ github.workspace }}/piper/piper
+          PIPER_MODEL: ${{ github.workspace }}/piper/${{ env.PIPER_VOICE }}.onnx
 
       - name: Sync Google Analytics snapshot
         run: npm run sync-analytics

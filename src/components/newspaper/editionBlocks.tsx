@@ -6,7 +6,7 @@ import { ListenButton } from "@/components/articles/ListenButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
 import { Crossword } from "@/components/games/Crossword";
 import { WordSearch } from "@/components/games/WordSearch";
-import { getEditoriaById, getAuthors } from "@/lib/content";
+import { getEditoriaById, getAuthors, getArticleAudioUrl } from "@/lib/content";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
 import { formatDate } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ interface ArticleBlockOptions {
  */
 export function buildArticleBlocks(article: Article, { editoria, author }: ArticleBlockOptions): NewspaperBlock[] {
   const plainTextContent = article.content.replace(/<[^>]+>/g, " ");
+  const audioUrl = getArticleAudioUrl(article.slug);
 
   return [
     {
@@ -48,7 +49,16 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
           </h1>
 
           <div className="mt-3">
-            <ListenButton text={plainTextContent} />
+            {audioUrl ? (
+              <audio controls preload="none" className="h-9 w-full max-w-sm" src={audioUrl}>
+                Seu navegador não suporta áudio.
+              </audio>
+            ) : (
+              // Sem áudio do Piper ainda gerado para esta matéria (build mais
+              // recente que a publicação, ou falha silenciosa do TTS) —
+              // fallback local via Web Speech API, sem depender de rede.
+              <ListenButton text={plainTextContent} />
+            )}
           </div>
 
           <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>

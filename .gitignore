@@ -41,6 +41,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Piper TTS (binário + modelo baixados em CI, cache; ver .github/workflows/deploy.yml)
+/piper/
+# Áudio gerado por scripts/generate-audio.mjs — recriado/restaurado via cache do Actions, não é fonte
+/public/assets/audio/
+/src/content/audio-manifest.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
