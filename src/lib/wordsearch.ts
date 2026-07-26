@@ -55,6 +55,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "SERTAO",
     ],
   },
+  {
+    slug: "cidades-de-pernambuco",
+    date: "2026-07-26",
+    theme: "Cidades de Pernambuco",
+    size: 14,
+    words: [
+      "RECIFE",
+      "OLINDA",
+      "CARUARU",
+      "PETROLINA",
+      "GARANHUNS",
+      "PAULISTA",
+      "IGARASSU",
+      "TRIUNFO",
+      "ARCOVERDE",
+      "SALGUEIRO",
+      "GOIANA",
+      "IPOJUCA",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
