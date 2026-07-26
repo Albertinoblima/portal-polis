@@ -24,14 +24,14 @@ export function ArticleCard({ article, editoria, size = "default" }: ArticleCard
           que ocupam quase todo o card) faz o touchstart cair no fluxo de
           "virar página" da biblioteca, que dá preventDefault() e suprime o
           click sintético do toque, quebrando a navegação só no mobile. */}
-      <div className={`pointer-events-none ${isLarge ? "aspect-[16/9]" : "aspect-[4/3]"}`}>
+      <div className="pointer-events-none aspect-square">
         <div className="relative h-full w-full overflow-hidden bg-polis-ink/5">
           <Image
             src={article.featuredImage}
             alt={article.featuredImageAlt}
             fill
             sizes={isLarge ? "100vw" : "(min-width: 768px) 33vw, 100vw"}
-            className="object-contain p-6 grayscale transition-transform duration-300 group-hover:scale-105"
+            className="object-cover grayscale transition-transform duration-300 group-hover:scale-105"
           />
         </div>
       </div>

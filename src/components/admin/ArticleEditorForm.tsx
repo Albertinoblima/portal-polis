@@ -476,11 +476,15 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
         <Card>
           <h3 className="text-sm font-semibold text-polis-navy">Imagem de Destaque</h3>
           {featuredImage && (
+            // aspect-square + object-contain (em vez de recortar com object-cover):
+            // as fotos do site são padronizadas em 1:1, então esta prévia mostra a
+            // imagem exatamente como vai aparecer publicada — se sobrar barra
+            // (letterbox), é sinal de que o arquivo enviado não é quadrado.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={featuredImage}
               alt={featuredImageAlt}
-              className="mt-3 h-32 w-full rounded-sm object-cover"
+              className="mt-3 aspect-square w-full rounded-sm bg-polis-navy/5 object-contain"
             />
           )}
           <button

@@ -55,33 +55,31 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-center sm:gap-6">
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
             {article.featuredImage && (
-              // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco
-              // é renderizado dentro de um container com `column-count` (ver
-              // PageChrome.tsx) — filhos com altura percentual não enxergam a
-              // altura do ancestral nesse contexto e colapsam para 0px, deixando
-              // a imagem tecnicamente carregada mas invisível. Ocupa a primeira
-              // coluna do grid, com o título ao lado (a partir de `sm`) — no
-              // mobile (1 coluna) a imagem fica acima do título.
-              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-sm bg-polis-ink/5">
+              // Sem aspect-ratio fixo de propósito: a altura da página é fixa
+              // (ver `contentHeightPx` em Newspaper.tsx) e as fotos são 1:1 —
+              // uma imagem quadrada esticada à largura total da coluna pode
+              // facilmente ultrapassar essa altura. `flex-1` faz este container
+              // ocupar todo o espaço vertical que sobra abaixo do título/áudio
+              // (que têm altura natural), e `object-contain` garante que a foto
+              // apareça inteira dentro dele — usando a largura completa da
+              // coluna quando há altura disponível, ou reduzindo pelo lado
+              // (letterbox) quando não há, mas nunca cortada nem estourando a
+              // página.
+              <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-sm bg-polis-ink/5">
                 <Image
                   src={article.featuredImage}
                   alt={article.featuredImageAlt}
                   fill
-                  sizes="(min-width: 640px) 50vw, 100vw"
-                  className="object-cover grayscale"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-contain grayscale"
                   priority
                 />
               </div>
             )}
 
             <div className="flex flex-col">
-              {/* Fonte reduzida em relação ao título "solo" (antes text-4xl):
-                  a partir de `sm` esta coluna divide a largura da página com a
-                  imagem ao lado, então um título grande quebraria em linhas
-                  demais e estufaria a altura fixa da página (ver comentário do
-                  bloco acima sobre `column-count` + `overflow: hidden`). */}
               <h1 className="font-serif text-xl font-bold leading-tight text-polis-ink md:text-3xl">
                 {article.title}
               </h1>
