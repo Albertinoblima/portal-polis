@@ -21,7 +21,10 @@ const SPLITTABLE_TAGS = new Set(["P", "LI", "BLOCKQUOTE", "DIV", "TD", "TH"]);
 export function paginateHtml(html: string, options: PaginateOptions): string[] {
   if (typeof document === "undefined" || !html.trim()) return [html];
 
-  const { pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx = 32 } = options;
+  // 36px = 2.25rem, precisa bater com o columnGap hardcoded em PageChrome.tsx
+  // (o container que de fato renderiza o fragmento) — divergir aqui reintroduz
+  // o mesmo tipo de subestimação de altura corrigido em createProbe().
+  const { pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx = 36 } = options;
 
   const source = document.createElement("div");
   source.innerHTML = html;
@@ -91,7 +94,14 @@ function createProbe(
   probe.style.columnCount = String(columnsPerPage);
   probe.style.columnGap = `${columnGapPx}px`;
   probe.style.overflow = "hidden";
-  probe.className = "prose prose-sm max-w-none";
+  // Precisa bater exatamente com a className usada no render real do fragmento
+  // (ver Newspaper.tsx) — inclusive o `md:prose-base` responsivo. Sem isso, em
+  // qualquer viewport >=768px a sonda mede o texto em prose-sm (fonte menor)
+  // enquanto o real usa prose-base (fonte maior), subestimando a altura e
+  // deixando o fim do fragmento estourar a área com `overflow-hidden` da
+  // página — o final da matéria some sem aviso.
+  probe.className =
+    "prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-blockquote:font-serif prose-blockquote:italic";
   return probe;
 }
 
