@@ -28,17 +28,14 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
   const plainTextContent = article.content.replace(/<[^>]+>/g, " ");
   const audioUrl = getArticleAudioUrl(article.slug);
 
-  return [
+  const blocks: NewspaperBlock[] = [
     {
       type: "node",
       // Forçado a 1 (em vez de herdar o padrão de 2 colunas do desktop): este
       // bloco é um `flex-col` único e indivisível dentro do `column-count` do
       // PageChrome — com 2 colunas ele fica espremido na largura de UMA
-      // sub-coluna (metade da página), o título quebra em mais linhas, e a
-      // imagem (por vir depois de todo o texto) estourava a altura fixa do
-      // container e ficava cortada pelo `overflow: hidden` — inteiramente
-      // invisível no desktop, e só uma tira no mobile. Com 1 coluna a largura
-      // total da página fica disponível, sobrando altura para a imagem.
+      // sub-coluna (metade da página) e o título quebra em mais linhas do que
+      // deveria. Com 1 coluna a largura total da página fica disponível.
       columns: 1,
       node: (
         <div className="flex h-full flex-col">
@@ -55,49 +52,22 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             </div>
           )}
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
-            {article.featuredImage && (
-              // Sem aspect-ratio fixo de propósito: a altura da página é fixa
-              // (ver `contentHeightPx` em Newspaper.tsx) e as fotos são 1:1 —
-              // uma imagem quadrada esticada à largura total da coluna pode
-              // facilmente ultrapassar essa altura. `flex-1` faz este container
-              // ocupar todo o espaço vertical que sobra abaixo do título/áudio
-              // (que têm altura natural), e `object-contain` garante que a foto
-              // apareça inteira dentro dele — usando a largura completa da
-              // coluna quando há altura disponível, ou reduzindo pelo lado
-              // (letterbox) quando não há, mas nunca cortada nem estourando a
-              // página.
-              <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-sm bg-polis-ink/5">
-                <Image
-                  src={article.featuredImage}
-                  alt={article.featuredImageAlt}
-                  fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-contain grayscale"
-                  priority
-                />
-              </div>
+          <h1 className="font-serif text-xl font-bold leading-tight text-polis-ink md:text-3xl">
+            {article.title}
+          </h1>
+
+          <div className="mt-3">
+            {audioUrl ? (
+              <AudioPlayerButton src={audioUrl} />
+            ) : (
+              // Sem áudio do Piper ainda gerado para esta matéria (build mais
+              // recente que a publicação, ou falha silenciosa do TTS) —
+              // fallback local via Web Speech API, sem depender de rede.
+              <ListenButton text={plainTextContent} />
             )}
-
-            <div className="flex flex-col">
-              <h1 className="font-serif text-xl font-bold leading-tight text-polis-ink md:text-3xl">
-                {article.title}
-              </h1>
-
-              <div className="mt-3">
-                {audioUrl ? (
-                  <AudioPlayerButton src={audioUrl} />
-                ) : (
-                  // Sem áudio do Piper ainda gerado para esta matéria (build mais
-                  // recente que a publicação, ou falha silenciosa do TTS) —
-                  // fallback local via Web Speech API, sem depender de rede.
-                  <ListenButton text={plainTextContent} />
-                )}
-              </div>
-
-              <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
-            </div>
           </div>
+
+          <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-polis-rule/20 py-3 text-xs text-polis-ink-soft">
             {author && (
@@ -111,8 +81,45 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
         </div>
       ),
     },
-    { type: "html", html: article.content },
   ];
+
+  if (article.featuredImage) {
+    blocks.push({
+      type: "node",
+      // Página própria (em vez de dividir espaço com o título): o bloco
+      // acima já ocupa quase todo o orçamento de altura fixa da capa (ver
+      // `contentHeightCover` em Newspaper.tsx, reduzido pelo timbre do
+      // jornal) — título + resumo + foto juntos não cabem em telas mais
+      // baixas (ex.: notebook 1280×720), e o que sobra some silenciosamente
+      // (o `column-count` do PageChrome empurra o excesso para uma coluna
+      // invisível em vez de cortar visivelmente). Com a foto na PRÓXIMA
+      // página ela usa o orçamento cheio (sem o timbre), com folga de sobra.
+      // `aspect-square` + `max-h` deriva o tamanho da LARGURA (eixo sempre
+      // confiável, mesmo em column-count) em vez de uma altura percentual do
+      // ancestral (essa sim instável nesse contexto — chegou a renderizar
+      // uma foto quadrada de 512x512 com ~90px de altura ao vivo).
+      // `object-contain` garante que a foto apareça inteira, nunca cortada.
+      columns: 1,
+      node: (
+        <div className="flex h-full flex-col items-center justify-center">
+          <div className="relative aspect-square w-full max-h-[280px] overflow-hidden rounded-sm bg-polis-ink/5 sm:max-h-[360px] lg:max-h-[440px]">
+            <Image
+              src={article.featuredImage}
+              alt={article.featuredImageAlt}
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-contain grayscale"
+              priority
+            />
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  blocks.push({ type: "html", html: article.content });
+
+  return blocks;
 }
 
 /**
