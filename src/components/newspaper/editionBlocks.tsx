@@ -55,41 +55,51 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             </div>
           )}
 
-          {article.featuredImage && (
-            // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco é
-            // renderizado dentro de um container com `column-count` (ver
-            // PageChrome.tsx) — filhos com altura percentual não enxergam a
-            // altura do ancestral nesse contexto e colapsam para 0px, deixando
-            // a imagem tecnicamente carregada mas invisível. Vem antes do
-            // título de propósito: é o primeiro elemento visual da matéria.
-            <div className="relative mb-4 aspect-[16/9] w-full overflow-hidden rounded-sm bg-polis-ink/5">
-              <Image
-                src={article.featuredImage}
-                alt={article.featuredImageAlt}
-                fill
-                sizes="100vw"
-                className="object-cover grayscale"
-                priority
-              />
-            </div>
-          )}
-
-          <h1 className="font-serif text-2xl font-bold leading-tight text-polis-ink md:text-4xl">
-            {article.title}
-          </h1>
-
-          <div className="mt-3">
-            {audioUrl ? (
-              <AudioPlayerButton src={audioUrl} />
-            ) : (
-              // Sem áudio do Piper ainda gerado para esta matéria (build mais
-              // recente que a publicação, ou falha silenciosa do TTS) —
-              // fallback local via Web Speech API, sem depender de rede.
-              <ListenButton text={plainTextContent} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-center sm:gap-6">
+            {article.featuredImage && (
+              // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco
+              // é renderizado dentro de um container com `column-count` (ver
+              // PageChrome.tsx) — filhos com altura percentual não enxergam a
+              // altura do ancestral nesse contexto e colapsam para 0px, deixando
+              // a imagem tecnicamente carregada mas invisível. Ocupa a primeira
+              // coluna do grid, com o título ao lado (a partir de `sm`) — no
+              // mobile (1 coluna) a imagem fica acima do título.
+              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-sm bg-polis-ink/5">
+                <Image
+                  src={article.featuredImage}
+                  alt={article.featuredImageAlt}
+                  fill
+                  sizes="(min-width: 640px) 50vw, 100vw"
+                  className="object-cover grayscale"
+                  priority
+                />
+              </div>
             )}
-          </div>
 
-          <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
+            <div className="flex flex-col">
+              {/* Fonte reduzida em relação ao título "solo" (antes text-4xl):
+                  a partir de `sm` esta coluna divide a largura da página com a
+                  imagem ao lado, então um título grande quebraria em linhas
+                  demais e estufaria a altura fixa da página (ver comentário do
+                  bloco acima sobre `column-count` + `overflow: hidden`). */}
+              <h1 className="font-serif text-xl font-bold leading-tight text-polis-ink md:text-3xl">
+                {article.title}
+              </h1>
+
+              <div className="mt-3">
+                {audioUrl ? (
+                  <AudioPlayerButton src={audioUrl} />
+                ) : (
+                  // Sem áudio do Piper ainda gerado para esta matéria (build mais
+                  // recente que a publicação, ou falha silenciosa do TTS) —
+                  // fallback local via Web Speech API, sem depender de rede.
+                  <ListenButton text={plainTextContent} />
+                )}
+              </div>
+
+              <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
+            </div>
+          </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-polis-rule/20 py-3 text-xs text-polis-ink-soft">
             {author && (
