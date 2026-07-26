@@ -31,6 +31,15 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
   return [
     {
       type: "node",
+      // Forçado a 1 (em vez de herdar o padrão de 2 colunas do desktop): este
+      // bloco é um `flex-col` único e indivisível dentro do `column-count` do
+      // PageChrome — com 2 colunas ele fica espremido na largura de UMA
+      // sub-coluna (metade da página), o título quebra em mais linhas, e a
+      // imagem (por vir depois de todo o texto) estourava a altura fixa do
+      // container e ficava cortada pelo `overflow: hidden` — inteiramente
+      // invisível no desktop, e só uma tira no mobile. Com 1 coluna a largura
+      // total da página fica disponível, sobrando altura para a imagem.
+      columns: 1,
       node: (
         <div className="flex h-full flex-col">
           <Link
@@ -43,6 +52,25 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
           {editoria && (
             <div className="mb-3">
               <EditoriaBadge name={editoria.name} color={editoria.color} />
+            </div>
+          )}
+
+          {article.featuredImage && (
+            // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco é
+            // renderizado dentro de um container com `column-count` (ver
+            // PageChrome.tsx) — filhos com altura percentual não enxergam a
+            // altura do ancestral nesse contexto e colapsam para 0px, deixando
+            // a imagem tecnicamente carregada mas invisível. Vem antes do
+            // título de propósito: é o primeiro elemento visual da matéria.
+            <div className="relative mb-4 aspect-[16/9] w-full overflow-hidden rounded-sm bg-polis-ink/5">
+              <Image
+                src={article.featuredImage}
+                alt={article.featuredImageAlt}
+                fill
+                sizes="100vw"
+                className="object-cover grayscale"
+                priority
+              />
             </div>
           )}
 
@@ -72,24 +100,6 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             <span>{formatDate(article.publishedAt)}</span>
             <span>{article.readingTimeMinutes} min de leitura</span>
           </div>
-
-          {article.featuredImage && (
-            // Proporção fixa (não `flex-1`/`h-full`) de propósito: este bloco é
-            // renderizado dentro de um container com `column-count` (ver
-            // PageChrome.tsx) — filhos com altura percentual não enxergam a
-            // altura do ancestral nesse contexto e colapsam para 0px, deixando
-            // a imagem tecnicamente carregada mas invisível.
-            <div className="relative mt-4 aspect-[4/3] w-full overflow-hidden rounded-sm bg-polis-ink/5">
-              <Image
-                src={article.featuredImage}
-                alt={article.featuredImageAlt}
-                fill
-                sizes="(min-width: 768px) 50vw, 100vw"
-                className="object-contain p-6 grayscale"
-                priority
-              />
-            </div>
-          )}
         </div>
       ),
     },
