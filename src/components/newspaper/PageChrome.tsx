@@ -51,6 +51,15 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
           className="overflow-hidden px-6 py-5"
           style={{
             height: contentHeightPx,
+            // content-box de propósito: `contentHeightPx` (calculado em Newspaper.tsx)
+            // já é a altura disponível para o conteúdo, líquida do padding vertical
+            // desta página — a mesma conta usada pela sonda invisível do paginador
+            // (paginate.ts), que não tem padding nenhum. Com o `border-box` padrão
+            // do Tailwind, aplicar esse número como `height` numa div que também tem
+            // `py-5` descontaria o padding DUAS vezes, deixando a área real ~40px
+            // mais baixa do que a sonda mediu — o fim do texto que "coube" segundo a
+            // sonda estoura essa caixa menor e some, cortado pelo `overflow-hidden`.
+            boxSizing: "content-box",
             columnCount: columns,
             columnGap: "2.25rem",
             columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
