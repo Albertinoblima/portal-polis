@@ -10,11 +10,13 @@ import { getArticlesForAdmin, softDeleteArticle } from "@/lib/supabase/queries";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 import { logAction } from "@/lib/supabase/audit";
 import { formatDate } from "@/lib/utils";
+import { SITE_URL } from "@/lib/seo";
 
 export default function AdminMateriasPage() {
   const { profile } = useAdminSession();
   const { data: articles, loading, error, refetch } = useSupabaseQuery(getArticlesForAdmin);
   const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const canDelete = profile.role === "admin" || profile.role === "editor_chief";
 
   const filtered = (articles ?? []).filter((article) =>
@@ -32,6 +34,13 @@ export default function AdminMateriasPage() {
       newValue: { title },
     });
     refetch();
+  }
+
+  async function handleCopyLink(id: string, slug: string) {
+    const url = `${SITE_URL}/materia/${slug}/`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
   }
 
   return (
@@ -97,6 +106,13 @@ export default function AdminMateriasPage() {
                         >
                           Editar
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(article.id, article.slug)}
+                          className="font-semibold text-polis-navy hover:text-polis-gold"
+                        >
+                          {copiedId === article.id ? "Copiado!" : "Copiar link"}
+                        </button>
                         {canDelete && (
                           <button
                             type="button"
