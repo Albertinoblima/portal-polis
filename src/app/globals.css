@@ -158,6 +158,25 @@ body {
   --tw-prose-td-borders: var(--color-rule);
 }
 
+/* Imagens inseridas no corpo da matéria (editor de texto rico) sempre
+   quadradas (1:1) e ocupando a largura inteira da coluna. O `aspect-ratio`
+   fixo é o que importa de verdade: reserva a altura final sem depender do
+   carregamento da imagem, então o paginador (paginate.ts) mede a mesma
+   altura na sonda invisível (offline, imagem ainda não carregada) e no
+   render real — sem isso a paginação ficaria instável dependendo de quando
+   cada imagem termina de carregar. `object-fit: cover` preenche o quadrado
+   por completo (sem barras), diferente da foto de destaque da capa
+   (object-contain), que precisa aparecer inteira sem corte.
+*/
+.prose img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Capitular de abertura de matéria, ao estilo de jornal impresso. */
 .dropcap::first-letter {
   float: left;
