@@ -133,38 +133,50 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
 
   const blocks: NewspaperBlock[] = [
     {
+      // Página própria, só com a foto de destaque (em vez de dividir espaço
+      // com o índice num grid 2 colunas de altura fixa): é este bloco que
+      // carrega o timbre (Masthead — só o primeiro bloco de "node" recebe o
+      // orçamento `contentHeightCover`, ver Newspaper.tsx), então precisa
+      // continuar sendo `type: "node"` e vir primeiro. O índice completo, por
+      // maior que seja, vai para o bloco `type: "grid"` logo abaixo, que já
+      // pagina automaticamente (ver itemsPerPage) em vez de cortar o excesso
+      // silenciosamente como o `overflow-hidden` fazia antes.
       type: "node",
       columns: 1,
-      node: (
-        <div className="grid h-full grid-cols-1 items-center gap-8 sm:grid-cols-2">
-          {topStory?.featuredImage ? (
-            <Link
-              href={`/materia/${topStory.slug}`}
-              className="relative block aspect-[4/3] overflow-hidden rounded-sm bg-polis-ink/5"
-            >
-              <Image
-                src={topStory.featuredImage}
-                alt={topStory.featuredImageAlt}
-                fill
-                sizes="(min-width: 768px) 50vw, 100vw"
-                className="object-contain p-6 grayscale"
-                priority
-              />
-            </Link>
-          ) : (
-            <div />
-          )}
-          <ol className="mx-auto max-w-md list-decimal space-y-2 text-left text-sm text-polis-ink">
-            {edition.articles.map((article) => (
-              <li key={article.id}>
-                <Link href={`/materia/${article.slug}`} className="hover:text-polis-gold-ink hover:underline">
-                  {article.title}
-                </Link>
-              </li>
-            ))}
-          </ol>
+      node: topStory?.featuredImage ? (
+        <div className="flex h-full flex-col items-center justify-center">
+          <Link
+            href={`/materia/${topStory.slug}`}
+            className="relative block aspect-[4/3] w-full max-w-xl overflow-hidden rounded-sm bg-polis-ink/5"
+          >
+            <Image
+              src={topStory.featuredImage}
+              alt={topStory.featuredImageAlt}
+              fill
+              sizes="(min-width: 768px) 50vw, 100vw"
+              className="object-contain p-6 grayscale"
+              priority
+            />
+          </Link>
+        </div>
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          <p className="font-serif text-lg italic text-polis-ink-soft">Edição nº {edition.number}</p>
         </div>
       ),
+    },
+    {
+      type: "grid",
+      items: edition.articles.map((article, index) => (
+        <div key={article.id} className="flex items-baseline gap-2">
+          <span className="text-xs font-semibold text-polis-ink-soft">{index + 1}.</span>
+          <Link href={`/materia/${article.slug}`} className="hover:text-polis-gold-ink hover:underline">
+            {article.title}
+          </Link>
+        </div>
+      )),
+      itemsPerPage: { mobile: 8, desktop: 14 },
+      gridClassName: "mx-auto flex h-full max-w-md flex-col justify-center gap-3 text-sm text-polis-ink",
     },
   ];
 
