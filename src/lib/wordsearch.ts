@@ -75,6 +75,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "IPOJUCA",
     ],
   },
+  {
+    slug: "democracia-e-soberania",
+    date: "2026-07-27",
+    theme: "Democracia e Soberania",
+    size: 15,
+    words: [
+      "DEMOCRACIA",
+      "SOBERANIA",
+      "CIDADANIA",
+      "AUTONOMIA",
+      "INDEPENDENCIA",
+      "CONSTITUICAO",
+      "TERRITORIO",
+      "DIPLOMACIA",
+      "FRONTEIRA",
+      "GOVERNO",
+      "NACAO",
+      "ESTADO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
