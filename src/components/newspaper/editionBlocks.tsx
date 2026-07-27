@@ -56,12 +56,12 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
 
           <div className="mt-3">
             {audioUrl ? (
-              <AudioPlayerButton src={audioUrl} />
+              <AudioPlayerButton src={audioUrl} articleTitle={article.title} />
             ) : (
               // Sem áudio do Piper ainda gerado para esta matéria (build mais
               // recente que a publicação, ou falha silenciosa do TTS) —
               // fallback local via Web Speech API, sem depender de rede.
-              <ListenButton text={plainTextContent} />
+              <ListenButton text={plainTextContent} articleTitle={article.title} />
             )}
           </div>
 

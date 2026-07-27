@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { getEditorias } from "@/lib/content";
 import { getSiteSettings } from "@/lib/settings";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { HeaderAudioControl } from "@/components/articles/HeaderAudioControl";
 
 const editorias = getEditorias();
 const siteSettings = getSiteSettings();
@@ -117,6 +118,7 @@ export function NavBar() {
       </nav>
 
       <div className="flex items-center gap-1">
+        <HeaderAudioControl />
         <Link href="/busca" aria-label="Buscar" className="rounded-full p-2 text-polis-ink hover:bg-polis-ink/10">
           <SearchIcon />
         </Link>
