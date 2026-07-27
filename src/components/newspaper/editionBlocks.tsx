@@ -5,8 +5,6 @@ import type { NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { ListenButton } from "@/components/articles/ListenButton";
 import { AudioPlayerButton } from "@/components/articles/AudioPlayerButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
-import { Crossword } from "@/components/games/Crossword";
-import { WordSearch } from "@/components/games/WordSearch";
 import { getEditoriaById, getAuthors } from "@/lib/content";
 import { getArticleAudioUrl } from "@/lib/audio";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
@@ -190,21 +188,34 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
     );
   }
 
+  // Passatempos aparecem na capa só como uma chamada com link, não jogáveis
+  // dentro do flip-book: o tabuleiro embutido (layout="embedded") competia
+  // com o próprio gesto de arrastar/virar página do jornal, tornando difícil
+  // tocar numa casa sem virar a folha sem querer — leitores reclamaram que
+  // não conseguiam responder. A página própria do passatempo
+  // (`/entretenimento/.../[slug]`) não tem esse conflito de gesto e tem mais
+  // espaço para o tabuleiro.
   const crossword = getCrosswordForEdition(edition);
   if (crossword) {
     blocks.push({
       type: "node",
+      columns: 1,
       node: (
-        <div className="flex h-full flex-col">
-          <div className="mx-auto mb-6 max-w-lg text-center">
-            <h3 className="font-serif text-2xl font-bold text-polis-ink">Palavras Cruzadas</h3>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição nº {edition.number} · Tema: {crossword.theme}
-            </p>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <Crossword puzzle={crossword} layout="embedded" />
-          </div>
+        <div className="mx-auto flex h-full w-full max-w-xl flex-col items-center justify-center gap-4 border-y border-polis-rule/20 py-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-polis-ink-soft">Entretenimento</p>
+          <h3 className="font-serif text-2xl font-bold text-polis-ink">Palavras Cruzadas</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
+            Edição nº {edition.number} · Tema: {crossword.theme}
+          </p>
+          <p className="max-w-md text-sm text-polis-ink-soft">
+            Responda na página do passatempo, com mais espaço para o tabuleiro e conferência automática das respostas.
+          </p>
+          <Link
+            href={`/entretenimento/palavras-cruzadas/${crossword.slug}/`}
+            className="mt-2 border border-polis-ink/25 bg-polis-paper-soft/20 px-6 py-3 font-serif font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Responder agora →
+          </Link>
         </div>
       ),
     });
@@ -214,17 +225,23 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
   if (wordSearch) {
     blocks.push({
       type: "node",
+      columns: 1,
       node: (
-        <div className="flex h-full flex-col">
-          <div className="mx-auto mb-6 max-w-lg text-center">
-            <h3 className="font-serif text-2xl font-bold text-polis-ink">Caça-Palavras</h3>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição nº {edition.number} · Tema: {wordSearch.theme}
-            </p>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <WordSearch puzzle={wordSearch} layout="embedded" />
-          </div>
+        <div className="mx-auto flex h-full w-full max-w-xl flex-col items-center justify-center gap-4 border-y border-polis-rule/20 py-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-polis-ink-soft">Entretenimento</p>
+          <h3 className="font-serif text-2xl font-bold text-polis-ink">Caça-Palavras</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
+            Edição nº {edition.number} · Tema: {wordSearch.theme}
+          </p>
+          <p className="max-w-md text-sm text-polis-ink-soft">
+            Responda na página do passatempo, com mais espaço para a grade e conferência automática das respostas.
+          </p>
+          <Link
+            href={`/entretenimento/caca-palavras/${wordSearch.slug}/`}
+            className="mt-2 border border-polis-ink/25 bg-polis-paper-soft/20 px-6 py-3 font-serif font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Responder agora →
+          </Link>
         </div>
       ),
     });
