@@ -10,6 +10,7 @@ import { paginateHtml } from "./paginate";
 import { useIsClient } from "@/hooks/useIsClient";
 import { getActiveBanners } from "@/lib/banners";
 import { wrapWordsForHighlight } from "@/lib/ttsHighlight";
+import { ARTICLE_PROSE_CLASSNAME } from "./proseClassName";
 
 const SIDEBAR_BANNERS = getActiveBanners("sidebar");
 
@@ -181,7 +182,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
         out.push({
           content: (
             <div
-              className="prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-blockquote:font-serif prose-blockquote:italic"
+              className={ARTICLE_PROSE_CLASSNAME}
               data-tts-body={block.ttsId}
               dangerouslySetInnerHTML={{ __html: html }}
             />

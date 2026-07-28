@@ -7,6 +7,8 @@
  * marcação estática (ver Newspaper.tsx).
  */
 
+import { ARTICLE_PROSE_CLASSNAME } from "./proseClassName";
+
 export interface PaginateOptions {
   /** Largura da área de conteúdo da página (todas as colunas juntas), em px. */
   pageWidthPx: number;
@@ -95,14 +97,10 @@ function createProbe(
   probe.style.columnCount = String(columnsPerPage);
   probe.style.columnGap = `${columnGapPx}px`;
   probe.style.overflow = "hidden";
-  // Precisa bater exatamente com a className usada no render real do fragmento
-  // (ver Newspaper.tsx) — inclusive o `md:prose-base` responsivo. Sem isso, em
-  // qualquer viewport >=768px a sonda mede o texto em prose-sm (fonte menor)
-  // enquanto o real usa prose-base (fonte maior), subestimando a altura e
-  // deixando o fim do fragmento estourar a área com `overflow-hidden` da
-  // página — o final da matéria some sem aviso.
-  probe.className =
-    "prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-blockquote:font-serif prose-blockquote:italic";
+  // Importado de proseClassName.ts (mesma constante usada no render real do
+  // fragmento, em Newspaper.tsx) de propósito — ver o comentário lá para o
+  // porquê de nunca poder haver duas cópias divergentes dessa string.
+  probe.className = ARTICLE_PROSE_CLASSNAME;
   return probe;
 }
 
