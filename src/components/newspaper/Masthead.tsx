@@ -27,7 +27,7 @@ export function Masthead({ sectionLabel, edition }: MastheadProps) {
 
   return (
     <header className="shrink-0 border-b-4 border-double border-polis-rule px-6 pb-4 pt-6 text-center">
-      <div className="flex items-center justify-between border-b border-polis-rule pb-2 text-[10px] uppercase tracking-[0.25em] text-polis-ink">
+      <div className="flex items-center justify-between border-b border-polis-rule pb-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-polis-ink">
         <span>{dateLabel}</span>
         <span>{editionLabel}</span>
       </div>
