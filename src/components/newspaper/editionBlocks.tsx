@@ -65,7 +65,7 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
             )}
           </div>
 
-          <p className="mt-3 font-serif text-base italic text-polis-ink-soft md:text-lg">{article.subtitle}</p>
+          <p className="mt-3 font-serif text-lg italic text-polis-ink-soft md:text-xl">{article.subtitle}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-y border-polis-rule/20 py-3 text-xs text-polis-ink-soft">
             {author && (
