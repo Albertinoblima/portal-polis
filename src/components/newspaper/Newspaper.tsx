@@ -9,11 +9,24 @@ import { AdMargin } from "./AdMargin";
 import { paginateHtml } from "./paginate";
 import { useIsClient } from "@/hooks/useIsClient";
 import { getActiveBanners } from "@/lib/banners";
+import { wrapWordsForHighlight } from "@/lib/ttsHighlight";
 
 const SIDEBAR_BANNERS = getActiveBanners("sidebar");
 
 export type NewspaperBlock =
-  | { type: "html"; html: string; columns?: 1 | 2 | 3 }
+  | {
+      type: "html";
+      html: string;
+      columns?: 1 | 2 | 3;
+      /** Slug da matéria dona deste corpo de texto — presença opcional (ver
+       *  editionBlocks.tsx). Quando definido, as palavras do bloco são
+       *  envolvidas em spans marcadores para o destaque de leitura em áudio
+       *  (ver ttsHighlight.ts/useAudioWordHighlight.ts) poder sincronizar com
+       *  o `<audio>` daquela matéria especificamente — necessário porque uma
+       *  edição pode ter várias matérias (logo vários corpos de texto) na
+       *  mesma página do flip-book ao mesmo tempo. */
+      ttsId?: string;
+    }
   | { type: "node"; node: ReactNode; columns?: 1 | 2 | 3 }
   | {
       type: "grid";
@@ -151,18 +164,25 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
       // diferente da renderizada pelo servidor (mismatch garantido em qualquer
       // matéria cujo corpo não caiba inteiro numa folha). Só medimos de verdade
       // depois que `isClient` vira true, no ciclo de render seguinte à hidratação.
+      // O wrap de palavras em spans (para o destaque de leitura em áudio) só
+      // faz sentido do lado do cliente (mesma lógica/motivo do `isClient`
+      // acima) e só quando o bloco tem dono conhecido (`ttsId`) — páginas
+      // institucionais (termos, privacidade etc.) usam blocos "html" sem
+      // matéria/áudio associado e não precisam desse peso extra de DOM.
+      const sourceHtml = isClient && block.ttsId ? wrapWordsForHighlight(block.html) : block.html;
       const fragments = isClient
-        ? paginateHtml(block.html, {
+        ? paginateHtml(sourceHtml, {
             pageWidthPx: contentWidth,
             columnHeightPx: budgetHeight,
             columnsPerPage: columns,
           })
-        : [block.html];
+        : [sourceHtml];
       fragments.forEach((html, fragmentIndex) => {
         out.push({
           content: (
             <div
               className="prose prose-sm md:prose-base max-w-none prose-headings:font-sans prose-blockquote:font-serif prose-blockquote:italic"
+              data-tts-body={block.ttsId}
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ),

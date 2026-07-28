@@ -177,6 +177,18 @@ body {
   margin-right: auto;
 }
 
+/* Palavra ativa durante a leitura em áudio (ver ttsHighlight.ts /
+   useAudioWordHighlight.ts). `border-radius` pequeno + leve respiro lateral
+   (box-shadow, não padding: padding mudaria o fluxo de linha do texto e
+   causaria um "pulo" perceptível a cada palavra) dão o efeito de marca-texto
+   sem interferir na tipografia normal do corpo da matéria. */
+.tts-word--active {
+  background-color: color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
+  box-shadow: 0 0 0 0.05em color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
+  border-radius: 0.15em;
+  transition: background-color 100ms ease;
+}
+
 /* Capitular de abertura de matéria, ao estilo de jornal impresso. */
 .dropcap::first-letter {
   float: left;

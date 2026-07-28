@@ -3,12 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { AudioButtonFrame } from "./AudioButtonFrame";
 import { useAudioPlaybackController } from "./AudioPlaybackContext";
+import { useAudioWordHighlight } from "./useAudioWordHighlight";
 
 /** Botão "Ouvir matéria" tocando o MP3 gerado pelo Piper TTS em build time. */
-export function AudioPlayerButton({ src, articleTitle }: { src: string; articleTitle: string }) {
+export function AudioPlayerButton({
+  src,
+  articleTitle,
+  articleSlug,
+}: {
+  src: string;
+  articleTitle: string;
+  articleSlug: string;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const { setController } = useAudioPlaybackController();
+
+  useAudioWordHighlight(audioRef, articleSlug);
 
   function toggle() {
     const audio = audioRef.current;

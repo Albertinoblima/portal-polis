@@ -56,7 +56,7 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
 
           <div className="mt-3">
             {audioUrl ? (
-              <AudioPlayerButton src={audioUrl} articleTitle={article.title} />
+              <AudioPlayerButton src={audioUrl} articleTitle={article.title} articleSlug={article.slug} />
             ) : (
               // Sem áudio do Piper ainda gerado para esta matéria (build mais
               // recente que a publicação, ou falha silenciosa do TTS) —
@@ -115,7 +115,7 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
     });
   }
 
-  blocks.push({ type: "html", html: article.content });
+  blocks.push({ type: "html", html: article.content, ttsId: article.slug });
 
   return blocks;
 }
