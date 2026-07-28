@@ -273,6 +273,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "cultura-de-pernambuco",
+    date: "2026-07-28",
+    theme: "Cultura de Pernambuco",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 1,
+        col: 6,
+        answer: "VITALINO",
+        clue: "Mestre ceramista do Alto do Moura, em Caruaru, famoso pelas esculturas de barro do cotidiano nordestino.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 2,
+        col: 2,
+        answer: "FREVO",
+        clue: "Dança e ritmo símbolo do Carnaval de Pernambuco, com passos acelerados e o uso da sombrinha.",
+      },
+      {
+        number: 3,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "MARACATU",
+        clue: "Cortejo afro-brasileiro de realeza negra, ao som das alfaias, um dos maiores símbolos culturais de Pernambuco.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 3,
+        col: 0,
+        answer: "MANGUEBEAT",
+        clue: "Movimento musical surgido no Recife nos anos 1990, que misturou ritmos regionais a guitarras e rock.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 3,
+        col: 3,
+        answer: "ARTESANATO",
+        clue: "Produção manual de objetos como cerâmica e renda, tradição forte no Agreste pernambucano.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 3,
+        col: 4,
+        answer: "CORDEL",
+        clue: "Literatura popular em versos, geralmente ilustrada com xilogravura e vendida em folhetos de capa colorida.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {

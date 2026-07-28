@@ -95,6 +95,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "ESTADO",
     ],
   },
+  {
+    slug: "cultura-de-pernambuco",
+    date: "2026-07-28",
+    theme: "Cultura de Pernambuco",
+    size: 14,
+    words: [
+      "FREVO",
+      "MARACATU",
+      "FORRO",
+      "CORDEL",
+      "XILOGRAVURA",
+      "ALFAIA",
+      "VITALINO",
+      "ARTESANATO",
+      "MANGUEBEAT",
+      "CAPOEIRA",
+      "RENDA",
+      "CARNAVAL",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
