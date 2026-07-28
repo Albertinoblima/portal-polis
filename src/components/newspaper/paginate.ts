@@ -16,7 +16,8 @@ export interface PaginateOptions {
   columnGapPx?: number;
 }
 
-const SPLITTABLE_TAGS = new Set(["P", "LI", "BLOCKQUOTE", "DIV", "TD", "TH"]);
+const TEXT_SPLITTABLE_TAGS = new Set(["P", "LI", "BLOCKQUOTE", "DIV", "TD", "TH"]);
+const LIST_TAGS = new Set(["UL", "OL"]);
 
 export function paginateHtml(html: string, options: PaginateOptions): string[] {
   if (typeof document === "undefined" || !html.trim()) return [html];
@@ -112,13 +113,22 @@ function createProbe(
  * Para blocos textuais, faz busca binária por número de palavras; o fragmento
  * que "sobra" perde formatação inline (negrito/links) nessa única quebra,
  * troca deliberada de fidelidade tipográfica por robustez do algoritmo.
+ * `<ul>`/`<ol>` têm sua própria busca binária por `<li>` (ver splitListBlock)
+ * — sem isso, uma lista mais alta que uma página inteira era tratada como
+ * bloco não-divisível (como uma imagem) e forçada inteira numa única página,
+ * e o `overflow-hidden` real cortava os itens/o texto que não coubessem, sem
+ * aviso nenhum.
  */
 function splitBlock(
   block: HTMLElement,
   probe: HTMLElement,
   overflowed: () => boolean
 ): { fitted: HTMLElement | null; rest: HTMLElement | null } {
-  if (!SPLITTABLE_TAGS.has(block.tagName)) {
+  if (LIST_TAGS.has(block.tagName)) {
+    return splitListBlock(block, probe, overflowed);
+  }
+
+  if (!TEXT_SPLITTABLE_TAGS.has(block.tagName)) {
     return { fitted: block, rest: null };
   }
 
@@ -160,6 +170,68 @@ function splitBlock(
 
   const rest = block.cloneNode(false) as HTMLElement;
   rest.textContent = words.slice(best).join(" ");
+
+  return { fitted, rest };
+}
+
+/**
+ * Mesma ideia de `splitBlock` (busca binária pelo máximo que cabe sozinho
+ * numa página vazia), mas contando `<li>` inteiros em vez de palavras — cada
+ * item preserva sua formatação interna intacta (nada de negrito/link
+ * perdido, ao contrário do fallback textual de parágrafo). Se nem o primeiro
+ * `<li>` sozinho couber, aceita a lista inteira (mesma política de "bloco
+ * não-divisível" usada para imagens).
+ */
+function splitListBlock(
+  block: HTMLElement,
+  probe: HTMLElement,
+  overflowed: () => boolean
+): { fitted: HTMLElement | null; rest: HTMLElement | null } {
+  const items = Array.from(block.children).filter((child) => child.tagName === "LI") as HTMLElement[];
+  if (items.length <= 1) {
+    return { fitted: block, rest: null };
+  }
+
+  let lo = 1;
+  let hi = items.length;
+  let best = 0;
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const candidate = block.cloneNode(false) as HTMLElement;
+    for (const item of items.slice(0, mid)) candidate.appendChild(item.cloneNode(true));
+    probe.innerHTML = "";
+    probe.appendChild(candidate);
+    if (overflowed()) {
+      hi = mid - 1;
+    } else {
+      best = mid;
+      lo = mid + 1;
+    }
+  }
+
+  probe.innerHTML = "";
+
+  if (best === 0) {
+    return { fitted: block, rest: null };
+  }
+
+  const fitted = block.cloneNode(false) as HTMLElement;
+  for (const item of items.slice(0, best)) fitted.appendChild(item.cloneNode(true));
+
+  if (best >= items.length) {
+    return { fitted, rest: null };
+  }
+
+  const rest = block.cloneNode(false) as HTMLElement;
+  for (const item of items.slice(best)) rest.appendChild(item.cloneNode(true));
+  // <ol> precisa continuar a numeração de onde parou na página anterior, não
+  // reiniciar em 1 — soma o que já tinha em `start` (se a lista já vinha
+  // fatiada de uma quebra anterior) com o nº de itens que ficaram em `fitted`.
+  if (rest.tagName === "OL") {
+    const previousStart = Number(block.getAttribute("start") ?? "1");
+    rest.setAttribute("start", String(previousStart + best));
+  }
 
   return { fitted, rest };
 }
