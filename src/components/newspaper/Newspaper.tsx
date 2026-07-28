@@ -165,26 +165,36 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
       // diferente da renderizada pelo servidor (mismatch garantido em qualquer
       // matéria cujo corpo não caiba inteiro numa folha). Só medimos de verdade
       // depois que `isClient` vira true, no ciclo de render seguinte à hidratação.
-      // O wrap de palavras em spans (para o destaque de leitura em áudio) só
-      // faz sentido do lado do cliente (mesma lógica/motivo do `isClient`
-      // acima) e só quando o bloco tem dono conhecido (`ttsId`) — páginas
-      // institucionais (termos, privacidade etc.) usam blocos "html" sem
-      // matéria/áudio associado e não precisam desse peso extra de DOM.
-      const sourceHtml = isClient && block.ttsId ? wrapWordsForHighlight(block.html) : block.html;
       const fragments = isClient
-        ? paginateHtml(sourceHtml, {
+        ? paginateHtml(block.html, {
             pageWidthPx: contentWidth,
             columnHeightPx: budgetHeight,
             columnsPerPage: columns,
           })
-        : [sourceHtml];
+        : [block.html];
       fragments.forEach((html, fragmentIndex) => {
+        // O wrap de palavras em spans (para o destaque de leitura em áudio)
+        // roda DEPOIS da paginação, em cada fragmento (1 página) já pronto —
+        // nunca no HTML inteiro do artigo antes de paginar. `paginateHtml`
+        // clona/mede a árvore inteira repetidas vezes (ver rebuildProbe em
+        // paginate.ts); alimentá-la com um span por palavra multiplica o nº
+        // de nós que ela precisa clonar a cada bloco, e numa página que
+        // concatena muitas matérias (Home, edição) isso trava o cliente por
+        // tempo suficiente pra estourar até o carregamento inicial da página
+        // (visto num timeout de E2E em CI, com o conteúdo real do Supabase —
+        // bem maior que o dataset de demonstração local). Envolver só o
+        // fragmento já paginado é uma operação de string barata (sem
+        // DOM/layout) e produz o mesmo HTML final, já que `<span>` inline
+        // não muda a altura de nada. Só faz sentido no cliente e só quando o
+        // bloco tem dono conhecido (`ttsId`) — páginas institucionais
+        // (termos, privacidade etc.) não têm matéria/áudio associado.
+        const finalHtml = isClient && block.ttsId ? wrapWordsForHighlight(html) : html;
         out.push({
           content: (
             <div
               className={ARTICLE_PROSE_CLASSNAME}
               data-tts-body={block.ttsId}
-              dangerouslySetInnerHTML={{ __html: html }}
+              dangerouslySetInnerHTML={{ __html: finalHtml }}
             />
           ),
           columns,
