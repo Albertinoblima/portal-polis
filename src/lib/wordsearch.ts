@@ -115,6 +115,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "CARNAVAL",
     ],
   },
+  {
+    slug: "xadrez-politico",
+    date: "2026-08-01",
+    theme: "Xadrez Político",
+    size: 14,
+    words: [
+      "XADREZ",
+      "PODER",
+      "ESTRATEGIA",
+      "NEGOCIACAO",
+      "BASTIDORES",
+      "ALIANCA",
+      "PEAO",
+      "REI",
+      "XEQUEMATE",
+      "TABULEIRO",
+      "MANOBRA",
+      "COALIZAO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {

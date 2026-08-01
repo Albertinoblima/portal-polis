@@ -328,6 +328,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "xadrez-politico",
+    date: "2026-08-01",
+    theme: "Xadrez Político",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 1,
+        col: 1,
+        answer: "BASTIDORES",
+        clue: "Onde ocorrem as negociações e articulações políticas, longe dos holofotes públicos.",
+      },
+      {
+        number: 2,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "ESTRATEGIA",
+        clue: "Plano de ação cuidadosamente arquitetado para vencer uma disputa, como num jogo de xadrez.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 3,
+        col: 0,
+        answer: "ESQUEMA",
+        clue: "Arranjo, muitas vezes velado, para articular apoios ou vantagens políticas.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 3,
+        col: 3,
+        answer: "REI",
+        clue: "Peça mais importante do tabuleiro de xadrez — na política, a figura central que concentra o poder.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 3,
+        col: 4,
+        answer: "ALIANCA",
+        clue: "Acordo entre partidos ou lideranças para somar forças em uma disputa eleitoral.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 3,
+        col: 7,
+        answer: "GOVERNO",
+        clue: "Conjunto de poderes e instituições que administram o Estado e executam suas políticas.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {
