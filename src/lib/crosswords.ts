@@ -383,6 +383,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "ariano-suassuna",
+    date: "2026-08-04",
+    theme: "Ariano Suassuna",
+    entries: [
+      {
+        number: 1,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "ARMORIAL",
+        clue: "Movimento cultural criado por Ariano Suassuna em 1970, unindo cordel, xilogravura e repente à erudição.",
+      },
+      {
+        number: 1,
+        direction: "down",
+        row: 3,
+        col: 0,
+        answer: "ARIANO",
+        clue: "Primeiro nome do escritor paraibano criador do Auto da Compadecida, radicado no Recife.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 3,
+        col: 3,
+        answer: "OBRA",
+        clue: "Conjunto dos trabalhos literários e teatrais deixados por um autor.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 3,
+        col: 4,
+        answer: "ROMANCE",
+        clue: "Gênero narrativo do livro 'A Pedra do Reino', magnum opus de Suassuna.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 3,
+        col: 6,
+        answer: "AUTO",
+        clue: "Peça teatral popular de origem medieval — a mais famosa de Suassuna é 'da Compadecida'.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 3,
+        col: 7,
+        answer: "LITERATURA",
+        clue: "Arte da palavra escrita, que Suassuna enriqueceu ao valorizar a cultura popular nordestina.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {

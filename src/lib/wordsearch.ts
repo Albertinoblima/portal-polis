@@ -135,6 +135,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "COALIZAO",
     ],
   },
+  {
+    slug: "ariano-suassuna",
+    date: "2026-08-04",
+    theme: "Ariano Suassuna",
+    size: 14,
+    words: [
+      "SUASSUNA",
+      "ARIANO",
+      "ARMORIAL",
+      "COMPADECIDA",
+      "QUADERNA",
+      "CHICO",
+      "GRILO",
+      "CORDEL",
+      "XILOGRAVURA",
+      "SERTAO",
+      "DRAMATURGO",
+      "TAPEROA",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
