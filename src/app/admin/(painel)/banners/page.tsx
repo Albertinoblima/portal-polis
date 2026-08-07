@@ -62,7 +62,7 @@ export default function AdminBannersPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [linkUrl, setLinkUrl] = useState("");
-  const [position, setPosition] = useState<BannerPosition>("home_secondary");
+  const [position, setPosition] = useState<BannerPosition>("sidebar");
   const [error, setError] = useState<string | null>(null);
 
   async function handleBannerImageSelect(media: { url: string }) {
@@ -163,6 +163,9 @@ export default function AdminBannersPage() {
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-[11px] text-polis-gray/80">
+                Para aparecer no espaço publicitário do jornal, a posição precisa ser <strong>Barra lateral</strong>.
+              </p>
             </div>
             <div>
               <label htmlFor="imageUrl" className="block text-xs font-semibold text-polis-slate">
