@@ -6,7 +6,13 @@ import { useAdminSession } from "@/components/admin/AuthProvider";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { createBanner, deleteBanner, getBanners, toggleBanner } from "@/lib/supabase/queries";
+import {
+  createBanner,
+  deleteBanner,
+  getBanners,
+  toggleBanner,
+  triggerSiteRebuild,
+} from "@/lib/supabase/queries";
 import type { BannerPosition } from "@/types/database";
 
 const positionLabels: Record<BannerPosition, string> = {
@@ -99,6 +105,7 @@ export default function AdminBannersPage() {
 
     try {
       await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#", position });
+      await triggerSiteRebuild();
       setTitle("");
       setImageUrl("");
       setImageDimensions(null);
@@ -251,14 +258,22 @@ export default function AdminBannersPage() {
                       <div className="flex gap-3">
                         <button
                           type="button"
-                          onClick={() => toggleBanner(banner.id, !banner.is_active).then(refetch)}
+                          onClick={async () => {
+                            await toggleBanner(banner.id, !banner.is_active);
+                            await triggerSiteRebuild();
+                            refetch();
+                          }}
                           className="font-semibold text-polis-navy hover:text-polis-gold"
                         >
                           {banner.is_active ? "Desativar" : "Ativar"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteBanner(banner.id).then(refetch)}
+                          onClick={async () => {
+                            await deleteBanner(banner.id);
+                            await triggerSiteRebuild();
+                            refetch();
+                          }}
                           className="font-semibold text-red-700 hover:underline"
                         >
                           Excluir
