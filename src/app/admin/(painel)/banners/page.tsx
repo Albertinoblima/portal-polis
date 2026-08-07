@@ -18,6 +18,17 @@ import {
 type BannerRecord = Awaited<ReturnType<typeof getBanners>>[number];
 
 const SIDEBAR_DIMENSIONS = { width: 1200, height: 960 };
+const SIDEBAR_ASPECT_RATIO = SIDEBAR_DIMENSIONS.width / SIDEBAR_DIMENSIONS.height;
+const SIDEBAR_RATIO_TOLERANCE = 0.01;
+
+export function isValidBannerDimensions(width: number, height: number): boolean {
+  if (width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const ratio = width / height;
+  return Math.abs(ratio - SIDEBAR_ASPECT_RATIO) <= SIDEBAR_RATIO_TOLERANCE;
+}
 
 async function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -94,12 +105,9 @@ export default function AdminBannersPage() {
       setError("Não foi possível validar as dimensões da imagem. Selecione novamente na biblioteca.");
       return;
     }
-    if (
-      imageDimensions.width !== SIDEBAR_DIMENSIONS.width ||
-      imageDimensions.height !== SIDEBAR_DIMENSIONS.height
-    ) {
+    if (!isValidBannerDimensions(imageDimensions.width, imageDimensions.height)) {
       setError(
-        `Para os 4 banners da publicidade, use exatamente ${SIDEBAR_DIMENSIONS.width} x ${SIDEBAR_DIMENSIONS.height}px. Imagem selecionada: ${imageDimensions.width} x ${imageDimensions.height}px.`
+        `Para os 4 banners da publicidade, use uma imagem proporcional ao formato 5:4. Exemplo: ${SIDEBAR_DIMENSIONS.width} x ${SIDEBAR_DIMENSIONS.height}px ou ${SIDEBAR_DIMENSIONS.width - 240} x ${SIDEBAR_DIMENSIONS.height - 192}px. Imagem selecionada: ${imageDimensions.width} x ${imageDimensions.height}px.`
       );
       return;
     }
@@ -189,9 +197,9 @@ export default function AdminBannersPage() {
                 />
               )}
               <p className="mt-2 text-[11px] text-polis-gray">
-                Dimensão exata obrigatória: <strong>1200 x 960 px</strong>
+                Proporção recomendada: <strong>5:4</strong> (ex.: 1200 x 960 px, 960 x 768 px)
               </p>
-              <p className="text-[11px] text-polis-gray/80">Formato 5:4. Aceita JPG, PNG, WEBP, SVG e GIF.</p>
+              <p className="text-[11px] text-polis-gray/80">Aceita JPG, PNG, WEBP, SVG e GIF.</p>
               {imageDimensions && (
                 <p className="mt-1 text-[11px] text-polis-slate">
                   Imagem selecionada: {imageDimensions.width} x {imageDimensions.height}px
