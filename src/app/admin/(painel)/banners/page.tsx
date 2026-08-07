@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { MediaLibraryModal } from "@/components/admin/MediaLibraryModal";
+import { useAdminSession } from "@/components/admin/AuthProvider";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
@@ -13,22 +15,93 @@ const positionLabels: Record<BannerPosition, string> = {
   sidebar: "Barra lateral",
 };
 
+const positionRequirements: Record<
+  BannerPosition,
+  {
+    dimensions: string;
+    recommendation: string;
+  }
+> = {
+  home_hero: {
+    dimensions: "1600 x 900 px",
+    recommendation: "Formato 16:9 para o destaque principal da Home.",
+  },
+  home_secondary: {
+    dimensions: "1200 x 675 px",
+    recommendation: "Formato 16:9 para manter consistência nos destaques secundários.",
+  },
+  sidebar: {
+    dimensions: "1200 x 960 px",
+    recommendation: "Formato 5:4. Este é o padrão dos 4 slots da página de anúncios.",
+  },
+};
+
+const SIDEBAR_DIMENSIONS = { width: 1200, height: 960 };
+
+async function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => reject(new Error("Não foi possível ler as dimensões da imagem selecionada."));
+    image.src = url;
+  });
+}
+
 export default function AdminBannersPage() {
+  const { profile } = useAdminSession();
   const { data: banners, loading, refetch } = useSupabaseQuery(getBanners);
   const [isCreating, setIsCreating] = useState(false);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [linkUrl, setLinkUrl] = useState("");
   const [position, setPosition] = useState<BannerPosition>("home_secondary");
   const [error, setError] = useState<string | null>(null);
 
+  async function handleBannerImageSelect(media: { url: string }) {
+    try {
+      const dimensions = await getImageDimensions(media.url);
+      setImageUrl(media.url);
+      setImageDimensions(dimensions);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao selecionar imagem da biblioteca.");
+      setImageUrl("");
+      setImageDimensions(null);
+    }
+  }
+
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!imageUrl) {
+      setError("Selecione uma imagem da biblioteca de mídia.");
+      return;
+    }
+
+    if (position === "sidebar") {
+      if (!imageDimensions) {
+        setError("Não foi possível validar as dimensões da imagem. Selecione novamente na biblioteca.");
+        return;
+      }
+      if (
+        imageDimensions.width !== SIDEBAR_DIMENSIONS.width ||
+        imageDimensions.height !== SIDEBAR_DIMENSIONS.height
+      ) {
+        setError(
+          `Para os 4 banners da barra lateral, use exatamente ${SIDEBAR_DIMENSIONS.width} x ${SIDEBAR_DIMENSIONS.height}px. Imagem selecionada: ${imageDimensions.width} x ${imageDimensions.height}px.`
+        );
+        return;
+      }
+    }
+
     try {
       await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#", position });
       setTitle("");
       setImageUrl("");
+      setImageDimensions(null);
       setLinkUrl("");
       setIsCreating(false);
       refetch();
@@ -86,16 +159,44 @@ export default function AdminBannersPage() {
             </div>
             <div>
               <label htmlFor="imageUrl" className="block text-xs font-semibold text-polis-slate">
-                URL da imagem
+                Imagem do banner
               </label>
-              <input
-                id="imageUrl"
-                required
-                value={imageUrl}
-                onChange={(event) => setImageUrl(event.target.value)}
-                placeholder="https://.../banner.jpg"
-                className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
-              />
+              {imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrl}
+                  alt={title || "Prévia do banner"}
+                  className="mt-1 h-24 w-full rounded-sm border border-polis-navy/10 bg-polis-off-white object-contain"
+                />
+              ) : (
+                <div className="mt-1 flex h-24 items-center justify-center rounded-sm border border-dashed border-polis-navy/20 bg-polis-off-white text-xs text-polis-gray">
+                  Nenhuma imagem selecionada
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsMediaLibraryOpen(true)}
+                className="mt-2 flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold"
+              >
+                <span>Selecionar da biblioteca de mídia</span>
+                <span className="text-[10px] text-polis-gray/70">aceita JPG, PNG, WEBP, SVG e GIF</span>
+              </button>
+              {isMediaLibraryOpen && (
+                <MediaLibraryModal
+                  uploadedBy={profile.id}
+                  onSelect={handleBannerImageSelect}
+                  onClose={() => setIsMediaLibraryOpen(false)}
+                />
+              )}
+              <p className="mt-2 text-[11px] text-polis-gray">
+                Dimensão exigida para esta posição: <strong>{positionRequirements[position].dimensions}</strong>
+              </p>
+              <p className="text-[11px] text-polis-gray/80">{positionRequirements[position].recommendation}</p>
+              {imageDimensions && (
+                <p className="mt-1 text-[11px] text-polis-slate">
+                  Imagem selecionada: {imageDimensions.width} x {imageDimensions.height}px
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="linkUrl" className="block text-xs font-semibold text-polis-slate">
@@ -140,9 +241,8 @@ export default function AdminBannersPage() {
                     <td className="px-5 py-3 text-polis-slate">{positionLabels[banner.position]}</td>
                     <td className="px-5 py-3">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          banner.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-                        }`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${banner.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                          }`}
                       >
                         {banner.is_active ? "Ativo" : "Inativo"}
                       </span>

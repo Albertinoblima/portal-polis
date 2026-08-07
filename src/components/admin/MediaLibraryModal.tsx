@@ -62,7 +62,13 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
           <label className="flex h-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
             <span>{isUploading ? "Enviando..." : "Não achou? Envie uma imagem do computador"}</span>
             <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 20MB</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isUploading} />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={isUploading}
+            />
           </label>
           {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
         </div>
