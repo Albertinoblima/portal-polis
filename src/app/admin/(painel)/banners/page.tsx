@@ -12,8 +12,11 @@ import {
   getBanners,
   toggleBanner,
   triggerSiteRebuild,
+  updateBanner,
 } from "@/lib/supabase/queries";
 import type { BannerPosition } from "@/types/database";
+
+type BannerRecord = Awaited<ReturnType<typeof getBanners>>[number];
 
 const positionLabels: Record<BannerPosition, string> = {
   home_hero: "Destaque principal (Home)",
@@ -56,14 +59,45 @@ async function getImageDimensions(url: string): Promise<{ width: number; height:
 export default function AdminBannersPage() {
   const { profile } = useAdminSession();
   const { data: banners, loading, refetch } = useSupabaseQuery(getBanners);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [linkUrl, setLinkUrl] = useState("");
   const [position, setPosition] = useState<BannerPosition>("sidebar");
   const [error, setError] = useState<string | null>(null);
+
+  function resetForm() {
+    setEditingBannerId(null);
+    setTitle("");
+    setImageUrl("");
+    setImageDimensions(null);
+    setLinkUrl("");
+    setPosition("sidebar");
+    setError(null);
+  }
+
+  function openCreateForm() {
+    resetForm();
+    setIsFormOpen(true);
+  }
+
+  async function openEditForm(banner: BannerRecord) {
+    setIsFormOpen(true);
+    setEditingBannerId(banner.id);
+    setTitle(banner.title);
+    setImageUrl(banner.image_url);
+    setLinkUrl(banner.link_url);
+    setPosition(banner.position);
+    setError(null);
+    try {
+      setImageDimensions(await getImageDimensions(banner.image_url));
+    } catch {
+      setImageDimensions(null);
+    }
+  }
 
   async function handleBannerImageSelect(media: { url: string }) {
     try {
@@ -104,16 +138,17 @@ export default function AdminBannersPage() {
     }
 
     try {
-      await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#", position });
+      if (editingBannerId) {
+        await updateBanner(editingBannerId, { title, image_url: imageUrl, link_url: linkUrl || "#", position });
+      } else {
+        await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#", position });
+      }
       await triggerSiteRebuild();
-      setTitle("");
-      setImageUrl("");
-      setImageDimensions(null);
-      setLinkUrl("");
-      setIsCreating(false);
+      resetForm();
+      setIsFormOpen(false);
       refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o banner.");
+      setError(err instanceof Error ? err.message : "Não foi possível salvar o banner.");
     }
   }
 
@@ -123,18 +158,22 @@ export default function AdminBannersPage() {
         title="Banners e Destaques"
         description="Gerencie os destaques exibidos na Home."
         actions={
-          <Button type="button" onClick={() => setIsCreating((v) => !v)}>
-            {isCreating ? "Cancelar" : "+ Novo Banner"}
+          <Button type="button" onClick={() => (isFormOpen ? (resetForm(), setIsFormOpen(false)) : openCreateForm())}>
+            {isFormOpen ? "Cancelar" : "+ Novo Banner"}
           </Button>
         }
       />
 
       <div className="p-6">
-        {isCreating && (
+        {isFormOpen && (
           <form
             onSubmit={handleCreate}
             className="mb-6 grid grid-cols-1 gap-4 rounded-sm border border-polis-navy/10 bg-white p-4 sm:grid-cols-2"
           >
+            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-sm border border-polis-navy/10 bg-polis-off-white px-3 py-2 text-xs text-polis-slate">
+              <span>{editingBannerId ? "Editando banner existente" : "Criando novo banner"}</span>
+              {editingBannerId && <span>O site será atualizado após salvar.</span>}
+            </div>
             <div>
               <label htmlFor="title" className="block text-xs font-semibold text-polis-slate">
                 Título
@@ -222,7 +261,7 @@ export default function AdminBannersPage() {
             </div>
             {error && <p className="text-sm text-red-700 sm:col-span-2">{error}</p>}
             <Button type="submit" className="sm:col-span-2">
-              Criar banner
+              {editingBannerId ? "Salvar alterações" : "Criar banner"}
             </Button>
           </form>
         )}
@@ -259,6 +298,13 @@ export default function AdminBannersPage() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(banner)}
+                          className="font-semibold text-polis-navy hover:text-polis-gold"
+                        >
+                          Editar
+                        </button>
                         <button
                           type="button"
                           onClick={async () => {

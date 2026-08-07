@@ -219,6 +219,20 @@ export async function createBanner(input: {
   return data;
 }
 
+export async function updateBanner(
+  id: string,
+  input: {
+    title: string;
+    image_url: string;
+    link_url: string;
+    position: BannerPosition;
+  }
+) {
+  const { data, error } = await supabase.from("banners").update(input).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function toggleBanner(id: string, isActive: boolean) {
   const { error } = await supabase.from("banners").update({ is_active: isActive }).eq("id", id);
   if (error) throw error;
