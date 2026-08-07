@@ -138,6 +138,7 @@ async function fetchBanners(supabase) {
   const { data, error } = await supabase
     .from("banners")
     .select("id, title, image_url, link_url, position, start_date, end_date, is_active")
+    .eq("position", "sidebar")
     .eq("is_active", true)
     .lte("start_date", nowIso)
     .or(`end_date.is.null,end_date.gte.${nowIso}`)

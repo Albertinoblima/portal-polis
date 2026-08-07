@@ -14,7 +14,7 @@ export type ArticleStatus =
   | "archived";
 
 export type CommentStatus = "pending" | "approved" | "rejected";
-export type BannerPosition = "home_hero" | "home_secondary" | "sidebar";
+export type BannerPosition = "sidebar";
 export type HeadingFont = "eb-garamond" | "playfair-display" | "merriweather";
 export type BodyFont = "inter" | "source-sans-3" | "ibm-plex-sans";
 

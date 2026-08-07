@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase/client";
 import { slugify } from "@/lib/utils";
 import type {
   ArticleStatus,
-  BannerPosition,
   BodyFont,
   CommentStatus,
   HeadingFont,
@@ -203,7 +202,11 @@ export async function deleteMedia(id: string, filename: string) {
 }
 
 export async function getBanners() {
-  const { data, error } = await supabase.from("banners").select("*").order("start_date", { ascending: false });
+  const { data, error } = await supabase
+    .from("banners")
+    .select("*")
+    .eq("position", "sidebar")
+    .order("start_date", { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -212,9 +215,12 @@ export async function createBanner(input: {
   title: string;
   image_url: string;
   link_url: string;
-  position: BannerPosition;
 }) {
-  const { data, error } = await supabase.from("banners").insert(input).select().single();
+  const { data, error } = await supabase
+    .from("banners")
+    .insert({ ...input, position: "sidebar" })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
@@ -225,10 +231,14 @@ export async function updateBanner(
     title: string;
     image_url: string;
     link_url: string;
-    position: BannerPosition;
   }
 ) {
-  const { data, error } = await supabase.from("banners").update(input).eq("id", id).select().single();
+  const { data, error } = await supabase
+    .from("banners")
+    .update({ ...input, position: "sidebar" })
+    .eq("id", id)
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }

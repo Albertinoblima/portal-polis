@@ -110,7 +110,7 @@ export interface Banner {
   title: string;
   imageUrl: string;
   linkUrl: string;
-  position: "home_hero" | "home_secondary" | "sidebar";
+  position: "sidebar";
   startDate: string;
   endDate?: string;
   isActive: boolean;

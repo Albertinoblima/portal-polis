@@ -14,36 +14,8 @@ import {
   triggerSiteRebuild,
   updateBanner,
 } from "@/lib/supabase/queries";
-import type { BannerPosition } from "@/types/database";
 
 type BannerRecord = Awaited<ReturnType<typeof getBanners>>[number];
-
-const positionLabels: Record<BannerPosition, string> = {
-  home_hero: "Destaque principal (Home)",
-  home_secondary: "Destaques secundários (Home)",
-  sidebar: "Barra lateral",
-};
-
-const positionRequirements: Record<
-  BannerPosition,
-  {
-    dimensions: string;
-    recommendation: string;
-  }
-> = {
-  home_hero: {
-    dimensions: "1600 x 900 px",
-    recommendation: "Formato 16:9 para o destaque principal da Home.",
-  },
-  home_secondary: {
-    dimensions: "1200 x 675 px",
-    recommendation: "Formato 16:9 para manter consistência nos destaques secundários.",
-  },
-  sidebar: {
-    dimensions: "1200 x 960 px",
-    recommendation: "Formato 5:4. Este é o padrão dos 4 slots da página de anúncios.",
-  },
-};
 
 const SIDEBAR_DIMENSIONS = { width: 1200, height: 960 };
 
@@ -66,7 +38,6 @@ export default function AdminBannersPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [linkUrl, setLinkUrl] = useState("");
-  const [position, setPosition] = useState<BannerPosition>("sidebar");
   const [error, setError] = useState<string | null>(null);
 
   function resetForm() {
@@ -75,7 +46,6 @@ export default function AdminBannersPage() {
     setImageUrl("");
     setImageDimensions(null);
     setLinkUrl("");
-    setPosition("sidebar");
     setError(null);
   }
 
@@ -90,7 +60,6 @@ export default function AdminBannersPage() {
     setTitle(banner.title);
     setImageUrl(banner.image_url);
     setLinkUrl(banner.link_url);
-    setPosition(banner.position);
     setError(null);
     try {
       setImageDimensions(await getImageDimensions(banner.image_url));
@@ -121,27 +90,25 @@ export default function AdminBannersPage() {
       return;
     }
 
-    if (position === "sidebar") {
-      if (!imageDimensions) {
-        setError("Não foi possível validar as dimensões da imagem. Selecione novamente na biblioteca.");
-        return;
-      }
-      if (
-        imageDimensions.width !== SIDEBAR_DIMENSIONS.width ||
-        imageDimensions.height !== SIDEBAR_DIMENSIONS.height
-      ) {
-        setError(
-          `Para os 4 banners da barra lateral, use exatamente ${SIDEBAR_DIMENSIONS.width} x ${SIDEBAR_DIMENSIONS.height}px. Imagem selecionada: ${imageDimensions.width} x ${imageDimensions.height}px.`
-        );
-        return;
-      }
+    if (!imageDimensions) {
+      setError("Não foi possível validar as dimensões da imagem. Selecione novamente na biblioteca.");
+      return;
+    }
+    if (
+      imageDimensions.width !== SIDEBAR_DIMENSIONS.width ||
+      imageDimensions.height !== SIDEBAR_DIMENSIONS.height
+    ) {
+      setError(
+        `Para os 4 banners da publicidade, use exatamente ${SIDEBAR_DIMENSIONS.width} x ${SIDEBAR_DIMENSIONS.height}px. Imagem selecionada: ${imageDimensions.width} x ${imageDimensions.height}px.`
+      );
+      return;
     }
 
     try {
       if (editingBannerId) {
-        await updateBanner(editingBannerId, { title, image_url: imageUrl, link_url: linkUrl || "#", position });
+        await updateBanner(editingBannerId, { title, image_url: imageUrl, link_url: linkUrl || "#" });
       } else {
-        await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#", position });
+        await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#" });
       }
       await triggerSiteRebuild();
       resetForm();
@@ -155,8 +122,8 @@ export default function AdminBannersPage() {
   return (
     <>
       <AdminTopbar
-        title="Banners e Destaques"
-        description="Gerencie os destaques exibidos na Home."
+        title="Publicidade"
+        description="Gerencie os 4 banners da página publicitária do jornal."
         actions={
           <Button type="button" onClick={() => (isFormOpen ? (resetForm(), setIsFormOpen(false)) : openCreateForm())}>
             {isFormOpen ? "Cancelar" : "+ Novo Banner"}
@@ -186,25 +153,9 @@ export default function AdminBannersPage() {
                 className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
               />
             </div>
-            <div>
-              <label htmlFor="position" className="block text-xs font-semibold text-polis-slate">
-                Posição
-              </label>
-              <select
-                id="position"
-                value={position}
-                onChange={(event) => setPosition(event.target.value as BannerPosition)}
-                className="mt-1 w-full rounded-sm border border-polis-navy/20 px-3 py-2 text-sm focus:border-polis-gold focus:outline-none"
-              >
-                {Object.entries(positionLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-[11px] text-polis-gray/80">
-                Para aparecer no espaço publicitário do jornal, a posição precisa ser <strong>Barra lateral</strong>.
-              </p>
+            <div className="rounded-sm border border-polis-navy/10 bg-polis-off-white px-3 py-2 text-xs text-polis-slate">
+              <p className="font-semibold text-polis-navy">Posição fixa: Barra lateral</p>
+              <p className="mt-1">Esses banners alimentam exclusivamente os 4 slots de publicidade do jornal.</p>
             </div>
             <div>
               <label htmlFor="imageUrl" className="block text-xs font-semibold text-polis-slate">
@@ -238,9 +189,9 @@ export default function AdminBannersPage() {
                 />
               )}
               <p className="mt-2 text-[11px] text-polis-gray">
-                Dimensão exigida para esta posição: <strong>{positionRequirements[position].dimensions}</strong>
+                Dimensão exata obrigatória: <strong>1200 x 960 px</strong>
               </p>
-              <p className="text-[11px] text-polis-gray/80">{positionRequirements[position].recommendation}</p>
+              <p className="text-[11px] text-polis-gray/80">Formato 5:4. Aceita JPG, PNG, WEBP, SVG e GIF.</p>
               {imageDimensions && (
                 <p className="mt-1 text-[11px] text-polis-slate">
                   Imagem selecionada: {imageDimensions.width} x {imageDimensions.height}px
@@ -278,7 +229,6 @@ export default function AdminBannersPage() {
               <thead className="border-b border-polis-navy/10 bg-polis-off-white text-xs uppercase tracking-wide text-polis-gray">
                 <tr>
                   <th className="px-5 py-3">Título</th>
-                  <th className="px-5 py-3">Posição</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Ações</th>
                 </tr>
@@ -287,7 +237,6 @@ export default function AdminBannersPage() {
                 {(banners ?? []).map((banner) => (
                   <tr key={banner.id}>
                     <td className="px-5 py-3 font-medium text-polis-navy">{banner.title}</td>
-                    <td className="px-5 py-3 text-polis-slate">{positionLabels[banner.position]}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${banner.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
