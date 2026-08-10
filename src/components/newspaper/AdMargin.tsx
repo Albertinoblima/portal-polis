@@ -33,7 +33,7 @@ export function AdMargin({ banners, slotCount = SLOT_COUNT, fillHeightPx }: AdMa
       <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
       </span>
-      <div className={`${gridClassName} h-full`}>
+      <div className={gridClassName}>
         {slots.map((banner, index) =>
           banner ? <AdSlot key={banner.id} banner={banner} /> : <AdPlaceholder key={index} />
         )}
