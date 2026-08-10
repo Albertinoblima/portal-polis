@@ -68,7 +68,7 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
           }}
         >
           {columns === 1 ? (
-            <div className="flex min-h-0 w-full flex-col">{children}</div>
+            <div className="flex h-full min-h-0 w-full flex-col">{children}</div>
           ) : (
             children
           )}

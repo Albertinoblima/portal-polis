@@ -120,7 +120,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
     if (showMasthead) {
       if (isDesktop) {
         out.push({
-          content: <AdMargin banners={SIDEBAR_BANNERS} fillHeightPx={contentHeightCover} />,
+          content: <AdMargin banners={SIDEBAR_BANNERS} />,
           columns: 1,
           contentHeightPx: contentHeightCover,
         });
@@ -139,7 +139,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
 
         for (const chunk of mobileChunks) {
           out.push({
-            content: <AdMargin banners={chunk} slotCount={MOBILE_ADS_PER_PAGE} fillHeightPx={contentHeight} />,
+            content: <AdMargin banners={chunk} slotCount={MOBILE_ADS_PER_PAGE} />,
             columns: 1,
             contentHeightPx: contentHeight,
           });
