@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn, formatTime } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { useElementSize } from "@/hooks/useElementSize";
 import { GameOverlay } from "@/components/games/GameOverlay";
-import { useCompactLandscape } from "@/hooks/useCompactLandscape";
+import { GameInfoDialog, GameSettingsButton } from "@/components/games/GameInfoDialog";
 
 interface Point {
   x: number;
@@ -17,6 +18,7 @@ type SnakeMode = "competitivo" | "treino" | "desafio";
 
 const COLS = 20;
 const ROWS = 12;
+const BOARD_RATIO = COLS / ROWS;
 const START_SPEED = 160;
 const TRAINING_SPEED = 180;
 const CHALLENGE_START_SPEED = 150;
@@ -114,6 +116,7 @@ export function Snake() {
   const [isNewBestTime, setIsNewBestTime] = useState(false);
   const [isNewChallengeTier, setIsNewChallengeTier] = useState(false);
   const [eatenPulse, setEatenPulse] = useState<Point | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const directionRef = useRef<Direction>(INITIAL_DIRECTION);
   const nextDirectionRef = useRef<Direction>(INITIAL_DIRECTION);
@@ -122,9 +125,16 @@ export function Snake() {
   const elapsedRef = useRef(0);
   const touchStartRef = useRef<Point | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isCompactLandscape = useCompactLandscape(true);
+  const [boardWrapRef, boardWrapSize] = useElementSize<HTMLDivElement>();
   const isTrainingMode = mode === "treino";
   const isChallengeMode = mode === "desafio";
+
+  const boardBox = useMemo(() => {
+    const { width, height } = boardWrapSize;
+    if (width <= 0 || height <= 0) return null;
+    const w = Math.floor(Math.min(width, height * BOARD_RATIO));
+    return { width: w, height: Math.floor(w / BOARD_RATIO) };
+  }, [boardWrapSize]);
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -157,6 +167,11 @@ export function Snake() {
   const togglePause = useCallback(() => {
     setStatus((prev) => (prev === "playing" ? "paused" : prev === "paused" ? "playing" : prev));
   }, []);
+
+  const openInfo = useCallback(() => {
+    if (status === "playing") setStatus("paused");
+    setInfoOpen(true);
+  }, [status]);
 
   const adjustSpeed = useCallback(
     (delta: number) => {
@@ -312,9 +327,7 @@ export function Snake() {
           ? "Fim de jogo!"
           : null;
 
-  const canPause = status === "playing" || status === "paused";
   const canChangeMode = status === "idle" || status === "gameover";
-  const boardWidthClass = isCompactLandscape ? "w-[min(100%,22rem)]" : "w-full";
   const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
   const currentTierIndex = reachedChallengeTierIndex(elapsedSeconds);
   const nextTier = CHALLENGE_TIERS[currentTierIndex + 1] ?? null;
@@ -323,247 +336,59 @@ export function Snake() {
     : 100;
   const bestTierLabel = bestChallengeTier >= 0 ? CHALLENGE_TIERS[bestChallengeTier]?.label : "-";
 
-  return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      className={cn(
-        "mx-auto flex h-full max-w-4xl flex-col items-center justify-center gap-5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted",
-        isCompactLandscape && "justify-start gap-3 sm:flex-row sm:items-start sm:justify-center"
-      )}
-    >
-      <div className={cn("flex w-full flex-col items-center gap-5", isCompactLandscape && "max-w-[24rem] gap-3")}>
-        <h1 className="font-serif text-3xl font-bold text-polis-ink">Jogo da Cobrinha</h1>
-
-        <div className="flex w-full max-w-[300px] gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("competitivo")}
-            disabled={!canChangeMode}
-            className={cn(
-              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
-              mode === "competitivo"
-                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
-                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
-            )}
-          >
-            Competitivo
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("treino")}
-            disabled={!canChangeMode}
-            className={cn(
-              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
-              mode === "treino"
-                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
-                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
-            )}
-          >
-            Treino
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("desafio")}
-            disabled={!canChangeMode}
-            className={cn(
-              "flex-1 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
-              mode === "desafio"
-                ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
-                : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
-            )}
-          >
-            Desafio
-          </button>
+  const settingsContent = (
+    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Modo</p>
+        <div className="flex gap-2">
+          {(["competitivo", "treino", "desafio"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setMode(option)}
+              disabled={!canChangeMode}
+              className={cn(
+                "flex-1 border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors disabled:opacity-40",
+                mode === option
+                  ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                  : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+              )}
+            >
+              {option === "competitivo" ? "Competitivo" : option === "treino" ? "Treino" : "Desafio"}
+            </button>
+          ))}
         </div>
-
-        <p className="text-center text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
+        <p className="mt-2 text-xs text-polis-ink-soft">
           {isTrainingMode
-            ? "Modo treino: velocidade fixa para praticar rota e reflexo"
+            ? "Modo treino: velocidade fixa para praticar rota e reflexo."
             : isChallengeMode
-              ? "Modo desafio: sobreviva para conquistar medalhas por tempo"
-              : "Modo competitivo: aceleração por comida e por tempo"}
+              ? "Modo desafio: sobreviva para conquistar medalhas por tempo."
+              : "Modo competitivo: aceleração por comida e por tempo."}
         </p>
-
-        {isChallengeMode && (
-          <div className="w-full max-w-[300px] border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
-            <div className="flex items-center justify-between">
-              <span>
-                Medalha atual: <strong className="text-polis-ink">{currentTierIndex >= 0 ? CHALLENGE_TIERS[currentTierIndex].label : "-"}</strong>
-              </span>
-              <span>
-                Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
-              <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
-            </div>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
-              {nextTier ? `Próxima medalha (${nextTier.label}) em ${formatTime(nextTier.seconds)}` : "Meta máxima atingida"}
-            </p>
-          </div>
-        )}
-
-        <div
-          className={cn(
-            "grid w-full grid-cols-2 items-center gap-y-1 border-y border-polis-rule/30 px-2 py-2 text-sm text-polis-ink sm:grid-cols-4",
-            isCompactLandscape &&
-            "border-polis-rule/20 bg-polis-paper-soft/30 py-1.5 text-xs font-semibold uppercase tracking-[0.15em]"
-          )}
-        >
-          <span className="text-center">
-            Pontos <strong>{score}</strong>
-          </span>
-          <span className="text-center text-polis-ink-soft">
-            Tempo <strong>{formatTime(elapsedSeconds)}</strong>
-          </span>
-          <span className="text-center text-polis-ink-soft">
-            Recorde <strong>{highScore}</strong>
-          </span>
-          <span className="text-center text-polis-ink-soft">
-            Melhor tempo <strong>{formatTime(bestTime)}</strong>
-          </span>
-        </div>
-
-        <div className={cn(boardWidthClass, "border-2 border-polis-ink")}>
-          <div
-            className="relative w-full overflow-hidden bg-polis-paper-soft touch-none"
-            style={{ aspectRatio: `${COLS} / ${ROWS}` }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            {snake.map((segment, index) => (
-              <div
-                key={index}
-                className={cn("absolute transition-all", index === 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg" : "bg-emerald-500/90")}
-                style={{
-                  width: `${100 / COLS}%`,
-                  height: `${100 / ROWS}%`,
-                  left: `${(segment.x / COLS) * 100}%`,
-                  top: `${(segment.y / ROWS) * 100}%`,
-                }}
-              />
-            ))}
-
-            <div
-              className="absolute rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-md ring-2 ring-amber-300/50"
-              style={{
-                width: `${100 / COLS}%`,
-                height: `${100 / ROWS}%`,
-                left: `${(food.x / COLS) * 100}%`,
-                top: `${(food.y / ROWS) * 100}%`,
-              }}
-            />
-
-            {eatenPulse && (
-              <div
-                className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-amber-400/70 shadow-lg"
-                style={{
-                  width: `${100 / COLS}%`,
-                  height: `${100 / ROWS}%`,
-                  left: `${(eatenPulse.x / COLS) * 100}%`,
-                  top: `${(eatenPulse.y / ROWS) * 100}%`,
-                }}
-              />
-            )}
-
-            {overlayMessage && (
-              <GameOverlay
-                title={overlayMessage}
-                subtitle={
-                  status === "gameover"
-                    ? `${isChallengeMode && currentTierIndex >= 0
-                      ? `Medalha: ${CHALLENGE_TIERS[currentTierIndex].label}. `
-                      : ""
-                    }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
-                    : undefined
-                }
-                actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
-                onAction={status === "paused" ? togglePause : startGame}
-                isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestTime || isNewChallengeTier)}
-              />
-            )}
-          </div>
-        </div>
-
-        <p className={cn("text-center text-xs text-polis-ink-soft", isCompactLandscape && "text-[11px] leading-snug")}>
-          Use setas (ou WASD), arraste na tela ou toque nos botões. Espaço, P ou Esc pausam o jogo.
-        </p>
-
-        <p className="text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
-          Ritmo atual: <strong className="text-polis-ink">{speedCellsPerSecond} casas/s</strong>
-        </p>
-
-        <div className="flex w-full max-w-[260px] gap-2">
-          <button
-            type="button"
-            onClick={() => adjustSpeed(SPEED_STEP)}
-            disabled={status !== "playing"}
-            title="Diminuir velocidade"
-            className="flex-1 border border-polis-ink/30 px-2 py-1 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-          >
-            ⬅ Lento
-          </button>
-          <button
-            type="button"
-            onClick={() => adjustSpeed(-SPEED_STEP)}
-            disabled={status !== "playing"}
-            title="Aumentar velocidade"
-            className="flex-1 border border-polis-ink/30 px-2 py-1 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-          >
-            Rápido ➜
-          </button>
-        </div>
-
-        <div className="flex w-full max-w-[260px] items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={startGame}
-            className="flex-1 border border-polis-ink/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
-          >
-            Novo jogo
-          </button>
-          <button
-            type="button"
-            onClick={togglePause}
-            disabled={!canPause}
-            className="flex-1 border border-polis-ink/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-          >
-            {status === "paused" ? "Continuar" : "Pausar"}
-          </button>
-        </div>
-
-        <div className={cn("grid grid-cols-3 gap-2", isCompactLandscape && "gap-1.5")}>
-          <div />
-          <DirectionButton compact={isCompactLandscape} label="Cima" onPress={() => queueDirection("UP")}>
-            ▲
-          </DirectionButton>
-          <div />
-          <DirectionButton compact={isCompactLandscape} label="Esquerda" onPress={() => queueDirection("LEFT")}>
-            ◀
-          </DirectionButton>
-          <div className="flex aspect-square items-center justify-center border border-dashed border-polis-ink/20 text-[10px] uppercase tracking-wide text-polis-ink-soft">
-            eixo
-          </div>
-          <DirectionButton compact={isCompactLandscape} label="Direita" onPress={() => queueDirection("RIGHT")}>
-            ▶
-          </DirectionButton>
-          <div />
-          <DirectionButton compact={isCompactLandscape} label="Baixo" onPress={() => queueDirection("DOWN")}>
-            ▼
-          </DirectionButton>
-          <div />
-        </div>
       </div>
 
-      <aside
-        className={cn(
-          "w-full max-w-xs border border-polis-rule/20 bg-polis-paper-soft/20 px-4 py-3 text-xs text-polis-ink-soft",
-          isCompactLandscape ? "max-w-[15rem]" : "hidden"
-        )}
-      >
-        <p className="font-semibold uppercase tracking-[0.14em] text-polis-ink">Guia Rápido</p>
-        <ul className="mt-2 space-y-1.5 leading-relaxed">
+      {isChallengeMode && (
+        <div className="border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
+          <div className="flex items-center justify-between">
+            <span>
+              Medalha atual: <strong className="text-polis-ink">{currentTierIndex >= 0 ? CHALLENGE_TIERS[currentTierIndex].label : "-"}</strong>
+            </span>
+            <span>
+              Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
+            <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
+          </div>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
+            {nextTier ? `Próxima medalha (${nextTier.label}) em ${formatTime(nextTier.seconds)}` : "Meta máxima atingida"}
+          </p>
+        </div>
+      )}
+
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
+        <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
           <li>Evite as bordas e o próprio corpo da cobra.</li>
           <li>
             {isTrainingMode
@@ -573,9 +398,176 @@ export function Snake() {
                 : "Cada comida aumenta os pontos e acelera o ritmo."}
           </li>
           {!isTrainingMode && <li>A aceleração por tempo acontece a cada 20 segundos.</li>}
-          <li>Pausa estratégica ajuda em velocidades altas.</li>
+          <li>Use setas (ou WASD), arraste na tela ou toque nos botões. Espaço, P ou Esc pausam.</li>
         </ul>
-      </aside>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      className="relative flex h-full w-full flex-col gap-2 overflow-hidden outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-polis-gold-muted"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <h1 className="font-serif text-lg font-bold text-polis-ink sm:text-xl">Jogo da Cobrinha</h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={startGame}
+            className="border border-polis-ink/30 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+          >
+            Novo jogo
+          </button>
+          <GameSettingsButton onClick={openInfo} />
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center gap-2">
+          <div className="grid w-full max-w-md grid-cols-4 items-center gap-y-1 border-y border-polis-rule/30 px-2 py-1.5 text-xs text-polis-ink">
+            <span className="text-center">
+              Pontos <strong>{score}</strong>
+            </span>
+            <span className="text-center text-polis-ink-soft">
+              Tempo <strong>{formatTime(elapsedSeconds)}</strong>
+            </span>
+            <span className="text-center text-polis-ink-soft">
+              Recorde <strong>{highScore}</strong>
+            </span>
+            <span className="text-center text-polis-ink-soft">
+              Melhor <strong>{formatTime(bestTime)}</strong>
+            </span>
+          </div>
+
+          <div ref={boardWrapRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
+            <div
+              className={cn(
+                "relative overflow-hidden border-2 border-polis-ink bg-polis-paper-soft touch-none transition-opacity",
+                boardBox ? "opacity-100" : "opacity-0"
+              )}
+              style={{ width: boardBox?.width ?? 0, height: boardBox?.height ?? 0 }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              {snake.map((segment, index) => (
+                <div
+                  key={index}
+                  className={cn("absolute transition-all", index === 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg" : "bg-emerald-500/90")}
+                  style={{
+                    width: `${100 / COLS}%`,
+                    height: `${100 / ROWS}%`,
+                    left: `${(segment.x / COLS) * 100}%`,
+                    top: `${(segment.y / ROWS) * 100}%`,
+                  }}
+                />
+              ))}
+
+              <div
+                className="absolute rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-md ring-2 ring-amber-300/50"
+                style={{
+                  width: `${100 / COLS}%`,
+                  height: `${100 / ROWS}%`,
+                  left: `${(food.x / COLS) * 100}%`,
+                  top: `${(food.y / ROWS) * 100}%`,
+                }}
+              />
+
+              {eatenPulse && (
+                <div
+                  className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-amber-400/70 shadow-lg"
+                  style={{
+                    width: `${100 / COLS}%`,
+                    height: `${100 / ROWS}%`,
+                    left: `${(eatenPulse.x / COLS) * 100}%`,
+                    top: `${(eatenPulse.y / ROWS) * 100}%`,
+                  }}
+                />
+              )}
+
+              {overlayMessage && (
+                <GameOverlay
+                  title={overlayMessage}
+                  subtitle={
+                    status === "gameover"
+                      ? `${isChallengeMode && currentTierIndex >= 0
+                        ? `Medalha: ${CHALLENGE_TIERS[currentTierIndex].label}. `
+                        : ""
+                      }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
+                      : undefined
+                  }
+                  actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
+                  onAction={status === "paused" ? togglePause : startGame}
+                  isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestTime || isNewChallengeTier)}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="flex w-full max-w-xs shrink-0 items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft">
+            <span>
+              Ritmo <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
+            </span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => adjustSpeed(SPEED_STEP)}
+                disabled={status !== "playing"}
+                title="Diminuir velocidade"
+                className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+              >
+                ⬅
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustSpeed(-SPEED_STEP)}
+                disabled={status !== "playing"}
+                title="Aumentar velocidade"
+                className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+              >
+                ➜
+              </button>
+            </div>
+          </div>
+
+          <div className="grid w-full max-w-[190px] shrink-0 grid-cols-3 gap-1.5">
+            <div />
+            <DirectionButton label="Cima" onPress={() => queueDirection("UP")}>
+              ▲
+            </DirectionButton>
+            <div />
+            <DirectionButton label="Esquerda" onPress={() => queueDirection("LEFT")}>
+              ◀
+            </DirectionButton>
+            <button
+              type="button"
+              onClick={togglePause}
+              disabled={status === "idle" || status === "gameover"}
+              aria-label={status === "paused" ? "Continuar" : "Pausar"}
+              className="flex aspect-square items-center justify-center border border-polis-ink/30 text-[9px] font-semibold uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+            >
+              {status === "paused" ? "▶" : "II"}
+            </button>
+            <DirectionButton label="Direita" onPress={() => queueDirection("RIGHT")}>
+              ▶
+            </DirectionButton>
+            <div />
+            <DirectionButton label="Baixo" onPress={() => queueDirection("DOWN")}>
+              ▼
+            </DirectionButton>
+            <div />
+          </div>
+        </div>
+
+        <aside className="hidden w-64 shrink-0 overflow-y-auto border-l border-polis-rule/20 pl-5 lg:block">
+          {settingsContent}
+        </aside>
+      </div>
+
+      <GameInfoDialog open={infoOpen} onOpenChange={setInfoOpen} title="Configurações e Guia">
+        {settingsContent}
+      </GameInfoDialog>
     </div>
   );
 }
@@ -583,12 +575,10 @@ export function Snake() {
 function DirectionButton({
   label,
   onPress,
-  compact = false,
   children,
 }: {
   label: string;
   onPress: () => void;
-  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -596,10 +586,7 @@ function DirectionButton({
       type="button"
       aria-label={label}
       onClick={onPress}
-      className={cn(
-        "flex aspect-square items-center justify-center border border-polis-ink/30 text-lg text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink",
-        compact && "text-base"
-      )}
+      className="flex aspect-square items-center justify-center border border-polis-ink/30 text-base text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
     >
       {children}
     </button>
