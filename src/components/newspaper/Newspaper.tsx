@@ -116,11 +116,11 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
     // — nunca uma folha "capa dura" isolada (ver showCover mais abaixo).
     // Só faz sentido no desktop: é pareada lado a lado com a capa/timbre na
     // primeira dobra dupla; no mobile cada folha aparece sozinha mesmo.
-    if (isDesktop && showMasthead) {
+    if (showMasthead) {
       out.push({
         content: <AdMargin banners={SIDEBAR_BANNERS} />,
         columns: 1,
-        contentHeightPx: contentHeightCover,
+        contentHeightPx: isDesktop ? contentHeightCover : contentHeight,
       });
     }
 

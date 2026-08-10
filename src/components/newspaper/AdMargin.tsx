@@ -23,7 +23,7 @@ export function AdMargin({ banners }: AdMarginProps) {
       <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
       </span>
-      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-4 gap-3 md:grid-cols-2 md:grid-rows-2">
         {slots.map((banner, index) =>
           banner ? <AdSlot key={banner.id} banner={banner} /> : <AdPlaceholder key={index} />
         )}
@@ -41,7 +41,7 @@ function AdSlot({ banner }: { banner: Banner }) {
       className="relative block h-full w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-contain" />
+      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-cover" />
     </a>
   );
 }
