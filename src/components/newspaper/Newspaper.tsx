@@ -106,6 +106,17 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
   const contentHeight = Math.max(pageHeight - CHROME_HEADER_PX - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
   const mastheadHeaderPx = isDesktop ? MASTHEAD_HEADER_PX.desktop : MASTHEAD_HEADER_PX.mobile;
   const contentHeightCover = Math.max(pageHeight - mastheadHeaderPx - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
+  /**
+   * Página de anúncios (AdMargin) não tem NENHUM header — nem o `<Masthead>`
+   * (só a página de capa recebe isso, via `isMasthead`), nem a barra fina de
+   * `runningTitle` (que só aparece a partir da 2ª página, `index === 0 ||
+   * page.isMasthead` some ela — ver `flipPages` abaixo). Usar `contentHeight`
+   * (que desconta `CHROME_HEADER_PX`) ou `contentHeightCover` (que desconta
+   * `mastheadHeaderPx`, ~200px) reserva espaço para um cabeçalho que nunca é
+   * renderizado nessa página específica, sobrando como vão em branco entre
+   * o grid de anúncios e o rodapé. Esta conta não desconta header nenhum.
+   */
+  const contentHeightAdPage = Math.max(pageHeight - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
 
   const preparedPages = useMemo<PreparedPage[]>(() => {
     if (contentWidth <= 0 || contentHeight <= 0) return [];
@@ -122,7 +133,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
         out.push({
           content: <AdMargin banners={SIDEBAR_BANNERS} isDesktop={true} />,
           columns: 1,
-          contentHeightPx: contentHeightCover,
+          contentHeightPx: contentHeightAdPage,
         });
       } else {
         const mobileChunks =
@@ -141,7 +152,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
           out.push({
             content: <AdMargin banners={chunk} slotCount={MOBILE_ADS_PER_PAGE} isDesktop={false} />,
             columns: 1,
-            contentHeightPx: contentHeight,
+            contentHeightPx: contentHeightAdPage,
           });
         }
       }
@@ -247,7 +258,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
     }
 
     return out;
-  }, [blocks, contentWidth, contentHeight, contentHeightCover, columnsDefault, isDesktop, isClient, showMasthead]);
+  }, [blocks, contentWidth, contentHeight, contentHeightCover, contentHeightAdPage, columnsDefault, isDesktop, isClient, showMasthead]);
 
   if (preparedPages.length !== pageCountSeen) {
     setPageCountSeen(preparedPages.length);
