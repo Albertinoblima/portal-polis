@@ -38,9 +38,15 @@ export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }:
         Espaço Publicitário
       </div>
 
-      {/* Grid: ocupa 100% da altura restante após o título */}
+      {/* Grid: ocupa 100% da altura restante após o título.
+          min-h-0 é OBRIGATÓRIO aqui: como item flex (flex-1) dentro do
+          wrapper flex-col, o grid por padrão tem min-height:auto, ou seja,
+          se recusa a encolher abaixo do tamanho intrínseco do conteúdo das
+          imagens dos slots. Sem min-h-0, o grid cresce além do espaço
+          alocado e o container pai (com overflow-hidden) corta a segunda
+          linha de anúncios — sintoma visto: linha 1 ok, linha 2 cortada. */}
       <div
-        className="w-full flex-1"
+        className="w-full min-h-0 flex-1"
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
@@ -62,17 +68,17 @@ function AdSlot({ banner }: { banner: Banner }) {
       href={banner.linkUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative flex h-full w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
+      className="relative flex h-full min-h-0 w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-contain lg:object-cover" />
+      <img src={banner.imageUrl} alt={banner.title} className="h-full min-h-0 w-full object-contain lg:object-cover" />
     </a>
   );
 }
 
 function AdPlaceholder() {
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden border-[5px] border-double border-polis-ink/40 bg-polis-paper">
+    <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden border-[5px] border-double border-polis-ink/40 bg-polis-paper">
       <div className="pointer-events-none absolute inset-0 flex flex-wrap content-center items-center justify-center gap-x-3 gap-y-2 opacity-[0.16]">
         {Array.from({ length: PLACEHOLDER_TILE_COUNT }).map((_, i) => (
           <span
