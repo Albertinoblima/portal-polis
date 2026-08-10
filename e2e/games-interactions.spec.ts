@@ -46,6 +46,31 @@ test.describe("Jogos - teclado desktop", () => {
         await page.keyboard.press("Space");
     });
 
+    test("Blocos responde a cliques e arrastos de mouse no tabuleiro", async ({ page }) => {
+        // Regressão: o tabuleiro só escutava Touch Events, então mouse (sem
+        // tela sensível ao toque) não conseguia jogar de jeito nenhum. Ver
+        // handleBoardPointer* em Blocks.tsx (Pointer Events unificam mouse e
+        // toque).
+        const errors: string[] = [];
+        page.on("pageerror", (err) => errors.push(err.message));
+
+        await startBlocks(page);
+        const canvas = page.getByRole("img", { name: /Tabuleiro do Jogo dos Blocos/ });
+        const box = await canvas.boundingBox();
+        if (!box) throw new Error("Tabuleiro sem bounding box");
+
+        // Clique simples (sem arrasto) gira a peça.
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+        // Arrasto lateral com o mouse move a peça.
+        await page.mouse.move(box.x + box.width / 2, box.y + 40);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2 + 60, box.y + 40, { steps: 5 });
+        await page.mouse.up();
+
+        expect(errors).toEqual([]);
+    });
+
     test("Jogo da Velha aceita lance via teclado", async ({ page }) => {
         await startTicTacToeCpu(page);
 

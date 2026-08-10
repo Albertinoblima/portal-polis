@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject, type TouchEvent as ReactTouchEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cn, formatTime } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useElementSize } from "@/hooks/useElementSize";
@@ -27,7 +27,6 @@ import {
   emptyBoard,
   highScoreKeyForMode,
   lockPiece,
-  peekBag,
   pieceCells,
   reachedChallengeTierIndex,
   spawnPosition,
@@ -72,33 +71,62 @@ const HARD_DROP_SWIPE_MAX_MS = 260;
  *  redimensionando o canvas (com correção de devicePixelRatio para nitidez
  *  em telas retina) sempre que `sizePx` mudar. `draw` é lido de uma ref
  *  atualizada a cada render — assim o loop não precisa reiniciar quando o
- *  estado do jogo muda, só quando o tamanho em pixels muda de verdade. */
-function useCanvasRafLoop(canvasRef: RefObject<HTMLCanvasElement | null>, sizePx: { width: number; height: number } | null, draw: (ctx: CanvasRenderingContext2D) => void) {
+ *  estado do jogo muda, só quando o tamanho em pixels muda de verdade.
+ *
+ *  Devolve um CALLBACK ref (não aceita um `useRef` pronto) de propósito: o
+ *  board e a "Próxima" existem em DOIS elementos `<canvas>` diferentes
+ *  (layout mobile/tablet vs. desktop, ver isDesktopLayout) — só um deles
+ *  está montado por vez, e o React desmonta um e monta o outro quando o
+ *  layout muda (inclusive na primeira hidratação, quando useMediaQuery
+ *  começa em `false` e corrige para o valor real do viewport logo em
+ *  seguida). Com um `useRef` comum, o efeito abaixo só reexecuta quando
+ *  `sizePx` muda — para o canvas da "Próxima" (tamanho sempre fixo, 56×56),
+ *  isso nunca acontece, então o loop ficava desenhando pra sempre no
+ *  elemento ANTIGO (já removido do DOM), enquanto o canvas novo e visível
+ *  nunca recebia nenhum frame — sintoma: painel "Próxima" sempre em branco.
+ *  O callback ref dispara sempre que o nó de fato muda, então o efeito
+ *  reinicia no elemento certo mesmo sem o tamanho ter mudado. */
+function useCanvasRafLoop(sizePx: { width: number; height: number } | null, draw: (ctx: CanvasRenderingContext2D) => void) {
+  // O nó em si mora numa ref (não em useState): o canvas.width/height
+  // precisa ser MUTADO diretamente (é assim que se redimensiona o buffer
+  // de pixels de um <canvas>), e um valor guardado via useState não deve
+  // ser mutado depois de renderizado. `generation` existe só para AVISAR o
+  // efeito abaixo que o nó mudou (o callback ref incrementa a cada
+  // montagem/desmontagem) — o efeito então lê o nó atual através da ref.
+  const nodeRef = useRef<HTMLCanvasElement | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const ref = useCallback((el: HTMLCanvasElement | null) => {
+    nodeRef.current = el;
+    setGeneration((g) => g + 1);
+  }, []);
+
   const drawRef = useRef(draw);
   useEffect(() => {
     drawRef.current = draw;
   });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !sizePx || sizePx.width <= 0 || sizePx.height <= 0) return;
+    const node = nodeRef.current;
+    if (!node || !sizePx || sizePx.width <= 0 || sizePx.height <= 0) return;
 
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    canvas.width = Math.round(sizePx.width * dpr);
-    canvas.height = Math.round(sizePx.height * dpr);
-    const ctx = canvas.getContext("2d");
+    node.width = Math.round(sizePx.width * dpr);
+    node.height = Math.round(sizePx.height * dpr);
+    const ctx = node.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     let rafId = 0;
     function frame() {
-      if (ctx) drawRef.current(ctx);
+      drawRef.current(ctx as CanvasRenderingContext2D);
       rafId = requestAnimationFrame(frame);
     }
     rafId = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(rafId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef, sizePx?.width, sizePx?.height]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `generation` é o gatilho de troca de nó de propósito
+  }, [generation, sizePx?.width, sizePx?.height]);
+
+  return ref;
 }
 
 /** Controlador genérico de "segurar para repetir" (DAS/ARR): a primeira
@@ -261,7 +289,7 @@ export function Blocks() {
       if (newScore !== score) setScore(newScore);
 
       const type = nextType ?? takeFromBag(bagRef);
-      const preview = peekBag(bagRef);
+      const preview = takeFromBag(bagRef);
       const spawned: PieceState = { type, rotation: 0, ...spawnPosition(type) };
 
       setBoard(result.board);
@@ -291,7 +319,7 @@ export function Blocks() {
     setSpeedMs(initialSpeed);
 
     const type = takeFromBag(bagRef);
-    const preview = peekBag(bagRef);
+    const preview = takeFromBag(bagRef);
     setCurrent({ type, rotation: 0, ...spawnPosition(type) });
     setNextType(preview);
     setStatus("playing");
@@ -498,23 +526,29 @@ export function Blocks() {
     return pieceCells(dropToLanding(board, current));
   }, [current, board, status]);
 
-  // Gestos de toque no próprio tabuleiro (substituem o D-pad virtual):
-  // arrastar move a peça acompanhando o dedo (um passo a cada
-  // `SWIPE_STEP_PX` percorridos), toque rápido sem deslocamento gira, e um
-  // swipe rápido para cima derruba na hora.
-  const touchStateRef = useRef<{ x: number; y: number; startX: number; startY: number; startTime: number; moved: boolean } | null>(null);
+  // Controle unificado por Pointer Events no próprio tabuleiro (substituem
+  // o D-pad virtual e funcionam igual para mouse, caneta e toque — ao
+  // contrário de Touch Events, que só disparam para dedo/toque real e
+  // deixam desktop-sem-touch sem forma nenhuma de jogar sem teclado):
+  // arrastar move a peça acompanhando o ponteiro (um passo a cada
+  // `SWIPE_STEP_PX` percorridos), clique/toque rápido sem deslocamento
+  // gira, e um arrasto rápido para cima derruba na hora.
+  const pointerStateRef = useRef<{ x: number; y: number; startX: number; startY: number; startTime: number; moved: boolean } | null>(null);
 
-  function handleBoardTouchStart(event: ReactTouchEvent<HTMLCanvasElement>) {
-    const touch = event.touches[0];
-    touchStateRef.current = { x: touch.clientX, y: touch.clientY, startX: touch.clientX, startY: touch.clientY, startTime: Date.now(), moved: false };
+  function handleBoardPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    // Captura o ponteiro: garante que os eventos de move/up continuem
+    // chegando a este elemento mesmo se o cursor sair da área do canvas
+    // durante o arrasto (comportamento padrão de drag baseado em Pointer
+    // Events).
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointerStateRef.current = { x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, startTime: Date.now(), moved: false };
   }
 
-  function handleBoardTouchMove(event: ReactTouchEvent<HTMLCanvasElement>) {
-    const state = touchStateRef.current;
+  function handleBoardPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const state = pointerStateRef.current;
     if (!state || status !== "playing") return;
-    const touch = event.touches[0];
-    const dx = touch.clientX - state.x;
-    const dy = touch.clientY - state.y;
+    const dx = event.clientX - state.x;
+    const dy = event.clientY - state.y;
 
     if (Math.abs(dx) >= SWIPE_STEP_PX) {
       tryMove(0, dx > 0 ? 1 : -1);
@@ -528,23 +562,30 @@ export function Blocks() {
     }
   }
 
-  function handleBoardTouchEnd(event: ReactTouchEvent<HTMLCanvasElement>) {
-    const state = touchStateRef.current;
-    touchStateRef.current = null;
+  function handleBoardPointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const state = pointerStateRef.current;
+    pointerStateRef.current = null;
     if (!state || status !== "playing") return;
 
-    const touch = event.changedTouches[0];
-    const totalDx = touch.clientX - state.startX;
-    const totalDy = touch.clientY - state.startY;
+    const totalDx = event.clientX - state.startX;
+    const totalDy = event.clientY - state.startY;
     const elapsedMs = Date.now() - state.startTime;
 
     if (!state.moved && Math.abs(totalDx) < TAP_SLOP_PX && Math.abs(totalDy) < TAP_SLOP_PX) {
       tryRotate();
       return;
     }
-    if (totalDy < -HARD_DROP_SWIPE_DIST_PX && elapsedMs < HARD_DROP_SWIPE_MAX_MS) {
+    // Arrasto rápido para baixo = queda instantânea (ver Guia Rápido). Um
+    // arrasto lento para baixo já move a peça uma casa por vez durante o
+    // próprio movimento (handleBoardPointerMove) — isto só entra quando o
+    // gesto é rápido e comprido o bastante para ser claramente intencional.
+    if (totalDy > HARD_DROP_SWIPE_DIST_PX && elapsedMs < HARD_DROP_SWIPE_MAX_MS) {
       hardDrop();
     }
+  }
+
+  function handleBoardPointerCancel() {
+    pointerStateRef.current = null;
   }
 
   const overlayMessage =
@@ -570,7 +611,6 @@ export function Blocks() {
     if (containerRef.current) themeRef.current = resolveBlocksTheme(containerRef.current);
   });
 
-  const boardCanvasRef = useRef<HTMLCanvasElement>(null);
   const drawBoardFrame = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       if (!activeBoardBox || !themeRef.current) return;
@@ -580,9 +620,8 @@ export function Blocks() {
     },
     [activeBoardBox]
   );
-  useCanvasRafLoop(boardCanvasRef, activeBoardBox, drawBoardFrame);
+  const boardCanvasRef = useCanvasRafLoop(activeBoardBox, drawBoardFrame);
 
-  const nextCanvasRef = useRef<HTMLCanvasElement>(null);
   const NEXT_PREVIEW_CELL_PX = 14;
   const nextPreviewBox = useMemo(() => ({ width: NEXT_PREVIEW_CELL_PX * 4, height: NEXT_PREVIEW_CELL_PX * 4 }), []);
   const drawNextFrame = useCallback(
@@ -592,7 +631,7 @@ export function Blocks() {
     },
     [nextType]
   );
-  useCanvasRafLoop(nextCanvasRef, nextPreviewBox, drawNextFrame);
+  const nextCanvasRef = useCanvasRafLoop(nextPreviewBox, drawNextFrame);
 
   function renderBoardSurface(box: { width: number; height: number } | null) {
     return (
@@ -609,11 +648,12 @@ export function Blocks() {
             ref={boardCanvasRef}
             role="img"
             aria-label={`Tabuleiro do Jogo dos Blocos, ${score} pontos, nível ${level}`}
-            className="block h-full w-full touch-none"
+            className="block h-full w-full touch-none select-none"
             style={{ aspectRatio: `${COLS} / ${ROWS}` }}
-            onTouchStart={handleBoardTouchStart}
-            onTouchMove={handleBoardTouchMove}
-            onTouchEnd={handleBoardTouchEnd}
+            onPointerDown={handleBoardPointerDown}
+            onPointerMove={handleBoardPointerMove}
+            onPointerUp={handleBoardPointerUp}
+            onPointerCancel={handleBoardPointerCancel}
           />
 
           {overlayMessage && (
@@ -760,8 +800,14 @@ export function Blocks() {
       <div>
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
         <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
-          <li>Setas (ou WASD) movem e giram; segure para repetir. Espaço derruba na hora, P pausa.</li>
-          <li>No toque: arraste para mover, toque rápido gira, deslize para cima com força derruba na hora.</li>
+          <li>
+            <strong className="text-polis-ink">Desktop:</strong> Setas (ou WASD) movem e giram; Segure para repetir;
+            Espaço derruba na hora; P pausa.
+          </li>
+          <li>
+            <strong className="text-polis-ink">Mobile/Mouse:</strong> Arraste para os lados para mover; Toque simples
+            para girar; Arraste rápido para baixo para derrubar.
+          </li>
         </ul>
       </div>
     );

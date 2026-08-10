@@ -137,14 +137,16 @@ export function shuffledBag(): PieceType[] {
   return bag;
 }
 
+/** Retira e devolve a próxima peça do saco, repondo-o (novo embaralhamento)
+ *  quando esvazia. Cada peça só deve ser retirada UMA vez — inclusive a que
+ *  vira `nextType`/preview, que mais tarde "se torna" a peça atual sem
+ *  passar por aqui de novo (ver Blocks.tsx). Chamar isto duas vezes para a
+ *  mesma peça (ex.: usando uma função de "espiar" sem consumir) faz o topo
+ *  do saco nunca avançar — sintoma: a mesma peça se repete para sempre a
+ *  partir da segunda queda. */
 export function takeFromBag(bagRef: { current: PieceType[] }): PieceType {
   if (bagRef.current.length === 0) bagRef.current = shuffledBag();
   return bagRef.current.shift() as PieceType;
-}
-
-export function peekBag(bagRef: { current: PieceType[] }): PieceType {
-  if (bagRef.current.length === 0) bagRef.current = shuffledBag();
-  return bagRef.current[0];
 }
 
 export function highScoreKeyForMode(mode: BlocksMode): string {
