@@ -20,26 +20,23 @@ const PLACEHOLDER_TILE_COUNT = 6;
  */
 export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }: AdMarginProps) {
   const slots = Array.from({ length: slotCount }, (_, index) => banners[index] ?? null);
-  
-  // Build grid classes based on actual breakpoint, not Tailwind media query
-  let gridClassName = "grid min-h-0 flex-1 gap-3";
-  if (slotCount === MOBILE_SLOT_COUNT) {
-    // Mobile: 1 column, 2 rows
-    gridClassName += " grid-cols-1 grid-rows-2";
-  } else if (isDesktop) {
-    // Desktop: 2 columns, 2 rows (not 4 rows!)
-    gridClassName += " grid-cols-2 grid-rows-2";
-  } else {
-    // Fallback for ambiguous state: 1 column, auto rows
-    gridClassName += " grid-cols-1 auto-rows-fr";
-  }
+
+  // Desktop: 2x2 grid. Mobile: 1x2 grid. Use inline style for row distribution.
+  const isDesktopLayout = isDesktop && slotCount !== MOBILE_SLOT_COUNT;
+  const gridColsClass = isDesktopLayout ? "grid-cols-2" : "grid-cols-1";
+  const rowCount = isDesktopLayout ? 2 : slotCount === MOBILE_SLOT_COUNT ? 2 : 4;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-3">
       <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
       </span>
-      <div className={gridClassName}>
+      <div
+        className={`grid min-h-0 flex-1 ${gridColsClass} gap-3`}
+        style={{
+          gridTemplateRows: `repeat(${rowCount}, 1fr)`,
+        }}
+      >
         {slots.map((banner, index) =>
           banner ? <AdSlot key={banner.id} banner={banner} /> : <AdPlaceholder key={index} />
         )}
