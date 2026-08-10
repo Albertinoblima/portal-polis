@@ -28,12 +28,12 @@ export function AdMargin({ banners, slotCount = SLOT_COUNT, fillHeightPx }: AdMa
   return (
     <div
       className="flex h-full min-h-0 w-full flex-col gap-3"
-      style={fillHeightPx ? { height: `${fillHeightPx}px` } : undefined}
+      style={fillHeightPx ? { height: `${fillHeightPx}px`, boxSizing: "border-box" } : undefined}
     >
       <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
       </span>
-      <div className={gridClassName}>
+      <div className={`${gridClassName} h-full`}>
         {slots.map((banner, index) =>
           banner ? <AdSlot key={banner.id} banner={banner} /> : <AdPlaceholder key={index} />
         )}
@@ -48,17 +48,17 @@ function AdSlot({ banner }: { banner: Banner }) {
       href={banner.linkUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative flex h-full min-h-0 w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
+      className="relative flex h-full w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={banner.imageUrl} alt={banner.title} className="h-full min-h-0 w-full object-contain lg:object-cover" />
+      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-contain lg:object-cover" />
     </a>
   );
 }
 
 function AdPlaceholder() {
   return (
-    <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden border-[5px] border-double border-polis-ink/40 bg-polis-paper">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden border-[5px] border-double border-polis-ink/40 bg-polis-paper">
       <div className="pointer-events-none absolute inset-0 flex flex-wrap content-center items-center justify-center gap-x-3 gap-y-2 opacity-[0.16]">
         {Array.from({ length: PLACEHOLDER_TILE_COUNT }).map((_, i) => (
           <span

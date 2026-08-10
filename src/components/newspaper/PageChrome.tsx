@@ -60,13 +60,15 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
             // mais baixa do que a sonda mediu — o fim do texto que "coube" segundo a
             // sonda estoura essa caixa menor e some, cortado pelo `overflow-hidden`.
             boxSizing: "content-box",
-            columnCount: columns,
-            columnGap: "2.25rem",
-            columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
+            ...(columns === 1 ? {} : {
+              columnCount: columns,
+              columnGap: "2.25rem",
+              columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
+            }),
           }}
         >
           {columns === 1 ? (
-            <div className="flex h-full min-h-0 w-full flex-col">{children}</div>
+            <div className="flex min-h-0 w-full flex-col">{children}</div>
           ) : (
             children
           )}
