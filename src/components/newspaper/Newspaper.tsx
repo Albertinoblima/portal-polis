@@ -35,6 +35,19 @@ export type NewspaperBlock =
     itemsPerPage: { mobile: number; desktop: number };
     gridClassName?: string;
     emptyState?: ReactNode;
+  }
+  | {
+    /**
+     * Quebra publicitária de meio de livro — usada ao final de cada matéria
+     * (ver `buildArticleBlocks` em editionBlocks.tsx), tanto na página isolada
+     * da matéria quanto na leitura da edição completa (Home/`/edicao/[n]`),
+     * já que uma simplesmente encadeia a outra. Vira uma página própria no
+     * flip-book, com 2 anúncios (mesma grade 1×2 já usada nas folhas de
+     * classificados do mobile — reaproveitada aqui de propósito, é o layout
+     * já validado). Não carrega dados: o pool de banners e a detecção de
+     * desktop já vivem neste componente (`SIDEBAR_BANNERS`, `isDesktop`).
+     */
+    type: "ad";
   };
 
 interface NewspaperProps {
@@ -63,6 +76,12 @@ const CHROME_FOOTER_PX = 24; // Reduzido significativamente para dar espaço às
 const PAGE_PADDING_Y_PX = 20; // Corresponds to Tailwind py-5 (1.25rem = 20px), applied in PageChrome
 const PAGE_PADDING_X_PX = 48;
 const MOBILE_ADS_PER_PAGE = 2;
+/** Quantos anúncios cada quebra de meio de livro (`type: "ad"`) mostra —
+ *  deliberadamente menor que os 4 da folha de classificados pareada com a
+ *  capa (essa é um "caderno de classificados" dedicado; a quebra de meio de
+ *  livro é só um respiro entre matérias, não deve competir demais com o
+ *  conteúdo editorial). */
+const AD_BREAK_SLOT_COUNT = 2;
 
 interface PreparedPage {
   content: ReactNode;
@@ -159,7 +178,27 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
     }
 
     let isFirstContentBlock = true;
+    let adBreakIndex = 0;
     for (const block of blocks) {
+      if (block.type === "ad") {
+        // Rodízio: cada quebra usa os próximos 2 banners do pool, dando a
+        // volta quando chega ao fim — evita mostrar sempre os 2 mesmos
+        // anúncios em toda quebra entre matérias quando há mais de 2 ativos.
+        const banners =
+          SIDEBAR_BANNERS.length > 0
+            ? Array.from({ length: AD_BREAK_SLOT_COUNT }, (_, i) =>
+              SIDEBAR_BANNERS[(adBreakIndex * AD_BREAK_SLOT_COUNT + i) % SIDEBAR_BANNERS.length]
+            )
+            : [];
+        adBreakIndex += 1;
+        out.push({
+          content: <AdMargin banners={banners} slotCount={AD_BREAK_SLOT_COUNT} isDesktop={isDesktop} />,
+          columns: 1,
+          contentHeightPx: contentHeight,
+        });
+        isFirstContentBlock = false;
+        continue;
+      }
       if (block.type === "node") {
         const columns = block.columns ?? columnsDefault;
         const isMasthead = isFirstContentBlock && showMasthead;

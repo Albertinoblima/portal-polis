@@ -117,6 +117,15 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
 
   blocks.push({ type: "html", html: article.content, ttsId: article.slug });
 
+  // Quebra publicitária ao final da matéria — vira uma página própria no
+  // flip-book (ver `type: "ad"` em Newspaper.tsx). Fica presente tanto na
+  // página isolada da matéria (`/materia/[slug]`) quanto na leitura da
+  // edição completa (Home/`/edicao/[n]`), já que esta última só encadeia
+  // várias chamadas a `buildArticleBlocks` em sequência — colocá-la aqui
+  // dentro cobre "fim de matéria" e "entre uma matéria e outra" de uma vez,
+  // sem duplicar a regra nos dois pontos de chamada.
+  blocks.push({ type: "ad" });
+
   return blocks;
 }
 

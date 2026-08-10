@@ -7,7 +7,6 @@ interface AdMarginProps {
 }
 
 const SLOT_COUNT = 4;
-const MOBILE_SLOT_COUNT = 2;
 const PLACEHOLDER_TILE_COUNT = 6;
 
 /**
@@ -26,10 +25,13 @@ const PLACEHOLDER_TILE_COUNT = 6;
 export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }: AdMarginProps) {
   const slots = Array.from({ length: slotCount }, (_, index) => banners[index] ?? null);
 
-  // Determine grid layout based on actual desktop detection
-  const isDesktopLayout = isDesktop && slotCount !== MOBILE_SLOT_COUNT;
-  const cols = isDesktopLayout ? 2 : 1;
-  const rows = isDesktopLayout ? 2 : 2; // Mobile: 2 ads per page, desktop: 2x2
+  // Layout genérico: no desktop usa no máximo 2 colunas (2×2 para 4 slots,
+  // 2×1 lado a lado para 2 slots); no mobile sempre 1 coluna empilhada
+  // (2×1 vira 1×2). Fórmula única evita casos especiais por slotCount
+  // específico — funciona tanto para a folha de classificados (4 slots)
+  // quanto para a quebra publicitária entre matérias (2 slots).
+  const cols = isDesktop ? Math.min(slotCount, 2) : 1;
+  const rows = Math.ceil(slotCount / cols);
 
   return (
     <div className="flex h-full w-full flex-col bg-polis-paper">
