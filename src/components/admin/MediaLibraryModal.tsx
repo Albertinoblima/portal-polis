@@ -61,7 +61,7 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
         <div className="border-b border-polis-navy/10 px-5 py-3">
           <label className="flex h-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
             <span>{isUploading ? "Enviando..." : "Não achou? Envie uma imagem do computador"}</span>
-            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 20MB</span>
+            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 100MB</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"

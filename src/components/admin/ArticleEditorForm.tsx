@@ -493,7 +493,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
             className="mt-3 flex h-20 w-full flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold"
           >
             <span>Selecionar da biblioteca de mídia</span>
-            <span className="text-[10px] text-polis-gray/70">ou envie uma imagem nova (até 20MB)</span>
+            <span className="text-[10px] text-polis-gray/70">ou envie uma imagem nova (até 100MB)</span>
           </button>
           {isMediaLibraryOpen && (
             <MediaLibraryModal

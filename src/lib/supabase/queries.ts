@@ -160,9 +160,9 @@ export async function getMedia() {
 }
 
 // Precisa bater com o file_size_limit configurado no bucket "media"
-// (supabase/migrations/0007_media_bucket_limits.sql) — mudar um sem o outro
-// deixa a mensagem de erro do app e o limite real do Supabase incoerentes.
-export const MAX_MEDIA_UPLOAD_BYTES = 20 * 1024 * 1024; // 20MB
+// (supabase/migrations/0009_media_bucket_limits_100mb.sql) — mudar um sem o
+// outro deixa a mensagem de erro do app e o limite real do Supabase incoerentes.
+export const MAX_MEDIA_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
 
 export async function uploadMedia(file: File, uploadedBy: string, altText: string) {
   if (file.size > MAX_MEDIA_UPLOAD_BYTES) {

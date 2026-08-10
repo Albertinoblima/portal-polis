@@ -51,7 +51,7 @@ export default function AdminMidiaPage() {
       <div className="p-6">
         <label className="mb-1 flex h-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-polis-navy/20 text-sm text-polis-gray hover:border-polis-gold">
           <span>{isUploading ? "Enviando..." : "Arraste arquivos aqui ou clique para enviar"}</span>
-          <span className="text-xs text-polis-gray/70">JPG, PNG, WEBP ou GIF (animados) — até 20MB</span>
+          <span className="text-xs text-polis-gray/70">JPG, PNG, WEBP ou GIF (animados) — até 100MB</span>
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
         </label>
         <p className="mb-4 text-xs text-polis-gray/70">
