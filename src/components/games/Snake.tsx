@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn, formatTime } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useElementSize } from "@/hooks/useElementSize";
+import { useCompactLandscape } from "@/hooks/useCompactLandscape";
 import { GameOverlay } from "@/components/games/GameOverlay";
 import { GameInfoDialog, GameSettingsButton } from "@/components/games/GameInfoDialog";
 
@@ -126,6 +127,8 @@ export function Snake() {
   const touchStartRef = useRef<Point | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardWrapRef, boardWrapSize] = useElementSize<HTMLDivElement>();
+  const [dpadWrapRef, dpadWrapSize] = useElementSize<HTMLDivElement>();
+  const isCompactLandscape = useCompactLandscape(true);
   const isTrainingMode = mode === "treino";
   const isChallengeMode = mode === "desafio";
 
@@ -135,6 +138,15 @@ export function Snake() {
     const w = Math.floor(Math.min(width, height * BOARD_RATIO));
     return { width: w, height: Math.floor(w / BOARD_RATIO) };
   }, [boardWrapSize]);
+
+  // Só entra em jogo no modo paisagem compacto: lá a barra lateral tem altura
+  // fixa (compartilhada com o tabuleiro) e placar+ritmo+D-pad competem por
+  // ela — sem isto o D-pad (dimensionado só pela largura, com células
+  // aspect-square) podia ficar mais alto do que o espaço realmente sobrando,
+  // empurrando parte da barra para fora da área visível. Uma grade 3×3 com
+  // gap uniforme é sempre quadrada (altura total = largura total), então
+  // basta limitar pela altura disponível medida.
+  const dpadFitPx = isCompactLandscape && dpadWrapSize.height > 0 ? Math.min(190, Math.floor(dpadWrapSize.height)) : null;
 
   const startGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
@@ -425,23 +437,13 @@ export function Snake() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center gap-2">
-          <div className="grid w-full max-w-md grid-cols-4 items-center gap-y-1 border-y border-polis-rule/30 px-2 py-1.5 text-xs text-polis-ink">
-            <span className="text-center">
-              Pontos <strong>{score}</strong>
-            </span>
-            <span className="text-center text-polis-ink-soft">
-              Tempo <strong>{formatTime(elapsedSeconds)}</strong>
-            </span>
-            <span className="text-center text-polis-ink-soft">
-              Recorde <strong>{highScore}</strong>
-            </span>
-            <span className="text-center text-polis-ink-soft">
-              Melhor <strong>{formatTime(bestTime)}</strong>
-            </span>
-          </div>
-
-          <div ref={boardWrapRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
+        <div
+          className={cn(
+            "flex min-h-0 w-full min-w-0 flex-1",
+            isCompactLandscape ? "flex-row items-stretch justify-center gap-4" : "flex-col items-center gap-2"
+          )}
+        >
+          <div ref={boardWrapRef} className={cn("flex min-h-0 flex-1 items-center justify-center", isCompactLandscape ? "w-auto" : "w-full")}>
             <div
               className={cn(
                 "relative overflow-hidden border-2 border-polis-ink bg-polis-paper-soft touch-none transition-opacity",
@@ -505,58 +507,96 @@ export function Snake() {
             </div>
           </div>
 
-          <div className="flex w-full max-w-xs shrink-0 items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft">
-            <span>
-              Ritmo <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
-            </span>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => adjustSpeed(SPEED_STEP)}
-                disabled={status !== "playing"}
-                title="Diminuir velocidade"
-                className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-              >
-                ⬅
-              </button>
-              <button
-                type="button"
-                onClick={() => adjustSpeed(-SPEED_STEP)}
-                disabled={status !== "playing"}
-                title="Aumentar velocidade"
-                className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-              >
-                ➜
-              </button>
-            </div>
-          </div>
-
-          <div className="grid w-full max-w-[190px] shrink-0 grid-cols-3 gap-1.5">
-            <div />
-            <DirectionButton label="Cima" onPress={() => queueDirection("UP")}>
-              ▲
-            </DirectionButton>
-            <div />
-            <DirectionButton label="Esquerda" onPress={() => queueDirection("LEFT")}>
-              ◀
-            </DirectionButton>
-            <button
-              type="button"
-              onClick={togglePause}
-              disabled={status === "idle" || status === "gameover"}
-              aria-label={status === "paused" ? "Continuar" : "Pausar"}
-              className="flex aspect-square items-center justify-center border border-polis-ink/30 text-[9px] font-semibold uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+          <div
+            className={cn(
+              "flex shrink-0 flex-col items-center gap-2",
+              isCompactLandscape ? "h-full w-[190px] overflow-y-auto" : "w-full max-w-md"
+            )}
+          >
+            <div
+              className={cn(
+                "grid w-full items-center gap-y-1 border-y border-polis-rule/30 py-1.5 text-polis-ink",
+                isCompactLandscape ? "grid-cols-2 gap-x-1 text-[10px]" : "max-w-md grid-cols-4 px-2 text-xs"
+              )}
             >
-              {status === "paused" ? "▶" : "II"}
-            </button>
-            <DirectionButton label="Direita" onPress={() => queueDirection("RIGHT")}>
-              ▶
-            </DirectionButton>
-            <div />
-            <DirectionButton label="Baixo" onPress={() => queueDirection("DOWN")}>
-              ▼
-            </DirectionButton>
-            <div />
+              <span className="text-center">
+                Pontos <strong>{score}</strong>
+              </span>
+              <span className="text-center text-polis-ink-soft">
+                Tempo <strong>{formatTime(elapsedSeconds)}</strong>
+              </span>
+              <span className="text-center text-polis-ink-soft">
+                Recorde <strong>{highScore}</strong>
+              </span>
+              <span className="text-center text-polis-ink-soft">
+                Melhor <strong>{formatTime(bestTime)}</strong>
+              </span>
+            </div>
+
+            <div className="flex w-full max-w-xs shrink-0 items-center justify-between gap-2 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft">
+              <span>
+                Ritmo <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => adjustSpeed(SPEED_STEP)}
+                  disabled={status !== "playing"}
+                  title="Diminuir velocidade"
+                  className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+                >
+                  ⬅
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustSpeed(-SPEED_STEP)}
+                  disabled={status !== "playing"}
+                  title="Aumentar velocidade"
+                  className="border border-polis-ink/30 px-2 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+                >
+                  ➜
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={dpadWrapRef}
+              className={cn("flex items-center justify-center", isCompactLandscape ? "min-h-0 w-full flex-1" : "w-full shrink-0")}
+            >
+              <div
+                className={cn(
+                  "grid shrink-0 grid-cols-3 gap-1.5 transition-opacity",
+                  isCompactLandscape ? (dpadFitPx ? "opacity-100" : "opacity-0") : "w-full max-w-[190px]"
+                )}
+                style={isCompactLandscape ? { width: dpadFitPx ?? 0, height: dpadFitPx ?? 0 } : undefined}
+              >
+                <div />
+                <DirectionButton label="Cima" onPress={() => queueDirection("UP")}>
+                  ▲
+                </DirectionButton>
+                <div />
+                <DirectionButton label="Esquerda" onPress={() => queueDirection("LEFT")}>
+                  ◀
+                </DirectionButton>
+                <button
+                  type="button"
+                  onClick={togglePause}
+                  disabled={status === "idle" || status === "gameover"}
+                  aria-label={status === "paused" ? "Continuar" : "Pausar"}
+                  className="flex aspect-square min-h-0 min-w-0 items-center justify-center border border-polis-ink/30 text-[9px] font-semibold uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+                >
+                  {status === "paused" ? "▶" : "II"}
+                </button>
+                <DirectionButton label="Direita" onPress={() => queueDirection("RIGHT")}>
+                  ▶
+                </DirectionButton>
+                <div />
+                <DirectionButton label="Baixo" onPress={() => queueDirection("DOWN")}>
+                  ▼
+                </DirectionButton>
+                <div />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -586,7 +626,7 @@ function DirectionButton({
       type="button"
       aria-label={label}
       onClick={onPress}
-      className="flex aspect-square items-center justify-center border border-polis-ink/30 text-base text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+      className="flex aspect-square min-h-0 min-w-0 items-center justify-center border border-polis-ink/30 text-base text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
     >
       {children}
     </button>
