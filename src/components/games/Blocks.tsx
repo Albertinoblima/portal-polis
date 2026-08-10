@@ -63,6 +63,21 @@ const PIECES: Record<PieceType, PieceShape> = {
 
 const PIECE_TYPES: PieceType[] = ["I", "O", "T", "S", "Z", "J", "L"];
 
+/** Cores vibrantes e distintas para cada tipo de peça (valores hex). */
+const PIECE_COLORS: Record<PieceType, { light: string; dark: string }> = {
+  I: { light: "#0ea5e9", dark: "#0284c7" },
+  O: { light: "#fbbf24", dark: "#f59e0b" },
+  T: { light: "#a855f7", dark: "#9333ea" },
+  S: { light: "#10b981", dark: "#059669" },
+  Z: { light: "#f43f5e", dark: "#e11d48" },
+  J: { light: "#3b82f6", dark: "#1d4ed8" },
+  L: { light: "#fb923c", dark: "#f97316" },
+};
+
+function getPieceColor(type: PieceType, state: "light" | "dark" = "light"): string {
+  return PIECE_COLORS[type][state];
+}
+
 /** Gira as casas 90° no sentido horário dentro do quadro-guia, `times` vezes. */
 function rotateCells(cells: [number, number][], size: number, times: number): [number, number][] {
   let result = cells;
@@ -86,15 +101,15 @@ function spawnPosition(type: PieceType): { row: number; col: number } {
   return { row: 0, col: Math.floor((COLS - shape.size) / 2) };
 }
 
-function emptyBoard(): boolean[][] {
-  return Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+function emptyBoard(): (PieceType | null)[][] {
+  return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 }
 
-function canPlace(board: boolean[][], cells: { row: number; col: number }[]): boolean {
+function canPlace(board: (PieceType | null)[][], cells: { row: number; col: number }[]): boolean {
   return cells.every(({ row, col }) => {
     if (col < 0 || col >= COLS || row >= ROWS) return false;
     if (row < 0) return true;
-    return !board[row][col];
+    return board[row][col] === null;
   });
 }
 
@@ -138,28 +153,28 @@ function reachedChallengeTierIndex(lines: number): number {
 }
 
 interface LockResult {
-  board: boolean[][];
+  board: (PieceType | null)[][];
   gameOver: boolean;
   cleared: number;
 }
 
-function lockPiece(piece: PieceState, board: boolean[][]): LockResult {
+function lockPiece(piece: PieceState, board: (PieceType | null)[][]): LockResult {
   const next = board.map((row) => [...row]);
   for (const { row, col } of pieceCells(piece)) {
     if (row < 0) return { board: next, gameOver: true, cleared: 0 };
-    next[row][col] = true;
+    next[row][col] = piece.type;
   }
 
-  const remaining = next.filter((row) => row.some((cell) => !cell));
+  const remaining = next.filter((row) => row.some((cell) => cell === null));
   const cleared = ROWS - remaining.length;
-  const cleaned = [...Array.from({ length: cleared }, () => Array(COLS).fill(false)), ...remaining];
+  const cleaned = [...Array.from({ length: cleared }, () => Array(COLS).fill(null)), ...remaining];
 
   return { board: cleaned, gameOver: false, cleared };
 }
 
 export function Blocks() {
   const [mode, setMode] = useLocalStorageState<BlocksMode>(MODE_KEY, "competitivo");
-  const [board, setBoard] = useState<boolean[][]>(() => emptyBoard());
+  const [board, setBoard] = useState<(PieceType | null)[][]>(() => emptyBoard());
   const [current, setCurrent] = useState<PieceState | null>(null);
   const [nextType, setNextType] = useState<PieceType | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -429,7 +444,7 @@ export function Blocks() {
   const nextShape = nextType ? PIECES[nextType] : null;
   const overlayMessage =
     status === "idle" ? "Pronto para jogar?" : status === "paused" ? "Pausado" : status === "gameover" ? "Fim de jogo!" : null;
-  const boardWidth = isCompactLandscape ? "w-[190px]" : "w-[200px] sm:w-[240px]";
+  const boardWidth = isCompactLandscape ? "w-[160px]" : "w-[170px] sm:w-[200px]";
   const canChangeMode = status === "idle" || status === "gameover";
   const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
   const challengeTierIndex = reachedChallengeTierIndex(lines);
@@ -540,18 +555,22 @@ export function Blocks() {
               style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${ROWS}, minmax(0, 1fr))` }}
             >
               {board.map((rowCells, r) =>
-                rowCells.map((_, c) => {
+                rowCells.map((pieceType, c) => {
                   const key = cellKey(r, c);
                   const filled = filledKeys.has(key);
                   const isGhost = !filled && ghostKeys.has(key);
+                  const pieceAtCell = board[r][c];
+                  const bgColor = pieceAtCell ? getPieceColor(pieceAtCell, "light") : "#f4f1e9";
                   return (
                     <div
                       key={key}
                       className={cn(
-                        "bg-polis-paper",
-                        filled && (clearFlash ? "bg-polis-gold" : "bg-polis-ink"),
-                        isGhost && "border border-polis-ink/40"
+                        filled && clearFlash && "ring-2 ring-polis-gold ring-inset shadow-lg",
+                        filled && !clearFlash && "shadow-md",
+                        isGhost && "border-2 border-polis-ink/40 opacity-60",
+                        !filled && !isGhost && "border border-polis-ink/10"
                       )}
+                      style={{ backgroundColor: bgColor }}
                     />
                   );
                 })
@@ -634,17 +653,24 @@ export function Blocks() {
       >
         <div>
           <p className="text-xs uppercase tracking-wide text-polis-ink-soft">Próxima</p>
-          <div className="mt-1 flex h-16 w-16 items-center justify-center border border-polis-ink/30 bg-polis-paper-soft">
-            {nextShape && (
+          <div className="mt-1 flex h-16 w-16 items-center justify-center border-2 border-polis-ink/20 bg-polis-paper-soft">
+            {nextShape && nextType && (
               <div
-                className="grid h-12 w-12"
+                className="grid h-12 w-12 gap-px bg-polis-ink/10"
                 style={{ gridTemplateColumns: `repeat(${nextShape.size}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${nextShape.size}, minmax(0, 1fr))` }}
               >
                 {Array.from({ length: nextShape.size * nextShape.size }, (_, i) => {
                   const r = Math.floor(i / nextShape.size);
                   const c = i % nextShape.size;
                   const active = nextShape.cells.some(([cr, cc]) => cr === r && cc === c);
-                  return <div key={i} className={cn(active && "bg-polis-ink")} />;
+                  const bgColor = active ? getPieceColor(nextType, "light") : "transparent";
+                  return (
+                    <div
+                      key={i}
+                      className={active ? "shadow-md" : ""}
+                      style={{ backgroundColor: bgColor }}
+                    />
+                  );
                 })}
               </div>
             )}

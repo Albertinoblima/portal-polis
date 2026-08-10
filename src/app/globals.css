@@ -57,6 +57,22 @@
   --color-polis-gold-ink: var(--color-gold-ink);
   --color-polis-gold-contrast: var(--color-gold-contrast);
 
+  /* Cores vibrantes para peças do Jogo dos Blocos */
+  --color-blocks-i: #0ea5e9;
+  --color-blocks-i-dark: #0284c7;
+  --color-blocks-o: #fbbf24;
+  --color-blocks-o-dark: #f59e0b;
+  --color-blocks-t: #a855f7;
+  --color-blocks-t-dark: #9333ea;
+  --color-blocks-s: #10b981;
+  --color-blocks-s-dark: #059669;
+  --color-blocks-z: #f43f5e;
+  --color-blocks-z-dark: #e11d48;
+  --color-blocks-j: #3b82f6;
+  --color-blocks-j-dark: #1d4ed8;
+  --color-blocks-l: #fb923c;
+  --color-blocks-l-dark: #f97316;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 

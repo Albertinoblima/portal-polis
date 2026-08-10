@@ -158,6 +158,18 @@ export function Snake() {
     setStatus((prev) => (prev === "playing" ? "paused" : prev === "paused" ? "playing" : prev));
   }, []);
 
+  const adjustSpeed = useCallback(
+    (delta: number) => {
+      if (status !== "playing") return;
+      const newSpeed = Math.max(MIN_SPEED, Math.min(START_SPEED, speedRef.current + delta));
+      if (newSpeed !== speedRef.current) {
+        speedRef.current = newSpeed;
+        setSpeedMs(newSpeed);
+      }
+    },
+    [status]
+  );
+
   useEffect(() => {
     // Escuta no contêiner do jogo (não em `window`) para que setas/espaço só
     // afetem a cobra quando o tabuleiro estiver focado — assim não "vazam"
@@ -423,7 +435,7 @@ export function Snake() {
             {snake.map((segment, index) => (
               <div
                 key={index}
-                className={cn("absolute", index === 0 ? "bg-polis-ink" : "bg-polis-ink/85")}
+                className={cn("absolute transition-all", index === 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg" : "bg-emerald-500/90")}
                 style={{
                   width: `${100 / COLS}%`,
                   height: `${100 / ROWS}%`,
@@ -434,7 +446,7 @@ export function Snake() {
             ))}
 
             <div
-              className="absolute rounded-full bg-polis-gold-ink"
+              className="absolute rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-md ring-2 ring-amber-300/50"
               style={{
                 width: `${100 / COLS}%`,
                 height: `${100 / ROWS}%`,
@@ -445,7 +457,7 @@ export function Snake() {
 
             {eatenPulse && (
               <div
-                className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-polis-gold/70"
+                className="motion-safe:animate-ping pointer-events-none absolute rounded-full bg-amber-400/70 shadow-lg"
                 style={{
                   width: `${100 / COLS}%`,
                   height: `${100 / ROWS}%`,
@@ -481,6 +493,27 @@ export function Snake() {
         <p className="text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
           Ritmo atual: <strong className="text-polis-ink">{speedCellsPerSecond} casas/s</strong>
         </p>
+
+        <div className="flex w-full max-w-[260px] gap-2">
+          <button
+            type="button"
+            onClick={() => adjustSpeed(SPEED_STEP)}
+            disabled={status !== "playing"}
+            title="Diminuir velocidade"
+            className="flex-1 border border-polis-ink/30 px-2 py-1 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+          >
+            ⬅ Lento
+          </button>
+          <button
+            type="button"
+            onClick={() => adjustSpeed(-SPEED_STEP)}
+            disabled={status !== "playing"}
+            title="Aumentar velocidade"
+            className="flex-1 border border-polis-ink/30 px-2 py-1 text-sm font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+          >
+            Rápido ➜
+          </button>
+        </div>
 
         <div className="flex w-full max-w-[260px] items-center justify-center gap-2">
           <button
