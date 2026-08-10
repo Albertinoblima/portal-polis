@@ -65,7 +65,11 @@ export const PageChrome = forwardRef<HTMLDivElement, PageChromeProps>(function P
             columnRule: "1px solid color-mix(in srgb, var(--color-rule) 25%, transparent)",
           }}
         >
-          {children}
+          {columns === 1 ? (
+            <div className="flex h-full min-h-0 w-full flex-col">{children}</div>
+          ) : (
+            children
+          )}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
