@@ -45,16 +45,18 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       url: articleUrl,
       title: article.title,
       description: article.subtitle,
-      // WhatsApp/Facebook exigem width/height para renderizar a prévia de
-      // forma confiável — sem eles, o crawler às vezes falha silenciosamente
-      // mesmo com a imagem acessível. 1200x630 é a proporção padrão de
-      // mercado (1.91:1); não precisa bater pixel a pixel com o arquivo real.
-      // Cai para a logo do site quando a matéria não tem imagem de destaque
-      // própria (campo opcional no banco) — sem isso a tag og:image sai
-      // vazia e a prévia não carrega em nenhuma rede social.
+      // WhatsApp/Facebook exigem URL absoluta e width/height para renderizar
+      // a prévia de forma confiável — sem URL absoluta o crawler do WhatsApp
+      // ignora a imagem silenciosamente mesmo quando ela existe.
+      // 1200×630 (1.91:1) é a proporção que ativa o preview GRANDE no WhatsApp;
+      // com imagem quadrada o WhatsApp mostra só um thumbnail pequeno.
+      // Cai para a logo do site quando a matéria não tem imagem de destaque.
       images: [
         {
-          url: article.featuredImage || "/brand/LOGO_COMPLETA.png",
+          url: (() => {
+            const img = article.featuredImage || "/brand/LOGO_COMPLETA.png";
+            return img.startsWith("http") ? img : `${SITE_URL}${img}`;
+          })(),
           width: 1200,
           height: 630,
           alt: article.featuredImageAlt || article.title,
