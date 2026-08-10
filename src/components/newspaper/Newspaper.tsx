@@ -42,10 +42,11 @@ export type NewspaperBlock =
      * (ver `buildArticleBlocks` em editionBlocks.tsx), tanto na página isolada
      * da matéria quanto na leitura da edição completa (Home/`/edicao/[n]`),
      * já que uma simplesmente encadeia a outra. Vira uma página própria no
-     * flip-book, com 2 anúncios (mesma grade 1×2 já usada nas folhas de
-     * classificados do mobile — reaproveitada aqui de propósito, é o layout
-     * já validado). Não carrega dados: o pool de banners e a detecção de
-     * desktop já vivem neste componente (`SIDEBAR_BANNERS`, `isDesktop`).
+     * flip-book, com os mesmos 4 anúncios (mesma grade 2×2 já usada na folha
+     * de classificados pareada com a capa — reaproveitada aqui de propósito,
+     * é o layout já validado). Não carrega dados: o pool de banners e a
+     * detecção de desktop já vivem neste componente (`SIDEBAR_BANNERS`,
+     * `isDesktop`).
      */
     type: "ad";
   };
@@ -76,12 +77,10 @@ const CHROME_FOOTER_PX = 24; // Reduzido significativamente para dar espaço às
 const PAGE_PADDING_Y_PX = 20; // Corresponds to Tailwind py-5 (1.25rem = 20px), applied in PageChrome
 const PAGE_PADDING_X_PX = 48;
 const MOBILE_ADS_PER_PAGE = 2;
-/** Quantos anúncios cada quebra de meio de livro (`type: "ad"`) mostra —
- *  deliberadamente menor que os 4 da folha de classificados pareada com a
- *  capa (essa é um "caderno de classificados" dedicado; a quebra de meio de
- *  livro é só um respiro entre matérias, não deve competir demais com o
- *  conteúdo editorial). */
-const AD_BREAK_SLOT_COUNT = 2;
+/** Quantos anúncios cada quebra de meio de livro (`type: "ad"`) mostra — igual
+ *  aos 4 da folha de classificados pareada com a capa, para que todos os
+ *  anunciantes apareçam em toda quebra publicitária, não só na capa. */
+const AD_BREAK_SLOT_COUNT = 4;
 
 interface PreparedPage {
   content: ReactNode;
