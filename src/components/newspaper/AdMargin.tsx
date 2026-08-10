@@ -3,6 +3,7 @@ import type { Banner } from "@/types";
 interface AdMarginProps {
   banners: Banner[];
   slotCount?: number;
+  isDesktop?: boolean;
 }
 
 const SLOT_COUNT = 4;
@@ -17,12 +18,21 @@ const PLACEHOLDER_TILE_COUNT = 6;
  * position="sidebar"), em grade 2×2; slots sem anúncio mostram um convite
  * "Anuncie Aqui!".
  */
-export function AdMargin({ banners, slotCount = SLOT_COUNT }: AdMarginProps) {
+export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }: AdMarginProps) {
   const slots = Array.from({ length: slotCount }, (_, index) => banners[index] ?? null);
-  const gridClassName =
-    slotCount === MOBILE_SLOT_COUNT
-      ? "grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3"
-      : "grid min-h-0 flex-1 grid-cols-1 grid-rows-4 gap-3 md:grid-cols-2 md:grid-rows-2";
+  
+  // Build grid classes based on actual breakpoint, not Tailwind media query
+  let gridClassName = "grid min-h-0 flex-1 gap-3";
+  if (slotCount === MOBILE_SLOT_COUNT) {
+    // Mobile: 1 column, 2 rows
+    gridClassName += " grid-cols-1 grid-rows-2";
+  } else if (isDesktop) {
+    // Desktop: 2 columns, 2 rows (not 4 rows!)
+    gridClassName += " grid-cols-2 grid-rows-2";
+  } else {
+    // Fallback for ambiguous state: 1 column, auto rows
+    gridClassName += " grid-cols-1 auto-rows-fr";
+  }
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-3">
