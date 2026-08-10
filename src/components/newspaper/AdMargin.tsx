@@ -41,7 +41,7 @@ function AdSlot({ banner }: { banner: Banner }) {
       className="relative block h-full w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-cover" />
+      <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-contain" />
     </a>
   );
 }
