@@ -17,24 +17,35 @@ const PLACEHOLDER_TILE_COUNT = 6;
  * livro). Até 4 anúncios configuráveis pelo painel (banners com
  * position="sidebar"), em grade 2×2; slots sem anúncio mostram um convite
  * "Anuncie Aqui!".
+ *
+ * IMPORTANTE: Este componente é passado como `children` direto ao PageChrome,
+ * que aplica `height: contentHeightPx` explícita ao container. Portanto, toda
+ * a altura disponível já está definida no nível do PageChrome. O AdMargin não
+ * precisa fazer flex tricks — apenas ocupar 100% e distribuir via grid.
  */
 export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }: AdMarginProps) {
   const slots = Array.from({ length: slotCount }, (_, index) => banners[index] ?? null);
 
-  // Desktop: 2x2 grid. Mobile: 1x2 grid. Use inline style for row distribution.
+  // Determine grid layout based on actual desktop detection
   const isDesktopLayout = isDesktop && slotCount !== MOBILE_SLOT_COUNT;
-  const gridColsClass = isDesktopLayout ? "grid-cols-2" : "grid-cols-1";
-  const rowCount = isDesktopLayout ? 2 : slotCount === MOBILE_SLOT_COUNT ? 2 : 4;
+  const cols = isDesktopLayout ? 2 : 1;
+  const rows = isDesktopLayout ? 2 : 2; // Mobile: 2 ads per page, desktop: 2x2
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col gap-3">
-      <span className="shrink-0 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
+    <div className="flex h-full w-full flex-col bg-polis-paper">
+      {/* Título */}
+      <div className="shrink-0 py-3 text-center font-serif text-[10px] uppercase tracking-[0.3em] text-polis-ink-soft">
         Espaço Publicitário
-      </span>
+      </div>
+
+      {/* Grid: ocupa 100% da altura restante após o título */}
       <div
-        className={`grid min-h-0 flex-1 ${gridColsClass} gap-3`}
+        className="w-full flex-1"
         style={{
-          gridTemplateRows: `repeat(${rowCount}, 1fr)`,
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          gap: "0.75rem",
         }}
       >
         {slots.map((banner, index) =>
