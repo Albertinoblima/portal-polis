@@ -62,6 +62,7 @@ const MASTHEAD_HEADER_PX = { desktop: 220, mobile: 195 };
 const CHROME_FOOTER_PX = 40;
 const PAGE_PADDING_Y_PX = 40;
 const PAGE_PADDING_X_PX = 48;
+const MOBILE_ADS_PER_PAGE = 2;
 
 interface PreparedPage {
   content: ReactNode;
@@ -117,11 +118,33 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
     // Só faz sentido no desktop: é pareada lado a lado com a capa/timbre na
     // primeira dobra dupla; no mobile cada folha aparece sozinha mesmo.
     if (showMasthead) {
-      out.push({
-        content: <AdMargin banners={SIDEBAR_BANNERS} />,
-        columns: 1,
-        contentHeightPx: isDesktop ? contentHeightCover : contentHeight,
-      });
+      if (isDesktop) {
+        out.push({
+          content: <AdMargin banners={SIDEBAR_BANNERS} />,
+          columns: 1,
+          contentHeightPx: contentHeightCover,
+        });
+      } else {
+        const mobileChunks =
+          SIDEBAR_BANNERS.length > 0
+            ? Array.from(
+              { length: Math.ceil(SIDEBAR_BANNERS.length / MOBILE_ADS_PER_PAGE) },
+              (_, chunkIndex) =>
+                SIDEBAR_BANNERS.slice(
+                  chunkIndex * MOBILE_ADS_PER_PAGE,
+                  chunkIndex * MOBILE_ADS_PER_PAGE + MOBILE_ADS_PER_PAGE
+                )
+            )
+            : [[]];
+
+        for (const chunk of mobileChunks) {
+          out.push({
+            content: <AdMargin banners={chunk} slotCount={MOBILE_ADS_PER_PAGE} />,
+            columns: 1,
+            contentHeightPx: contentHeight,
+          });
+        }
+      }
     }
 
     let isFirstContentBlock = true;
