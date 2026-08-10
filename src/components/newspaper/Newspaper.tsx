@@ -60,7 +60,7 @@ const CHROME_HEADER_PX = 33;
  *  fina de título corrido usada nas demais páginas. */
 const MASTHEAD_HEADER_PX = { desktop: 220, mobile: 195 };
 const CHROME_FOOTER_PX = 24; // Reduzido significativamente para dar espaço às publicidades
-const PAGE_PADDING_Y_PX = 40;
+const PAGE_PADDING_Y_PX = 20; // Corresponds to Tailwind py-5 (1.25rem = 20px), applied in PageChrome
 const PAGE_PADDING_X_PX = 48;
 const MOBILE_ADS_PER_PAGE = 2;
 
