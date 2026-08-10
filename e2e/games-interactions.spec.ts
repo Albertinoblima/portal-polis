@@ -68,10 +68,13 @@ test.describe("Jogos - toque retrato", () => {
         await expect(page.getByText("Pausado")).toBeVisible();
     });
 
-    test("Blocos responde a botões touch", async ({ page }) => {
+    test("Blocos responde a gestos de toque no tabuleiro", async ({ page }) => {
         await startBlocks(page);
 
-        await page.getByRole("button", { name: "Girar" }).tap();
+        // Sem D-pad: toque rápido sem deslocamento no tabuleiro gira a peça
+        // (ver handleBoardTouchEnd em Blocks.tsx). O botão "Pausar" continua
+        // existindo à parte, fora do tabuleiro.
+        await page.getByRole("img", { name: /Tabuleiro do Jogo dos Blocos/ }).tap();
         await page.getByRole("button", { name: "Pausar" }).tap();
         await expect(page.getByText("Pausado")).toBeVisible();
     });

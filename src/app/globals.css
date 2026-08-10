@@ -35,6 +35,34 @@
      modo escuro. */
   --color-gold-contrast: #1a1815;
 
+  /* Linhas de grade do tabuleiro do Jogo dos Blocos: sutis de propósito (ver
+     CLAUDE.md/histórico — versão anterior usava a cor de tinta quase opaca,
+     que competia visualmente com os blocos). Fundo do tabuleiro reaproveita
+     o papel do tema, sem token próprio. */
+  --color-blocks-grid-line: rgba(26, 24, 21, 0.08);
+
+  /* Cores vibrantes das peças do Jogo dos Blocos — não dependem de tema
+     (mesmas em claro/escuro). Declaradas aqui (bloco `:root` "de verdade",
+     fora do `@theme inline` abaixo) de propósito: o Canvas do tabuleiro lê
+     estes valores em tempo de execução via `getComputedStyle` (ver
+     blocksRenderer.ts), e o Tailwind v4 resolve `@theme inline` só em
+     tempo de build — direto de lá, `getComputedStyle` nunca enxergaria o
+     valor real (voltava vazio, e o Canvas caía no cinza de fallback). */
+  --color-blocks-i: #0ea5e9;
+  --color-blocks-i-dark: #0284c7;
+  --color-blocks-o: #fbbf24;
+  --color-blocks-o-dark: #f59e0b;
+  --color-blocks-t: #a855f7;
+  --color-blocks-t-dark: #9333ea;
+  --color-blocks-s: #10b981;
+  --color-blocks-s-dark: #059669;
+  --color-blocks-z: #f43f5e;
+  --color-blocks-z-dark: #e11d48;
+  --color-blocks-j: #3b82f6;
+  --color-blocks-j-dark: #1d4ed8;
+  --color-blocks-l: #fb923c;
+  --color-blocks-l-dark: #f97316;
+
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -57,22 +85,6 @@
   --color-polis-gold-ink: var(--color-gold-ink);
   --color-polis-gold-contrast: var(--color-gold-contrast);
 
-  /* Cores vibrantes para peças do Jogo dos Blocos */
-  --color-blocks-i: #0ea5e9;
-  --color-blocks-i-dark: #0284c7;
-  --color-blocks-o: #fbbf24;
-  --color-blocks-o-dark: #f59e0b;
-  --color-blocks-t: #a855f7;
-  --color-blocks-t-dark: #9333ea;
-  --color-blocks-s: #10b981;
-  --color-blocks-s-dark: #059669;
-  --color-blocks-z: #f43f5e;
-  --color-blocks-z-dark: #e11d48;
-  --color-blocks-j: #3b82f6;
-  --color-blocks-j-dark: #1d4ed8;
-  --color-blocks-l: #fb923c;
-  --color-blocks-l-dark: #f97316;
-
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -94,6 +106,7 @@
      (~8:1 de contraste — o mesmo tom escuro do modo claro ficaria quase
      invisível aqui). */
   --color-gold-ink: #d9b53c;
+  --color-blocks-grid-line: rgba(237, 230, 214, 0.1);
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -107,6 +120,7 @@
   /* Dourado bem mais escuro/terroso para maior contraste (~8:1) sobre o
      papel claro. */
   --color-gold-ink: #5c4514;
+  --color-blocks-grid-line: rgba(26, 24, 21, 0.08);
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }

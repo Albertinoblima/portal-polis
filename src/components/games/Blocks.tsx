@@ -1,185 +1,150 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject, type TouchEvent as ReactTouchEvent } from "react";
 import { cn, formatTime } from "@/lib/utils";
-import { cellKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useElementSize } from "@/hooks/useElementSize";
 import { useCompactLandscape } from "@/hooks/useCompactLandscape";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { GameOverlay } from "@/components/games/GameOverlay";
 import { GameInfoDialog, GameSettingsButton } from "@/components/games/GameInfoDialog";
+import {
+  BOARD_RATIO,
+  CHALLENGE_START_SPEED,
+  CHALLENGE_TIERS,
+  CHALLENGE_TIME_ACCELERATION_INTERVAL,
+  COLS,
+  LINES_PER_LEVEL,
+  LINE_SCORE,
+  ROWS,
+  START_SPEED,
+  bestLinesKeyForMode,
+  canPlace,
+  challengeSpeedAfterClear,
+  challengeSpeedAfterTime,
+  competitiveSpeedForLevel,
+  dropToLanding,
+  emptyBoard,
+  highScoreKeyForMode,
+  lockPiece,
+  peekBag,
+  pieceCells,
+  reachedChallengeTierIndex,
+  spawnPosition,
+  takeFromBag,
+  tryRotatePiece,
+  type BlocksMode,
+  type BoardMatrix,
+  type PieceState,
+  type PieceType,
+  type Status,
+} from "./blocksEngine";
+import { drawBoard, drawNextPreview, resolveBlocksTheme, type BlocksTheme } from "./blocksRenderer";
 
-type PieceType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
-type BlocksMode = "competitivo" | "treino" | "desafio";
-
-interface PieceShape {
-  /** Lado do quadro-guia (bounding box) onde a peça gira. */
-  size: number;
-  /** Casas ocupadas na rotação 0, como [linha, coluna] dentro do quadro-guia. */
-  cells: [number, number][];
-}
-
-interface PieceState {
-  type: PieceType;
-  rotation: number;
-  /** Posição do canto superior esquerdo do quadro-guia no tabuleiro. */
-  row: number;
-  col: number;
-}
-
-type Status = "idle" | "playing" | "paused" | "gameover";
-
-const ROWS = 20;
-const COLS = 10;
-const BOARD_RATIO = COLS / ROWS;
-/** Espaçamento (gap-3) entre o tabuleiro e o painel "Próxima" na mesma fileira. */
-const ROW_GAP_PX = 12;
-const START_SPEED = 800;
-const TRAINING_SPEED = 900;
-const CHALLENGE_START_SPEED = 760;
-const LINES_PER_LEVEL = 10;
-const COMPETITIVE_MIN_SPEED = 140;
-const COMPETITIVE_SPEED_STEP = 55;
-const CHALLENGE_MIN_SPEED = 170;
-const CHALLENGE_TIME_ACCELERATION_INTERVAL = 22;
-const CHALLENGE_TIME_ACCELERATION_STEP = 20;
-const CHALLENGE_LINE_ACCELERATION_STEP = 12;
-const LINE_SCORE = [0, 100, 300, 500, 800];
-const HIGH_SCORE_KEY = "polis:blocos:recorde";
-const BEST_LINES_KEY = "polis:blocos:melhor-linhas";
 const MODE_KEY = "polis:blocos:modo";
 const CHALLENGE_BEST_TIER_KEY = "polis:blocos:desafio:melhor-tier";
 
-const CHALLENGE_TIERS = [
-  { label: "Bronze", lines: 14 },
-  { label: "Prata", lines: 30 },
-  { label: "Ouro", lines: 46 },
-] as const;
+/** Modo treino: velocidade fixa e ajustável pelo jogador (ms por queda de 1 linha). */
+const TRAINING_SPEED_KEY = "polis:blocos:treino:velocidade";
+const TRAINING_SPEED_MIN = 200;
+const TRAINING_SPEED_MAX = 1100;
+const TRAINING_SPEED_STEP = 25;
+const TRAINING_SPEED_DEFAULT = 650;
 
-const PIECES: Record<PieceType, PieceShape> = {
-  I: { size: 4, cells: [[1, 0], [1, 1], [1, 2], [1, 3]] },
-  O: { size: 2, cells: [[0, 0], [0, 1], [1, 0], [1, 1]] },
-  T: { size: 3, cells: [[0, 1], [1, 0], [1, 1], [1, 2]] },
-  S: { size: 3, cells: [[0, 1], [0, 2], [1, 0], [1, 1]] },
-  Z: { size: 3, cells: [[0, 0], [0, 1], [1, 1], [1, 2]] },
-  J: { size: 3, cells: [[0, 0], [1, 0], [1, 1], [1, 2]] },
-  L: { size: 3, cells: [[0, 2], [1, 0], [1, 1], [1, 2]] },
-};
+/** DAS (Delayed Auto-Shift) e ARR (Auto-Repeat Rate) — padrão de Tetris
+ *  moderno: o primeiro movimento é imediato ao pressionar, e só depois de
+ *  `DAS_MS` segurando é que a peça passa a se repetir a cada `ARR_MS`. Sem
+ *  isso, mover repetidamente depende do auto-repeat do sistema operacional
+ *  (inconsistente entre navegadores/SO e geralmente lento demais para Tetris). */
+const DAS_MS = 170;
+const ARR_MS = 45;
+const SOFT_DROP_ARR_MS = 35;
 
-const PIECE_TYPES: PieceType[] = ["I", "O", "T", "S", "Z", "J", "L"];
+/** Gestos de toque no tabuleiro (substituem o D-pad virtual): arrastar move a
+ *  peça acompanhando o dedo, toque rápido sem deslocamento gira, e um swipe
+ *  rápido para cima derruba na hora. */
+const SWIPE_STEP_PX = 24;
+const TAP_SLOP_PX = 12;
+const HARD_DROP_SWIPE_DIST_PX = 70;
+const HARD_DROP_SWIPE_MAX_MS = 260;
 
-/** Cores vibrantes e distintas para cada tipo de peça (valores hex). */
-const PIECE_COLORS: Record<PieceType, { light: string; dark: string }> = {
-  I: { light: "#0ea5e9", dark: "#0284c7" },
-  O: { light: "#fbbf24", dark: "#f59e0b" },
-  T: { light: "#a855f7", dark: "#9333ea" },
-  S: { light: "#10b981", dark: "#059669" },
-  Z: { light: "#f43f5e", dark: "#e11d48" },
-  J: { light: "#3b82f6", dark: "#1d4ed8" },
-  L: { light: "#fb923c", dark: "#f97316" },
-};
-
-function getPieceColor(type: PieceType, state: "light" | "dark" = "light"): string {
-  return PIECE_COLORS[type][state];
-}
-
-/** Gira as casas 90° no sentido horário dentro do quadro-guia, `times` vezes. */
-function rotateCells(cells: [number, number][], size: number, times: number): [number, number][] {
-  let result = cells;
-  const normalized = ((times % 4) + 4) % 4;
-  for (let i = 0; i < normalized; i++) {
-    result = result.map(([r, c]) => [c, size - 1 - r] as [number, number]);
-  }
-  return result;
-}
-
-function pieceCells(piece: PieceState): { row: number; col: number }[] {
-  const shape = PIECES[piece.type];
-  return rotateCells(shape.cells, shape.size, piece.rotation).map(([r, c]) => ({
-    row: piece.row + r,
-    col: piece.col + c,
-  }));
-}
-
-function spawnPosition(type: PieceType): { row: number; col: number } {
-  const shape = PIECES[type];
-  return { row: 0, col: Math.floor((COLS - shape.size) / 2) };
-}
-
-function emptyBoard(): (PieceType | null)[][] {
-  return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-}
-
-function canPlace(board: (PieceType | null)[][], cells: { row: number; col: number }[]): boolean {
-  return cells.every(({ row, col }) => {
-    if (col < 0 || col >= COLS || row >= ROWS) return false;
-    if (row < 0) return true;
-    return board[row][col] === null;
+/** Roda um loop de `requestAnimationFrame` chamando `draw(ctx)` a cada frame,
+ *  redimensionando o canvas (com correção de devicePixelRatio para nitidez
+ *  em telas retina) sempre que `sizePx` mudar. `draw` é lido de uma ref
+ *  atualizada a cada render — assim o loop não precisa reiniciar quando o
+ *  estado do jogo muda, só quando o tamanho em pixels muda de verdade. */
+function useCanvasRafLoop(canvasRef: RefObject<HTMLCanvasElement | null>, sizePx: { width: number; height: number } | null, draw: (ctx: CanvasRenderingContext2D) => void) {
+  const drawRef = useRef(draw);
+  useEffect(() => {
+    drawRef.current = draw;
   });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !sizePx || sizePx.width <= 0 || sizePx.height <= 0) return;
+
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    canvas.width = Math.round(sizePx.width * dpr);
+    canvas.height = Math.round(sizePx.height * dpr);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    let rafId = 0;
+    function frame() {
+      if (ctx) drawRef.current(ctx);
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasRef, sizePx?.width, sizePx?.height]);
 }
 
-/** Sorteio "7-bag", como nos Tetris modernos: cada sequência de 7 peças contém
- *  exatamente uma de cada tipo, embaralhada — evita sequências de má sorte
- *  (ex.: cinco peças "S" seguidas). Só é chamado a partir de eventos do
- *  jogador (começar/repor o saco durante a partida), nunca durante a
- *  renderização inicial — sortear no render quebraria a hidratação. */
-function shuffledBag(): PieceType[] {
-  const bag = [...PIECE_TYPES];
-  for (let i = bag.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [bag[i], bag[j]] = [bag[j], bag[i]];
-  }
-  return bag;
-}
+/** Controlador genérico de "segurar para repetir" (DAS/ARR): a primeira
+ *  chamada de `action` é imediata; se ainda segurando após `DAS_MS`, passa a
+ *  repetir a cada `arrMs` até `stop()`. Usado tanto pelo teclado (setas
+ *  seguradas) quanto pelos gestos de toque. */
+function useHeldRepeat() {
+  const dasRef = useRef<number | null>(null);
+  const arrRef = useRef<number | null>(null);
+  const tokenRef = useRef<symbol | null>(null);
 
-function takeFromBag(bagRef: { current: PieceType[] }): PieceType {
-  if (bagRef.current.length === 0) bagRef.current = shuffledBag();
-  return bagRef.current.shift() as PieceType;
-}
+  const stop = useCallback(() => {
+    if (dasRef.current !== null) {
+      window.clearTimeout(dasRef.current);
+      dasRef.current = null;
+    }
+    if (arrRef.current !== null) {
+      window.clearInterval(arrRef.current);
+      arrRef.current = null;
+    }
+    tokenRef.current = null;
+  }, []);
 
-function peekBag(bagRef: { current: PieceType[] }): PieceType {
-  if (bagRef.current.length === 0) bagRef.current = shuffledBag();
-  return bagRef.current[0];
-}
+  const start = useCallback(
+    (action: () => void, arrMs: number) => {
+      stop();
+      const token = Symbol();
+      tokenRef.current = token;
+      action();
+      dasRef.current = window.setTimeout(() => {
+        if (tokenRef.current !== token) return;
+        arrRef.current = window.setInterval(action, arrMs);
+      }, DAS_MS);
+    },
+    [stop]
+  );
 
-function highScoreKeyForMode(mode: BlocksMode): string {
-  return `${HIGH_SCORE_KEY}:${mode}`;
-}
+  useEffect(() => stop, [stop]);
 
-function bestLinesKeyForMode(mode: BlocksMode): string {
-  return `${BEST_LINES_KEY}:${mode}`;
-}
-
-function reachedChallengeTierIndex(lines: number): number {
-  for (let i = CHALLENGE_TIERS.length - 1; i >= 0; i--) {
-    if (lines >= CHALLENGE_TIERS[i].lines) return i;
-  }
-  return -1;
-}
-
-interface LockResult {
-  board: (PieceType | null)[][];
-  gameOver: boolean;
-  cleared: number;
-}
-
-function lockPiece(piece: PieceState, board: (PieceType | null)[][]): LockResult {
-  const next = board.map((row) => [...row]);
-  for (const { row, col } of pieceCells(piece)) {
-    if (row < 0) return { board: next, gameOver: true, cleared: 0 };
-    next[row][col] = piece.type;
-  }
-
-  const remaining = next.filter((row) => row.some((cell) => cell === null));
-  const cleared = ROWS - remaining.length;
-  const cleaned = [...Array.from({ length: cleared }, () => Array(COLS).fill(null)), ...remaining];
-
-  return { board: cleaned, gameOver: false, cleared };
+  return { start, stop };
 }
 
 export function Blocks() {
   const [mode, setMode] = useLocalStorageState<BlocksMode>(MODE_KEY, "competitivo");
-  const [board, setBoard] = useState<(PieceType | null)[][]>(() => emptyBoard());
+  const [trainingSpeedMs, setTrainingSpeedMs] = useLocalStorageState(TRAINING_SPEED_KEY, TRAINING_SPEED_DEFAULT);
+  const [board, setBoard] = useState<BoardMatrix>(() => emptyBoard());
   const [current, setCurrent] = useState<PieceState | null>(null);
   const [nextType, setNextType] = useState<PieceType | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -201,19 +166,31 @@ export function Blocks() {
   const speedRef = useRef(START_SPEED);
   const elapsedRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<BlocksTheme | null>(null);
+
   // Medidos juntos (não só o board isolado): o tabuleiro dos Blocos é alto e
   // estreito, então sobra muita largura no wrap — se centralizássemos só o
   // board dentro dela, o painel "Próxima" (que fica ao lado) ia parar
   // encostado na borda direita, longe do tabuleiro. Medindo a fileira toda e
   // descontando a largura real do painel, o conjunto board+"Próxima" fica
-  // centralizado como um bloco só.
+  // centralizado como um bloco só. Só usado no layout mobile/tablet — no
+  // desktop o board tem coluna própria (ver desktopBoardWrapRef).
   const [rowRef, rowSize] = useElementSize<HTMLDivElement>();
   const [nextPanelRef, nextPanelSize] = useElementSize<HTMLDivElement>();
-  const [dpadWrapRef, dpadWrapSize] = useElementSize<HTMLDivElement>();
+  const [desktopBoardWrapRef, desktopBoardWrapSize] = useElementSize<HTMLDivElement>();
   const isCompactLandscape = useCompactLandscape(true);
+  // Decide qual dos dois layouts (mobile/tablet empilhado vs. desktop em 3
+  // colunas) efetivamente MONTA no DOM — não basta escondê-los via classe
+  // `lg:hidden`/`hidden lg:grid`: os dois ficariam presentes ao mesmo tempo
+  // (só um visível), duplicando textos como "Próxima"/"Pausado" e quebrando
+  // buscas por texto (inclusive nos testes e2e, que não filtram por
+  // visibilidade). 1024px casa com o breakpoint `lg` do Tailwind e com
+  // DESKTOP_BREAKPOINT usado no restante do site (ver Newspaper.tsx).
+  const isDesktopLayout = useMediaQuery("(min-width: 1024px)");
   const isTrainingMode = mode === "treino";
   const isChallengeMode = mode === "desafio";
 
+  const ROW_GAP_PX = 12;
   const boardBox = useMemo(() => {
     const { width, height } = rowSize;
     if (width <= 0 || height <= 0) return null;
@@ -223,14 +200,18 @@ export function Blocks() {
     return { width: w, height: Math.floor(w / BOARD_RATIO) };
   }, [rowSize, nextPanelSize]);
 
-  // Só entra em jogo no modo paisagem compacto: lá a barra lateral tem altura
-  // fixa (compartilhada com o tabuleiro) e placar+ritmo+D-pad competem por
-  // ela — sem isto o D-pad (dimensionado só pela largura, com células
-  // aspect-square) podia ficar mais alto do que o espaço realmente sobrando,
-  // empurrando parte da barra para fora da área visível. Uma grade 3×3 com
-  // gap uniforme é sempre quadrada (altura total = largura total), então
-  // basta limitar pela altura disponível medida.
-  const dpadFitPx = isCompactLandscape && dpadWrapSize.height > 0 ? Math.min(190, Math.floor(dpadWrapSize.height)) : null;
+  // Layout desktop (lg+): o board ocupa uma coluna própria da grade de 3
+  // colunas, sem disputar espaço com "Próxima"/estatísticas — por isso aqui
+  // não precisa descontar largura de painel nenhum, só encaixar no maior
+  // quadrado 10:20 que cabe na coluna central.
+  const desktopBoardBox = useMemo(() => {
+    const { width, height } = desktopBoardWrapSize;
+    if (width <= 0 || height <= 0) return null;
+    const w = Math.floor(Math.min(width, height * BOARD_RATIO));
+    return { width: w, height: Math.floor(w / BOARD_RATIO) };
+  }, [desktopBoardWrapSize]);
+
+  const activeBoardBox = isDesktopLayout ? desktopBoardBox : boardBox;
 
   const endGame = useCallback(
     (finalScore: number, finalLines: number) => {
@@ -247,15 +228,7 @@ export function Blocks() {
       setHighScore((prev) => Math.max(prev, finalScore));
       setBestLines((prev) => Math.max(prev, finalLines));
     },
-    [
-      isChallengeMode,
-      highScore,
-      bestLines,
-      bestChallengeTier,
-      setHighScore,
-      setBestLines,
-      setBestChallengeTier,
-    ]
+    [isChallengeMode, highScore, bestLines, bestChallengeTier, setHighScore, setBestLines, setBestChallengeTier]
   );
 
   const advanceAfterLock = useCallback(
@@ -277,11 +250,11 @@ export function Blocks() {
         setLevel(newLevel);
         setClearFlash(true);
         if (!isTrainingMode && !isChallengeMode) {
-          speedRef.current = Math.max(COMPETITIVE_MIN_SPEED, START_SPEED - (newLevel - 1) * COMPETITIVE_SPEED_STEP);
+          speedRef.current = competitiveSpeedForLevel(newLevel);
           setSpeedMs(speedRef.current);
         }
         if (isChallengeMode) {
-          speedRef.current = Math.max(CHALLENGE_MIN_SPEED, speedRef.current - result.cleared * CHALLENGE_LINE_ACCELERATION_STEP);
+          speedRef.current = challengeSpeedAfterClear(speedRef.current, result.cleared);
           setSpeedMs(speedRef.current);
         }
       }
@@ -313,7 +286,7 @@ export function Blocks() {
     setLevel(1);
     setElapsedSeconds(0);
     elapsedRef.current = 0;
-    const initialSpeed = isTrainingMode ? TRAINING_SPEED : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
+    const initialSpeed = isTrainingMode ? trainingSpeedMs : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
     speedRef.current = initialSpeed;
     setSpeedMs(initialSpeed);
 
@@ -348,29 +321,50 @@ export function Blocks() {
 
   const tryRotate = useCallback(() => {
     if (status !== "playing" || !current) return;
-    const rotated: PieceState = { ...current, rotation: (current.rotation + 1) % 4 };
-    // Pequenos ajustes horizontais ("wall kick" simplificado): tenta girar no
-    // lugar e, se não couber, empurra a peça 1-2 casas para os lados antes
-    // de desistir — evita que rotações perto da parede sejam sempre negadas.
-    for (const kick of [0, -1, 1, -2, 2]) {
-      const attempt: PieceState = { ...rotated, col: rotated.col + kick };
-      if (canPlace(board, pieceCells(attempt))) {
-        setCurrent(attempt);
-        return;
-      }
-    }
+    const rotated = tryRotatePiece(board, current);
+    if (rotated) setCurrent(rotated);
   }, [status, current, board]);
 
   const hardDrop = useCallback(() => {
     if (status !== "playing" || !current) return;
-    let dropped = current;
-    let distance = 0;
-    while (canPlace(board, pieceCells({ ...dropped, row: dropped.row + 1 }))) {
-      dropped = { ...dropped, row: dropped.row + 1 };
-      distance++;
-    }
-    advanceAfterLock(dropped, distance * 2);
+    const landed = dropToLanding(board, current);
+    const distance = landed.row - current.row;
+    advanceAfterLock(landed, distance * 2);
   }, [status, current, board, advanceAfterLock]);
+
+  // Referências "sempre atuais" para as ações usadas dentro de repetições
+  // (DAS/ARR) e gestos de toque: `tryMove`/`tryRotate`/`hardDrop` são
+  // recriadas a cada jogada (dependem de `board`/`current`), mas o
+  // temporizador do useHeldRepeat só é (re)criado quando o jogador
+  // pressiona — sem isto, segurar uma tecla continuaria repetindo a
+  // jogada com o tabuleiro "congelado" do momento em que começou a segurar.
+  const latestRef = useRef({ tryMove, tryRotate, hardDrop });
+  useEffect(() => {
+    latestRef.current = { tryMove, tryRotate, hardDrop };
+  });
+
+  const horizontalRepeat = useHeldRepeat();
+  const softDropRepeat = useHeldRepeat();
+  const heldDirRef = useRef<-1 | 0 | 1>(0);
+
+  const startHorizontal = useCallback(
+    (dir: -1 | 1) => {
+      heldDirRef.current = dir;
+      horizontalRepeat.start(() => latestRef.current.tryMove(0, dir), ARR_MS);
+    },
+    [horizontalRepeat]
+  );
+  const stopHorizontal = useCallback(
+    (dir: -1 | 1) => {
+      if (heldDirRef.current !== dir) return;
+      heldDirRef.current = 0;
+      horizontalRepeat.stop();
+    },
+    [horizontalRepeat]
+  );
+  const startSoftDrop = useCallback(() => {
+    softDropRepeat.start(() => latestRef.current.tryMove(1, 0), SOFT_DROP_ARR_MS);
+  }, [softDropRepeat]);
 
   useEffect(() => {
     if (status !== "playing" || !current) return;
@@ -395,13 +389,25 @@ export function Blocks() {
       setElapsedSeconds(elapsedRef.current);
 
       if (isChallengeMode && elapsedRef.current % CHALLENGE_TIME_ACCELERATION_INTERVAL === 0) {
-        speedRef.current = Math.max(CHALLENGE_MIN_SPEED, speedRef.current - CHALLENGE_TIME_ACCELERATION_STEP);
+        speedRef.current = challengeSpeedAfterTime(speedRef.current);
         setSpeedMs(speedRef.current);
       }
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [status, isChallengeMode]);
+
+  useEffect(() => {
+    // Sempre que o jogo sai de "playing" (pausa, fim de jogo), cancela
+    // qualquer DAS/ARR em andamento — sem isto, pausar com uma seta
+    // segurada deixava o repeat "fantasma" agendado, e a peça pulava
+    // sozinha assim que o jogo despausasse.
+    if (status !== "playing") {
+      horizontalRepeat.stop();
+      softDropRepeat.stop();
+      heldDirRef.current = 0;
+    }
+  }, [status, horizontalRepeat, softDropRepeat]);
 
   useEffect(() => {
     // Escuta no contêiner do jogo (não em `window`) para que os controles não
@@ -411,6 +417,7 @@ export function Blocks() {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "p" || event.key === "P" || event.key === "Escape") {
+        if (event.repeat) return;
         event.preventDefault();
         togglePause();
         return;
@@ -421,35 +428,64 @@ export function Blocks() {
         case "a":
         case "A":
           event.preventDefault();
-          tryMove(0, -1);
+          if (!event.repeat && heldDirRef.current !== -1) startHorizontal(-1);
           break;
         case "ArrowRight":
         case "d":
         case "D":
           event.preventDefault();
-          tryMove(0, 1);
+          if (!event.repeat && heldDirRef.current !== 1) startHorizontal(1);
           break;
         case "ArrowDown":
         case "s":
         case "S":
           event.preventDefault();
-          tryMove(1, 0);
+          if (!event.repeat) startSoftDrop();
           break;
         case "ArrowUp":
         case "w":
         case "W":
-          event.preventDefault();
-          tryRotate();
+          if (!event.repeat) {
+            event.preventDefault();
+            tryRotate();
+          }
           break;
         case " ":
-          event.preventDefault();
-          hardDrop();
+          if (!event.repeat) {
+            event.preventDefault();
+            hardDrop();
+          }
           break;
       }
     }
+
+    function handleKeyUp(event: KeyboardEvent) {
+      switch (event.key) {
+        case "ArrowLeft":
+        case "a":
+        case "A":
+          stopHorizontal(-1);
+          break;
+        case "ArrowRight":
+        case "d":
+        case "D":
+          stopHorizontal(1);
+          break;
+        case "ArrowDown":
+        case "s":
+        case "S":
+          softDropRepeat.stop();
+          break;
+      }
+    }
+
     container.addEventListener("keydown", handleKeyDown);
-    return () => container.removeEventListener("keydown", handleKeyDown);
-  }, [status, togglePause, tryMove, tryRotate, hardDrop]);
+    container.addEventListener("keyup", handleKeyUp);
+    return () => {
+      container.removeEventListener("keydown", handleKeyDown);
+      container.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [status, togglePause, tryRotate, hardDrop, startHorizontal, stopHorizontal, startSoftDrop, softDropRepeat]);
 
   useEffect(() => {
     if (!clearFlash) return;
@@ -457,29 +493,60 @@ export function Blocks() {
     return () => window.clearTimeout(timer);
   }, [clearFlash]);
 
-  const currentCells = useMemo(() => (current ? pieceCells(current) : []), [current]);
-
   const ghostCells = useMemo(() => {
     if (!current || status !== "playing") return [];
-    let ghost = current;
-    while (canPlace(board, pieceCells({ ...ghost, row: ghost.row + 1 }))) {
-      ghost = { ...ghost, row: ghost.row + 1 };
-    }
-    return pieceCells(ghost);
+    return pieceCells(dropToLanding(board, current));
   }, [current, board, status]);
 
-  const filledKeys = useMemo(() => {
-    const set = new Set<string>();
-    board.forEach((row, r) => row.forEach((cell, c) => cell && set.add(cellKey(r, c))));
-    for (const { row, col } of currentCells) {
-      if (row >= 0) set.add(cellKey(row, col));
+  // Gestos de toque no próprio tabuleiro (substituem o D-pad virtual):
+  // arrastar move a peça acompanhando o dedo (um passo a cada
+  // `SWIPE_STEP_PX` percorridos), toque rápido sem deslocamento gira, e um
+  // swipe rápido para cima derruba na hora.
+  const touchStateRef = useRef<{ x: number; y: number; startX: number; startY: number; startTime: number; moved: boolean } | null>(null);
+
+  function handleBoardTouchStart(event: ReactTouchEvent<HTMLCanvasElement>) {
+    const touch = event.touches[0];
+    touchStateRef.current = { x: touch.clientX, y: touch.clientY, startX: touch.clientX, startY: touch.clientY, startTime: Date.now(), moved: false };
+  }
+
+  function handleBoardTouchMove(event: ReactTouchEvent<HTMLCanvasElement>) {
+    const state = touchStateRef.current;
+    if (!state || status !== "playing") return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - state.x;
+    const dy = touch.clientY - state.y;
+
+    if (Math.abs(dx) >= SWIPE_STEP_PX) {
+      tryMove(0, dx > 0 ? 1 : -1);
+      state.x += dx > 0 ? SWIPE_STEP_PX : -SWIPE_STEP_PX;
+      state.moved = true;
     }
-    return set;
-  }, [board, currentCells]);
+    if (dy >= SWIPE_STEP_PX) {
+      tryMove(1, 0);
+      state.y += SWIPE_STEP_PX;
+      state.moved = true;
+    }
+  }
 
-  const ghostKeys = useMemo(() => new Set(ghostCells.map(({ row, col }) => cellKey(row, col))), [ghostCells]);
+  function handleBoardTouchEnd(event: ReactTouchEvent<HTMLCanvasElement>) {
+    const state = touchStateRef.current;
+    touchStateRef.current = null;
+    if (!state || status !== "playing") return;
 
-  const nextShape = nextType ? PIECES[nextType] : null;
+    const touch = event.changedTouches[0];
+    const totalDx = touch.clientX - state.startX;
+    const totalDy = touch.clientY - state.startY;
+    const elapsedMs = Date.now() - state.startTime;
+
+    if (!state.moved && Math.abs(totalDx) < TAP_SLOP_PX && Math.abs(totalDy) < TAP_SLOP_PX) {
+      tryRotate();
+      return;
+    }
+    if (totalDy < -HARD_DROP_SWIPE_DIST_PX && elapsedMs < HARD_DROP_SWIPE_MAX_MS) {
+      hardDrop();
+    }
+  }
+
   const overlayMessage =
     status === "idle" ? "Pronto para jogar?" : status === "paused" ? "Pausado" : status === "gameover" ? "Fim de jogo!" : null;
   const canChangeMode = status === "idle" || status === "gameover";
@@ -489,8 +556,123 @@ export function Blocks() {
   const nextTier = CHALLENGE_TIERS[challengeTierIndex + 1] ?? null;
   const challengeProgress = nextTier ? Math.min(100, (lines / nextTier.lines) * 100) : 100;
 
-  const settingsContent = (
-    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+  // Referência "sempre atual" com tudo que o loop de desenho do Canvas
+  // precisa — atualizada a cada render (não a cada frame). O loop em si (ver
+  // useCanvasRafLoop) só reinicia quando o TAMANHO em pixels muda; a cor/
+  // conteúdo mais recentes chegam através desta ref a cada frame de
+  // requestAnimationFrame, então nunca fica desenhando um quadro obsoleto.
+  const boardDrawStateRef = useRef({ board, current, ghostCells, clearFlash });
+  useEffect(() => {
+    boardDrawStateRef.current = { board, current, ghostCells, clearFlash };
+  });
+
+  useEffect(() => {
+    if (containerRef.current) themeRef.current = resolveBlocksTheme(containerRef.current);
+  });
+
+  const boardCanvasRef = useRef<HTMLCanvasElement>(null);
+  const drawBoardFrame = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      if (!activeBoardBox || !themeRef.current) return;
+      const cellSize = activeBoardBox.width / COLS;
+      const { board: b, current: c, ghostCells: g, clearFlash: f } = boardDrawStateRef.current;
+      drawBoard(ctx, { board: b, current: c, ghostCells: g, clearFlash: f, cellSize, theme: themeRef.current });
+    },
+    [activeBoardBox]
+  );
+  useCanvasRafLoop(boardCanvasRef, activeBoardBox, drawBoardFrame);
+
+  const nextCanvasRef = useRef<HTMLCanvasElement>(null);
+  const NEXT_PREVIEW_CELL_PX = 14;
+  const nextPreviewBox = useMemo(() => ({ width: NEXT_PREVIEW_CELL_PX * 4, height: NEXT_PREVIEW_CELL_PX * 4 }), []);
+  const drawNextFrame = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      if (!themeRef.current) return;
+      drawNextPreview(ctx, nextType, NEXT_PREVIEW_CELL_PX, themeRef.current);
+    },
+    [nextType]
+  );
+  useCanvasRafLoop(nextCanvasRef, nextPreviewBox, drawNextFrame);
+
+  function renderBoardSurface(box: { width: number; height: number } | null) {
+    return (
+      <div
+        className={cn(
+          "shrink-0 border-2 bg-polis-ink p-px transition-colors duration-200",
+          clearFlash ? "border-polis-gold" : "border-polis-ink",
+          box ? "opacity-100" : "opacity-0"
+        )}
+        style={{ width: (box?.width ?? 0) + 2, height: (box?.height ?? 0) + 2 }}
+      >
+        <div className="relative h-full w-full overflow-hidden">
+          <canvas
+            ref={boardCanvasRef}
+            role="img"
+            aria-label={`Tabuleiro do Jogo dos Blocos, ${score} pontos, nível ${level}`}
+            className="block h-full w-full touch-none"
+            style={{ aspectRatio: `${COLS} / ${ROWS}` }}
+            onTouchStart={handleBoardTouchStart}
+            onTouchMove={handleBoardTouchMove}
+            onTouchEnd={handleBoardTouchEnd}
+          />
+
+          {overlayMessage && (
+            <GameOverlay
+              title={overlayMessage}
+              subtitle={
+                status === "gameover"
+                  ? `${isChallengeMode && challengeTierIndex >= 0
+                    ? `Medalha: ${CHALLENGE_TIERS[challengeTierIndex].label}. `
+                    : ""
+                  }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
+                  : undefined
+              }
+              actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
+              onAction={status === "paused" ? togglePause : startGame}
+              isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestLines || isNewChallengeTier)}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderNextPreview() {
+    return (
+      <div className="flex flex-col items-center gap-1.5">
+        <p className="text-[10px] uppercase tracking-wide text-polis-ink-soft">Próxima</p>
+        <div className="flex h-14 w-14 items-center justify-center border-2 border-polis-ink/20 bg-polis-paper-soft">
+          <canvas
+            ref={nextCanvasRef}
+            role="img"
+            aria-label="Próxima peça"
+            width={nextPreviewBox.width}
+            height={nextPreviewBox.height}
+            style={{ width: nextPreviewBox.width, height: nextPreviewBox.height }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  function renderPauseButton(className?: string) {
+    return (
+      <button
+        type="button"
+        onClick={togglePause}
+        disabled={status === "idle" || status === "gameover"}
+        className={cn(
+          "border border-polis-ink/30 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30",
+          className
+        )}
+      >
+        {status === "paused" ? "Continuar" : "Pausar"}
+      </button>
+    );
+  }
+
+  function renderModeSelector() {
+    return (
       <div>
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Modo</p>
         <div className="flex gap-2">
@@ -513,46 +695,89 @@ export function Blocks() {
         </div>
         <p className="mt-2 text-xs text-polis-ink-soft">
           {isTrainingMode
-            ? "Modo treino: ritmo fixo para prática de encaixe."
+            ? "Modo treino: você define o ritmo abaixo, fixo durante a partida."
             : isChallengeMode
               ? "Modo desafio: metas de linhas com aceleração temporal."
               : "Modo competitivo: progressão clássica por nível."}
         </p>
+
+        {isTrainingMode && (
+          <div className="mt-3">
+            <label htmlFor="blocos-velocidade-treino" className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft">
+              <span>Velocidade</span>
+              <span className="text-polis-ink">{(1000 / trainingSpeedMs).toFixed(1)} c/s</span>
+            </label>
+            <input
+              id="blocos-velocidade-treino"
+              type="range"
+              disabled={!canChangeMode}
+              min={TRAINING_SPEED_MIN}
+              max={TRAINING_SPEED_MAX}
+              step={TRAINING_SPEED_STEP}
+              // Slider invertido de propósito: arrastar para a direita deve
+              // significar "mais rápido" (ritmo maior), mas velocidade aqui é
+              // medida em ms por queda — quanto MENOR o ms, mais rápido. Sem
+              // inverter, arrastar para a direita deixaria o jogo mais lento,
+              // o oposto do que o rótulo "Lento → Rápido" sugere.
+              value={TRAINING_SPEED_MAX + TRAINING_SPEED_MIN - trainingSpeedMs}
+              onChange={(event) => setTrainingSpeedMs(TRAINING_SPEED_MAX + TRAINING_SPEED_MIN - Number(event.target.value))}
+              className="mt-1.5 w-full accent-polis-gold-muted disabled:opacity-40"
+            />
+            <div className="mt-0.5 flex justify-between text-[10px] uppercase tracking-wide text-polis-ink-soft/70">
+              <span>Lento</span>
+              <span>Rápido</span>
+            </div>
+          </div>
+        )}
       </div>
+    );
+  }
 
-      {isChallengeMode && (
-        <div className="border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
-          <div className="flex items-center justify-between">
-            <span>
-              Medalha: <strong className="text-polis-ink">{challengeTierIndex >= 0 ? CHALLENGE_TIERS[challengeTierIndex].label : "-"}</strong>
-            </span>
-            <span>
-              Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
-            </span>
-          </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
-            <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
-          </div>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
-            {nextTier ? `Próxima medalha (${nextTier.label}) em ${nextTier.lines} linhas` : "Meta máxima atingida"}
-          </p>
+  function renderChallengeCard() {
+    if (!isChallengeMode) return null;
+    return (
+      <div className="border border-polis-rule/20 bg-polis-paper-soft/25 px-3 py-2 text-xs text-polis-ink-soft">
+        <div className="flex items-center justify-between">
+          <span>
+            Medalha: <strong className="text-polis-ink">{challengeTierIndex >= 0 ? CHALLENGE_TIERS[challengeTierIndex].label : "-"}</strong>
+          </span>
+          <span>
+            Melhor: <strong className="text-polis-ink">{bestTierLabel}</strong>
+          </span>
         </div>
-      )}
+        <div className="mt-2 h-1.5 w-full overflow-hidden bg-polis-ink/15">
+          <div className="h-full bg-polis-gold-muted transition-[width] duration-300" style={{ width: `${challengeProgress}%` }} />
+        </div>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.12em]">
+          {nextTier ? `Próxima medalha (${nextTier.label}) em ${nextTier.lines} linhas` : "Meta máxima atingida"}
+        </p>
+      </div>
+    );
+  }
 
+  function renderGuide() {
+    return (
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
+        <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
+          <li>Setas (ou WASD) movem e giram; segure para repetir. Espaço derruba na hora, P pausa.</li>
+          <li>No toque: arraste para mover, toque rápido gira, deslize para cima com força derruba na hora.</li>
+        </ul>
+      </div>
+    );
+  }
+
+  const settingsContent = (
+    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+      {renderModeSelector()}
+      {renderChallengeCard()}
       <dl className="grid grid-cols-2 gap-x-2 gap-y-1 border-y border-polis-rule/20 py-2 text-xs">
         <dt className="text-polis-ink-soft">Recorde</dt>
         <dd className="text-right font-semibold">{highScore}</dd>
         <dt className="text-polis-ink-soft">Melhor linhas</dt>
         <dd className="text-right font-semibold">{bestLines}</dd>
       </dl>
-
-      <div>
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
-        <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
-          <li>Setas (ou WASD) movem e giram, espaço derruba na hora, P pausa.</li>
-          <li>Use os botões na tela para jogar no toque.</li>
-        </ul>
-      </div>
+      {renderGuide()}
     </div>
   );
 
@@ -572,200 +797,129 @@ export function Blocks() {
           >
             Novo jogo
           </button>
-          <GameSettingsButton onClick={openInfo} />
+          {!isDesktopLayout && <GameSettingsButton onClick={openInfo} />}
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
-        <div
-          className={cn(
-            "flex min-h-0 w-full min-w-0 flex-1",
-            isCompactLandscape ? "flex-row items-stretch justify-center gap-4" : "flex-col items-center gap-2"
-          )}
-        >
-          <div ref={rowRef} className={cn("flex min-h-0 flex-1 items-center justify-center gap-3", isCompactLandscape ? "w-auto" : "w-full")}>
-            <div
-              className={cn(
-                "shrink-0 border-2 bg-polis-ink p-px transition-colors duration-200",
-                clearFlash ? "border-polis-gold" : "border-polis-ink",
-                boardBox ? "opacity-100" : "opacity-0"
-              )}
-              style={{ width: (boardBox?.width ?? 0) + 2, height: (boardBox?.height ?? 0) + 2 }}
-            >
-              <div className="relative h-full w-full overflow-hidden">
-                <div
-                  className="grid h-full w-full gap-px bg-polis-ink"
-                  style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${ROWS}, minmax(0, 1fr))` }}
-                >
-                  {board.map((rowCells, r) =>
-                    rowCells.map((pieceAtCell, c) => {
-                      const key = cellKey(r, c);
-                      const filled = filledKeys.has(key);
-                      const isGhost = !filled && ghostKeys.has(key);
-                      const bgColor = pieceAtCell ? getPieceColor(pieceAtCell, "light") : "#f4f1e9";
-                      return (
-                        <div
-                          key={key}
-                          className={cn(
-                            filled && clearFlash && "ring-2 ring-polis-gold ring-inset shadow-lg",
-                            filled && !clearFlash && "shadow-md",
-                            isGhost && "border-2 border-polis-ink/40 opacity-60",
-                            !filled && !isGhost && "border border-polis-ink/10"
-                          )}
-                          style={{ backgroundColor: bgColor }}
-                        />
-                      );
-                    })
-                  )}
-                </div>
-
-                {overlayMessage && (
-                  <GameOverlay
-                    title={overlayMessage}
-                    subtitle={
-                      status === "gameover"
-                        ? `${isChallengeMode && challengeTierIndex >= 0
-                          ? `Medalha: ${CHALLENGE_TIERS[challengeTierIndex].label}. `
-                          : ""
-                        }Você fez ${score} pontos em ${formatTime(elapsedSeconds)}.`
-                        : undefined
-                    }
-                    actionLabel={status === "idle" ? "Jogar" : status === "paused" ? "Continuar" : "Jogar novamente"}
-                    onAction={status === "paused" ? togglePause : startGame}
-                    isNewHighScore={status === "gameover" && (isNewHighScore || isNewBestLines || isNewChallengeTier)}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div ref={nextPanelRef} className="flex shrink-0 flex-col items-center gap-1.5">
-              <p className="text-[10px] uppercase tracking-wide text-polis-ink-soft">Próxima</p>
-              <div className="flex h-12 w-12 items-center justify-center border-2 border-polis-ink/20 bg-polis-paper-soft sm:h-14 sm:w-14">
-                {nextShape && nextType && (
-                  <div
-                    className="grid h-10 w-10 gap-px bg-polis-ink/10 sm:h-11 sm:w-11"
-                    style={{ gridTemplateColumns: `repeat(${nextShape.size}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${nextShape.size}, minmax(0, 1fr))` }}
-                  >
-                    {Array.from({ length: nextShape.size * nextShape.size }, (_, i) => {
-                      const r = Math.floor(i / nextShape.size);
-                      const c = i % nextShape.size;
-                      const active = nextShape.cells.some(([cr, cc]) => cr === r && cc === c);
-                      const bgColor = active ? getPieceColor(nextType, "light") : "transparent";
-                      return <div key={i} className={active ? "shadow-md" : ""} style={{ backgroundColor: bgColor }} />;
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
+      {/* Layout mobile/tablet (< lg): board+"Próxima" lado a lado, estatísticas
+          e controles empilhados abaixo (sem D-pad — controle é por gesto no
+          próprio tabuleiro); em paisagem compacta (celular deitado), board e
+          controles viram colunas lado a lado (ver isCompactLandscape).
+          Montado condicionalmente (não só escondido via CSS) — ver
+          isDesktopLayout acima. */}
+      {!isDesktopLayout && (
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
           <div
             className={cn(
-              "flex shrink-0 flex-col items-center gap-2",
-              isCompactLandscape ? "h-full w-[190px] overflow-y-auto" : "w-full max-w-md"
+              "flex min-h-0 w-full min-w-0 flex-1",
+              isCompactLandscape ? "flex-row items-stretch justify-center gap-4" : "flex-col items-center gap-2"
             )}
           >
-            <div
-              className={cn(
-                "grid w-full items-center gap-y-1 border-y border-polis-rule/20 bg-polis-paper-soft/30 py-1.5 font-semibold uppercase tracking-[0.12em] text-polis-ink",
-                isCompactLandscape ? "grid-cols-2 gap-x-1 text-[9px]" : "max-w-md grid-cols-4 px-2 text-[11px]"
-              )}
-            >
-              <span className="text-center">Nível {level}</span>
-              <span className="text-center">Pontos {score}</span>
-              <span className="text-center">Linhas {lines}</span>
-              <span className="text-center">Tempo {formatTime(elapsedSeconds)}</span>
+            <div ref={rowRef} className={cn("flex min-h-0 flex-1 items-center justify-center gap-3", isCompactLandscape ? "w-auto" : "w-full")}>
+              {renderBoardSurface(boardBox)}
+              <div ref={nextPanelRef}>{renderNextPreview()}</div>
             </div>
 
             <div
               className={cn(
-                "flex w-full shrink-0 gap-2 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft",
-                isCompactLandscape ? "flex-col items-stretch gap-1.5" : "max-w-xs items-center justify-between"
+                "flex shrink-0 flex-col items-center gap-2",
+                isCompactLandscape ? "h-full w-[190px] justify-center overflow-y-auto" : "w-full max-w-md"
               )}
-            >
-              <span>
-                Ritmo <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
-              </span>
-              <button
-                type="button"
-                onClick={hardDrop}
-                disabled={status !== "playing"}
-                className="border border-polis-ink/30 px-2.5 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
-              >
-                Queda rápida
-              </button>
-            </div>
-
-            <div
-              ref={dpadWrapRef}
-              className={cn("flex items-center justify-center", isCompactLandscape ? "min-h-0 w-full flex-1" : "w-full shrink-0")}
             >
               <div
                 className={cn(
-                  "grid shrink-0 grid-cols-3 gap-1.5 transition-opacity",
-                  isCompactLandscape ? (dpadFitPx ? "opacity-100" : "opacity-0") : "w-full max-w-[190px]"
+                  "grid w-full items-center gap-y-1 border-y border-polis-rule/20 bg-polis-paper-soft/30 py-1.5 font-semibold uppercase tracking-[0.12em] text-polis-ink",
+                  isCompactLandscape ? "grid-cols-2 gap-x-1 text-[9px]" : "max-w-md grid-cols-4 px-2 text-[11px]"
                 )}
-                style={isCompactLandscape ? { width: dpadFitPx ?? 0, height: dpadFitPx ?? 0 } : undefined}
               >
-                <div />
-                <DirectionButton label="Girar" onPress={tryRotate}>
-                  ⟳
-                </DirectionButton>
-                <div />
-                <DirectionButton label="Esquerda" onPress={() => tryMove(0, -1)}>
-                  ◀
-                </DirectionButton>
+                <span className="text-center">Nível {level}</span>
+                <span className="text-center">Pontos {score}</span>
+                <span className="text-center">Linhas {lines}</span>
+                <span className="text-center">Tempo {formatTime(elapsedSeconds)}</span>
+              </div>
+
+              <div
+                className={cn(
+                  "flex w-full shrink-0 gap-2 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft",
+                  isCompactLandscape ? "flex-col items-stretch gap-1.5" : "max-w-xs items-center justify-between"
+                )}
+              >
+                <span>
+                  Ritmo <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
+                </span>
                 <button
                   type="button"
-                  onClick={togglePause}
-                  disabled={status === "idle" || status === "gameover"}
-                  aria-label={status === "paused" ? "Continuar" : "Pausar"}
-                  className="flex aspect-square min-h-0 min-w-0 items-center justify-center border border-polis-ink/30 text-[9px] font-semibold uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+                  onClick={hardDrop}
+                  disabled={status !== "playing"}
+                  className="border border-polis-ink/30 px-2.5 py-1 font-semibold text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
                 >
-                  {status === "paused" ? "▶" : "II"}
+                  Queda rápida
                 </button>
-                <DirectionButton label="Direita" onPress={() => tryMove(0, 1)}>
-                  ▶
-                </DirectionButton>
-                <div />
-                <DirectionButton label="Descer" onPress={() => tryMove(1, 0)}>
-                  ▼
-                </DirectionButton>
-                <div />
               </div>
+
+              {renderPauseButton(isCompactLandscape ? "w-full" : "w-full max-w-xs")}
             </div>
           </div>
         </div>
+      )}
 
-        <aside className="hidden w-64 shrink-0 overflow-y-auto border-l border-polis-rule/20 pl-5 lg:block">
-          {settingsContent}
-        </aside>
-      </div>
+      {/* Layout desktop (lg+): 3 colunas — estatísticas | tabuleiro maximizado |
+          próxima peça + modo + velocidade + guia. Sem D-pad nem gestos: em
+          telas grandes o teclado já cobre tudo (setas seguradas repetem via
+          DAS/ARR). */}
+      {isDesktopLayout && (
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[200px_1fr_260px] lg:gap-8">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-r border-polis-rule/20 pr-6">
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Estatísticas</p>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <dt className="text-polis-ink-soft">Nível</dt>
+                <dd className="text-right font-semibold text-polis-ink">{level}</dd>
+                <dt className="text-polis-ink-soft">Pontos</dt>
+                <dd className="text-right font-semibold text-polis-ink">{score}</dd>
+                <dt className="text-polis-ink-soft">Linhas</dt>
+                <dd className="text-right font-semibold text-polis-ink">{lines}</dd>
+                <dt className="text-polis-ink-soft">Tempo</dt>
+                <dd className="text-right font-semibold text-polis-ink">{formatTime(elapsedSeconds)}</dd>
+              </dl>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-polis-rule/20 pt-3 text-xs">
+              <dt className="text-polis-ink-soft">Recorde</dt>
+              <dd className="text-right font-semibold text-polis-ink">{highScore}</dd>
+              <dt className="text-polis-ink-soft">Melhor linhas</dt>
+              <dd className="text-right font-semibold text-polis-ink">{bestLines}</dd>
+            </dl>
+            <div className="flex items-center justify-between border-t border-polis-rule/20 pt-3 text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft">
+              <span>Ritmo</span>
+              <strong className="text-polis-ink">{speedCellsPerSecond} c/s</strong>
+            </div>
+            <button
+              type="button"
+              onClick={hardDrop}
+              disabled={status !== "playing"}
+              className="border border-polis-ink/30 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink disabled:opacity-30"
+            >
+              Queda rápida (espaço)
+            </button>
+            {renderPauseButton()}
+          </div>
+
+          <div ref={desktopBoardWrapRef} className="flex min-h-0 items-center justify-center">
+            {renderBoardSurface(desktopBoardBox)}
+          </div>
+
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-l border-polis-rule/20 pl-6">
+            {renderNextPreview()}
+            {renderModeSelector()}
+            {renderChallengeCard()}
+            {renderGuide()}
+          </div>
+        </div>
+      )}
 
       <GameInfoDialog open={infoOpen} onOpenChange={setInfoOpen} title="Configurações e Guia">
         {settingsContent}
       </GameInfoDialog>
     </div>
-  );
-}
-
-function DirectionButton({
-  label,
-  onPress,
-  children,
-}: {
-  label: string;
-  onPress: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onPress}
-      className="flex aspect-square min-h-0 min-w-0 items-center justify-center border border-polis-ink/30 text-base text-polis-ink transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
-    >
-      {children}
-    </button>
   );
 }
