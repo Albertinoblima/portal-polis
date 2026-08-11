@@ -889,7 +889,7 @@ export function Blocks() {
             {renderPauseButton()}
           </div>
 
-          <div ref={desktopBoardWrapRef} className="flex min-h-0 items-center justify-center">
+          <div ref={desktopBoardWrapRef} className="flex min-h-0 min-w-0 items-center justify-center">
             {renderBoardSurface(desktopBoardBox)}
           </div>
 

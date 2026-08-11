@@ -27,7 +27,11 @@ import {
   START_SPEED,
   TIME_ACCELERATION_INTERVAL,
   TIME_ACCELERATION_STEP,
-  TRAINING_SPEED,
+  TRAINING_SPEED_DEFAULT,
+  TRAINING_SPEED_KEY,
+  TRAINING_SPEED_MAX,
+  TRAINING_SPEED_MIN,
+  TRAINING_SPEED_STEP,
   highScoreKeyForMode,
   highTimeKeyForMode,
   randomFood,
@@ -55,6 +59,7 @@ export function Snake() {
   const [score, setScore] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [speedMs, setSpeedMs] = useState(START_SPEED);
+  const [trainingSpeedMs, setTrainingSpeedMs] = useLocalStorageState(TRAINING_SPEED_KEY, TRAINING_SPEED_DEFAULT);
   const [highScore, setHighScore] = useLocalStorageState(highScoreKeyForMode(mode), 0);
   const [bestTime, setBestTime] = useLocalStorageState(highTimeKeyForMode(mode), 0);
   const [bestChallengeTier, setBestChallengeTier] = useLocalStorageState(CHALLENGE_BEST_TIER_KEY, -1);
@@ -113,7 +118,7 @@ export function Snake() {
     directionRef.current = INITIAL_DIRECTION;
     nextDirectionRef.current = INITIAL_DIRECTION;
     eatenRef.current = null;
-    const initialSpeed = isTrainingMode ? TRAINING_SPEED : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
+    const initialSpeed = isTrainingMode ? trainingSpeedMs : isChallengeMode ? CHALLENGE_START_SPEED : START_SPEED;
     speedRef.current = initialSpeed;
     setSpeedMs(initialSpeed);
     setStatus("playing");
@@ -121,7 +126,7 @@ export function Snake() {
     setIsNewBestTime(false);
     setIsNewChallengeTier(false);
     containerRef.current?.focus();
-  }, [isChallengeMode, isTrainingMode]);
+  }, [isChallengeMode, isTrainingMode, trainingSpeedMs]);
 
   const queueDirection = useCallback((direction: Direction) => {
     if (status !== "playing") return;
@@ -156,6 +161,24 @@ export function Snake() {
       }
     },
     [status]
+  );
+
+  // No modo treino, o ritmo é sempre o que o jogador escolheu no controle
+  // deslizante (ver renderModeSelector) — diferente dos outros modos, aqui
+  // não há aceleração automática nenhuma. Chamado direto pelo `onChange` do
+  // slider (não por um efeito): além de persistir a preferência, aplica a
+  // mudança imediatamente em `speedRef`/`speedMs` sempre que uma partida já
+  // está em andamento ou pausada — arrastar o controle no meio do jogo muda
+  // o ritmo na hora, sem precisar reiniciar.
+  const handleTrainingSpeedChange = useCallback(
+    (newSpeedMs: number) => {
+      setTrainingSpeedMs(newSpeedMs);
+      if (status === "playing" || status === "paused") {
+        speedRef.current = newSpeedMs;
+        setSpeedMs(newSpeedMs);
+      }
+    },
+    [status, setTrainingSpeedMs]
   );
 
   useEffect(() => {
@@ -343,7 +366,14 @@ export function Snake() {
           : null;
 
   const canChangeMode = status === "idle" || status === "gameover";
-  const speedCellsPerSecond = (1000 / speedMs).toFixed(1);
+  // Antes do primeiro "Jogar" (ou depois de um fim de jogo), `speedMs` ainda
+  // guarda o ritmo da ÚLTIMA partida — no treino, mostrar o ritmo que será
+  // usado na PRÓXIMA (trainingSpeedMs) é mais útil para calibrar antes de
+  // começar. Durante o jogo/pausa, `speedMs` já reflete qualquer ajuste
+  // feito no slider (ver handleTrainingSpeedChange), então os dois valores
+  // coincidem.
+  const displaySpeedMs = isTrainingMode && canChangeMode ? trainingSpeedMs : speedMs;
+  const speedCellsPerSecond = (1000 / displaySpeedMs).toFixed(1);
   const currentTierIndex = reachedChallengeTierIndex(elapsedSeconds);
   const nextTier = CHALLENGE_TIERS[currentTierIndex + 1] ?? null;
   const challengeProgress = nextTier ? Math.min(100, (elapsedSeconds / nextTier.seconds) * 100) : 100;
@@ -393,6 +423,10 @@ export function Snake() {
   }
 
   function renderPaceControls(className?: string) {
+    // No modo treino o ritmo é controlado pelo slider em "Configurações e
+    // Guia" (ver renderModeSelector) — os botões de +/- ficam reservados
+    // para competitivo/desafio, onde não existe um controle equivalente.
+    if (isTrainingMode) return null;
     return (
       <div className={cn("flex items-center gap-1.5", className)}>
         <button
@@ -457,11 +491,45 @@ export function Snake() {
         </div>
         <p className="mt-2 text-xs text-polis-ink-soft">
           {isTrainingMode
-            ? "Modo treino: velocidade fixa para praticar rota e reflexo."
+            ? "Modo treino: você define o ritmo abaixo, e pode ajustá-lo a qualquer momento — mesmo com o jogo em andamento."
             : isChallengeMode
               ? "Modo desafio: sobreviva para conquistar medalhas por tempo."
               : "Modo competitivo: aceleração por comida e por tempo."}
         </p>
+
+        {isTrainingMode && (
+          <div className="mt-3">
+            <label
+              htmlFor="cobrinha-velocidade-treino"
+              className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-polis-ink-soft"
+            >
+              <span>Velocidade</span>
+              <span className="text-polis-ink">{(1000 / trainingSpeedMs).toFixed(1)} c/s</span>
+            </label>
+            <input
+              id="cobrinha-velocidade-treino"
+              type="range"
+              min={TRAINING_SPEED_MIN}
+              max={TRAINING_SPEED_MAX}
+              step={TRAINING_SPEED_STEP}
+              // Slider invertido de propósito: arrastar para a direita deve
+              // significar "mais rápido" (ritmo maior), mas velocidade aqui é
+              // medida em ms por passo — quanto MENOR o ms, mais rápido. Sem
+              // inverter, arrastar para a direita deixaria a cobra mais
+              // lenta, o oposto do que o rótulo "Lento → Rápido" sugere
+              // (mesmo truque de Blocks.tsx). Fica sempre habilitado —
+              // inclusive jogando ou pausado — para o jogador poder recalibrar
+              // o ritmo em tempo real, não só antes de começar.
+              value={TRAINING_SPEED_MAX + TRAINING_SPEED_MIN - trainingSpeedMs}
+              onChange={(event) => handleTrainingSpeedChange(TRAINING_SPEED_MAX + TRAINING_SPEED_MIN - Number(event.target.value))}
+              className="mt-1.5 w-full accent-polis-gold-muted"
+            />
+            <div className="mt-0.5 flex justify-between text-[10px] uppercase tracking-wide text-polis-ink-soft/70">
+              <span>Lento</span>
+              <span>Rápido</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -496,7 +564,7 @@ export function Snake() {
           <li>Evite as bordas e o próprio corpo da cobra.</li>
           <li>
             {isTrainingMode
-              ? "No treino, o ritmo fica constante para focar na técnica."
+              ? "No treino, você controla o ritmo pelo controle deslizante em Modo — pause a qualquer momento para ajustar com calma."
               : isChallengeMode
                 ? "No desafio, a velocidade aumenta com o tempo para testar sobrevivência."
                 : "Cada comida aumenta os pontos e acelera o ritmo."}
@@ -551,7 +619,7 @@ export function Snake() {
         // rolagem numa tela de pouca altura (ver useCompactLandscape — este
         // arranjo já corrigiu um overflow real em telas curtas).
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-center gap-4">
-          <div ref={boardWrapRef} className="flex min-h-0 w-auto flex-1 items-center justify-center">
+          <div ref={boardWrapRef} className="flex min-h-0 w-auto min-w-0 flex-1 items-center justify-center">
             {renderBoardSurface(boardBox)}
           </div>
 
@@ -604,7 +672,7 @@ export function Snake() {
             </span>
           </div>
 
-          <div ref={boardWrapRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
+          <div ref={boardWrapRef} className="flex min-h-0 w-full min-w-0 flex-1 items-center justify-center">
             {renderBoardSurface(boardBox)}
           </div>
 
@@ -648,7 +716,17 @@ export function Snake() {
             {renderPauseButton()}
           </div>
 
-          <div ref={desktopBoardWrapRef} className="flex min-h-0 items-center justify-center">
+          {/* min-w-0 é essencial aqui, não decorativo: sem ele, um item de
+              grid CSS nunca encolhe abaixo do min-content dos filhos, e o
+              filho direto (o quadro do tabuleiro) tem largura FIXA em px,
+              vinda da própria medição deste elemento via ResizeObserver
+              (useElementSize). Isso cria um ciclo — mede X, aplica X+2px no
+              filho, o filho "empurra" o item para X+2px, próxima medição lê
+              X+2px, aplica X+4px... — que faz a coluna central crescer sem
+              parar e vazar para fora da grade de 3 colunas a cada poucos
+              frames. min-w-0 quebra o ciclo: o item passa a respeitar
+              apenas o espaço que a grade (1fr) de fato reservou pra ele. */}
+          <div ref={desktopBoardWrapRef} className="flex min-h-0 min-w-0 items-center justify-center">
             {renderBoardSurface(desktopBoardBox)}
           </div>
 

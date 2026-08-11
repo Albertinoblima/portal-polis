@@ -21,12 +21,23 @@ export const ROWS = 12;
 export const BOARD_RATIO = COLS / ROWS;
 
 export const START_SPEED = 160;
-export const TRAINING_SPEED = 180;
 export const CHALLENGE_START_SPEED = 150;
 export const MIN_SPEED = 70;
 export const SPEED_STEP = 4;
 export const TIME_ACCELERATION_INTERVAL = 20;
 export const TIME_ACCELERATION_STEP = 2;
+
+/** Modo treino: velocidade fixa, mas escolhida (e ajustável) pelo próprio
+ *  jogador — tanto antes de iniciar quanto durante a partida (ver o
+ *  controle deslizante em Snake.tsx). Faixa bem mais ampla e lenta do que a
+ *  do modo competitivo, para caber desde o iniciante absoluto (MAX, ~2.9
+ *  células/s) até um ritmo bem rápido para quem já está confiante (MIN,
+ *  ~11 células/s). */
+export const TRAINING_SPEED_KEY = "polis:cobrinha:treino:velocidade";
+export const TRAINING_SPEED_MIN = 90;
+export const TRAINING_SPEED_MAX = 350;
+export const TRAINING_SPEED_STEP = 10;
+export const TRAINING_SPEED_DEFAULT = 240;
 
 export const HIGH_SCORE_KEY = "polis:cobrinha:recorde";
 export const HIGH_TIME_KEY = "polis:cobrinha:melhor-tempo";
