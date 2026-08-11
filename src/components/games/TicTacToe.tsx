@@ -1,73 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { GameRegistrationForm, type GameRegistrationSlot } from "@/components/forms/GameRegistrationForm";
 import { cn } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useElementSize } from "@/hooks/useElementSize";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { GameOverlay } from "@/components/games/GameOverlay";
 import { GameInfoDialog, GameSettingsButton } from "@/components/games/GameInfoDialog";
+import { XMark, OMark } from "@/components/games/TicTacToeMarks";
+import {
+  applyMove,
+  calculateWinner,
+  createEmptyState,
+  findBestMove,
+  oldestPieceIndex,
+  type BoardState,
+  type Difficulty,
+  type Mode,
+  type Player,
+} from "./tictactoeEngine";
 
-type Cell = "X" | "O" | null;
-type Mode = "cpu" | "local";
 type Stage = "mode" | "registration" | "playing";
 
 interface Score {
   x: number;
   o: number;
-  draws: number;
 }
 
-const EMPTY_BOARD: Cell[] = Array(9).fill(null);
-const EMPTY_SCORE: Score = { x: 0, o: 0, draws: 0 };
-
-const WIN_LINES = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 3, 6],
-  [1, 4, 7],
-  [2, 5, 8],
-  [0, 4, 8],
-  [2, 4, 6],
-];
-
-function calculateWinner(board: Cell[]): { winner: "X" | "O"; line: number[] } | null {
-  for (const line of WIN_LINES) {
-    const [a, b, c] = line;
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      return { winner: board[a] as "X" | "O", line };
-    }
-  }
-  return null;
-}
-
-function isDraw(board: Cell[]): boolean {
-  return board.every((cell) => cell !== null);
-}
-
-/** Minimax clássico: o computador (O) sempre joga com perfeição, o que
- *  torna a IA imbatível — no pior caso, o desafiante empata. */
-function minimax(board: Cell[], player: "X" | "O"): { score: number; index: number | null } {
-  const outcome = calculateWinner(board);
-  if (outcome) return { score: outcome.winner === "O" ? 1 : -1, index: null };
-  if (isDraw(board)) return { score: 0, index: null };
-
-  const available = board.reduce<number[]>((acc, cell, i) => (cell === null ? [...acc, i] : acc), []);
-  let best = player === "O" ? -Infinity : Infinity;
-  let bestIndex = available[0];
-
-  for (const index of available) {
-    const next = [...board];
-    next[index] = player;
-    const { score } = minimax(next, player === "O" ? "X" : "O");
-    if (player === "O" ? score > best : score < best) {
-      best = score;
-      bestIndex = index;
-    }
-  }
-
-  return { score: best, index: bestIndex };
-}
+const EMPTY_SCORE: Score = { x: 0, o: 0 };
+const DIFFICULTY_KEY = "polis:tictactoe:dificuldade";
+const CPU_THINK_MS = 450;
 
 function scoreKey(mode: Mode, nameX: string, nameO: string): string {
   return `polis:tictactoe:${mode}:${nameX.toLowerCase()}:${nameO.toLowerCase()}`;
@@ -78,23 +42,39 @@ export function TicTacToe() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [nameX, setNameX] = useState("Jogador 1");
   const [nameO, setNameO] = useState("Jogador 2");
-  const [board, setBoard] = useState<Cell[]>(EMPTY_BOARD);
-  const [currentPlayer, setCurrentPlayer] = useState<"X" | "O">("X");
-  const [startingPlayer, setStartingPlayer] = useState<"X" | "O">("X");
+  const [boardState, setBoardState] = useState<BoardState>(createEmptyState);
+  const [currentPlayer, setCurrentPlayer] = useState<Player>("X");
+  const [startingPlayer, setStartingPlayer] = useState<Player>("X");
   const [infoOpen, setInfoOpen] = useState(false);
+  const [difficulty, setDifficulty] = useLocalStorageState<Difficulty>(DIFFICULTY_KEY, "medio");
+
   const [boardWrapRef, boardWrapSize] = useElementSize<HTMLDivElement>();
+  const [desktopBoardWrapRef, desktopBoardWrapSize] = useElementSize<HTMLDivElement>();
+  const isDesktopLayout = useMediaQuery("(min-width: 1024px)");
+
   const boardBox = useMemo(() => {
     const side = Math.floor(Math.min(boardWrapSize.width, boardWrapSize.height));
     return side > 0 ? side : null;
   }, [boardWrapSize]);
+  const desktopBoardBox = useMemo(() => {
+    const side = Math.floor(Math.min(desktopBoardWrapSize.width, desktopBoardWrapSize.height));
+    return side > 0 ? side : null;
+  }, [desktopBoardWrapSize]);
+
   // A chave só fica "real" depois do cadastro (quando mode/nomes são
   // definidos) — o hook recarrega sozinho sempre que a chave muda.
   const [score, setScore] = useLocalStorageState<Score>(scoreKey(mode ?? "local", nameX, nameO), EMPTY_SCORE);
 
-  const outcome = calculateWinner(board);
-  const draw = !outcome && isDraw(board);
-  const gameOver = Boolean(outcome) || draw;
+  const outcome = calculateWinner(boardState.board);
+  // Sem empate possível: com no máximo 3 peças ativas por jogador, o
+  // tabuleiro nunca fica cheio (sempre sobra pelo menos 1 casa livre uma
+  // vez que os dois já colocaram sua 4ª peça ou mais) — a única forma de a
+  // partida terminar é alguém completar uma linha.
+  const gameOver = Boolean(outcome);
   const isCpuTurn = stage === "playing" && mode === "cpu" && currentPlayer === "O" && !gameOver;
+  // Peça que vai sumir se o jogador da vez jogar de novo — mostrada com
+  // opacidade reduzida e pulsando, para ajudar no planejamento tático.
+  const fadingIndex = oldestPieceIndex(boardState, currentPlayer);
 
   function selectMode(selected: Mode) {
     setMode(selected);
@@ -111,31 +91,22 @@ export function TicTacToe() {
     // muda — não precisa carregar manualmente aqui.
     setStartingPlayer("X");
     setCurrentPlayer("X");
-    setBoard(EMPTY_BOARD);
+    setBoardState(createEmptyState());
     setStage("playing");
   }
 
-  function registerResult(result: "X" | "O" | "draw") {
-    setScore((prev) =>
-      result === "draw"
-        ? { ...prev, draws: prev.draws + 1 }
-        : result === "X"
-          ? { ...prev, x: prev.x + 1 }
-          : { ...prev, o: prev.o + 1 }
-    );
+  function registerResult(winner: Player) {
+    setScore((prev) => (winner === "X" ? { ...prev, x: prev.x + 1 } : { ...prev, o: prev.o + 1 }));
   }
 
-  function commitMove(index: number, player: "X" | "O") {
-    if (board[index] !== null) return;
-    const next = [...board];
-    next[index] = player;
-    setBoard(next);
+  function commitMove(index: number, player: Player) {
+    if (boardState.board[index] !== null) return;
+    const { state: nextState } = applyMove(boardState, index, player);
+    setBoardState(nextState);
 
-    const result = calculateWinner(next);
+    const result = calculateWinner(nextState.board);
     if (result) {
       registerResult(result.winner);
-    } else if (isDraw(next)) {
-      registerResult("draw");
     } else {
       setCurrentPlayer(player === "X" ? "O" : "X");
     }
@@ -150,13 +121,13 @@ export function TicTacToe() {
     const nextStarter = startingPlayer === "X" ? "O" : "X";
     setStartingPlayer(nextStarter);
     setCurrentPlayer(nextStarter);
-    setBoard(EMPTY_BOARD);
+    setBoardState(createEmptyState());
   }
 
   function changePlayers() {
     setStage("mode");
     setMode(null);
-    setBoard(EMPTY_BOARD);
+    setBoardState(createEmptyState());
     // Não zera `score` aqui: como ele agora também persiste em localStorage,
     // isso sobrescreveria o placar salvo do par com zeros. O placar da tela
     // de "mode" nem é exibido; o par seguinte recarrega o dele sozinho.
@@ -166,13 +137,13 @@ export function TicTacToe() {
     if (!isCpuTurn) return;
 
     const timer = window.setTimeout(() => {
-      const { index } = minimax(board, "O");
-      if (index !== null) commitMove(index, "O");
-    }, 450);
+      const index = findBestMove(boardState, "O", difficulty);
+      if (index >= 0) commitMove(index, "O");
+    }, CPU_THINK_MS);
 
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCpuTurn, board]);
+  }, [isCpuTurn, boardState, difficulty]);
 
   if (stage === "mode") {
     return (
@@ -228,16 +199,140 @@ export function TicTacToe() {
     );
   }
 
-  const settingsContent = (
-    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+  const statusText = outcome
+    ? `${outcome.winner === "X" ? nameX : nameO} venceu esta partida!`
+    : isCpuTurn
+      ? "Computador pensando..."
+      : `Vez de ${currentPlayer === "X" ? nameX : nameO} (${currentPlayer})`;
+
+  function renderScore(className?: string) {
+    return (
+      <dl className={cn("grid grid-cols-2 gap-x-3 gap-y-2 text-sm", className)}>
+        <dt className="text-polis-ink-soft">{nameX} (X)</dt>
+        <dd className="text-right font-semibold text-polis-ink">{score.x}</dd>
+        <dt className="text-polis-ink-soft">{nameO} (O)</dt>
+        <dd className="text-right font-semibold text-polis-ink">{score.o}</dd>
+      </dl>
+    );
+  }
+
+  function renderBoard(box: number | null) {
+    return (
+      <div
+        className={cn("relative shrink-0 transition-opacity", box ? "opacity-100" : "opacity-0")}
+        style={{ width: box ?? 0, height: box ?? 0 }}
+      >
+        {/* Sem linhas pretas duras: o fundo do contêiner é levemente
+            escurecido e cada casa tem fundo claro — as divisórias nascem do
+            próprio espaço vazio do gap, não de bordas desenhadas. */}
+        <div className="grid h-full w-full grid-cols-3 grid-rows-3 gap-[3px] bg-polis-ink/15 p-[3px]">
+          {boardState.board.map((cell, index) => {
+            const fading = index === fadingIndex;
+            const interactive = cell === null && !gameOver && !isCpuTurn;
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleCellClick(index)}
+                disabled={cell !== null || gameOver || isCpuTurn}
+                aria-label={`Casa ${index + 1}${cell ? `, ${cell}` : ""}`}
+                className={cn(
+                  "flex items-center justify-center bg-polis-paper transition-colors",
+                  outcome?.line.includes(index) ? "bg-polis-gold/20" : interactive && "hover:bg-polis-paper-soft"
+                )}
+              >
+                <AnimatePresence>
+                  {cell && (
+                    <motion.div
+                      key="mark"
+                      className={cn(
+                        "flex h-full w-full items-center justify-center",
+                        cell === "X" ? "text-polis-ink" : "text-polis-gold-ink"
+                      )}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      // A transição de CADA estado vive DENTRO do próprio
+                      // objeto (`animate.transition`/`exit.transition`), não
+                      // num `transition` único compartilhado no topo — se
+                      // ficasse compartilhado, a saída (exit) de uma peça
+                      // que estava pulsando herdaria o `repeat: Infinity`
+                      // da pulsação e nunca terminaria de fato: a peça
+                      // removida ficava presa piscando pra sempre em vez de
+                      // desaparecer (bug real, pego ao testar visualmente).
+                      animate={
+                        fading
+                          ? {
+                            opacity: [0.25, 0.55, 0.25],
+                            scale: 1,
+                            transition: { opacity: { duration: 1.6, repeat: Infinity, ease: "easeInOut" }, scale: { duration: 0.2 } },
+                          }
+                          : { opacity: 1, scale: 1, transition: { duration: 0.2 } }
+                      }
+                      exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.2 } }}
+                    >
+                      {cell === "X" ? <XMark /> : <OMark />}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </button>
+            );
+          })}
+        </div>
+
+        {outcome && (
+          <GameOverlay
+            title={statusText}
+            subtitle={`${nameX} ${score.x} × ${score.o} ${nameO}`}
+            actionLabel="Jogar novamente"
+            onAction={playAgain}
+          />
+        )}
+      </div>
+    );
+  }
+
+  function renderDifficultySelector() {
+    if (mode !== "cpu") return null;
+    return (
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Dificuldade</p>
+        <div className="flex gap-2">
+          {(["facil", "medio", "impossivel"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setDifficulty(option)}
+              className={cn(
+                "flex-1 border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors",
+                difficulty === option
+                  ? "border-polis-gold-muted bg-polis-paper-soft text-polis-ink"
+                  : "border-polis-ink/30 text-polis-ink-soft hover:border-polis-gold-muted hover:text-polis-gold-ink"
+              )}
+            >
+              {option === "facil" ? "Fácil" : option === "medio" ? "Médio" : "Impossível"}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderGuide() {
+    return (
       <div>
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
         <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
-          <li>Controle o centro para ampliar linhas de vitória.</li>
-          <li>Bloqueie jogadas duplas do adversário.</li>
-          <li>Contra a CPU perfeita, o objetivo ideal é empate.</li>
+          <li>Cada jogador só mantém 3 peças no tabuleiro — a 4ª jogada remove a mais antiga.</li>
+          <li>A peça pulsando e mais apagada é a próxima a desaparecer se o dono jogar de novo.</li>
+          <li>Sem empate: o jogo só termina quando alguém completa uma linha.</li>
         </ul>
       </div>
+    );
+  }
+
+  const settingsContent = (
+    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+      {renderDifficultySelector()}
+      {renderGuide()}
       <button
         type="button"
         onClick={changePlayers}
@@ -261,67 +356,58 @@ export function TicTacToe() {
           >
             Jogar novamente
           </button>
-          <GameSettingsButton onClick={() => setInfoOpen(true)} />
+          {!isDesktopLayout && <GameSettingsButton onClick={() => setInfoOpen(true)} />}
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center gap-3">
+      {/* Mobile/tablet (< lg): placar em cabeçalho compacto, tabuleiro
+          central maximizado, status abaixo — configurações/guia atrás da
+          engrenagem (GameInfoDialog). */}
+      {!isDesktopLayout && (
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3">
           <div className="flex w-full max-w-md items-center justify-around border-y border-polis-rule/30 py-1.5 text-sm">
             <span className="text-polis-ink">
               {nameX} (X) <strong>{score.x}</strong>
-            </span>
-            <span className="text-polis-ink-soft">
-              Empates <strong>{score.draws}</strong>
             </span>
             <span className="text-polis-ink">
               {nameO} (O) <strong>{score.o}</strong>
             </span>
           </div>
 
-          <div ref={boardWrapRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
-            <div
-              className={cn(
-                "grid grid-cols-3 gap-[3px] border-2 border-polis-ink bg-polis-ink transition-opacity",
-                boardBox ? "opacity-100" : "opacity-0"
-              )}
-              style={{ width: boardBox ?? 0, height: boardBox ?? 0 }}
-            >
-              {board.map((cell, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleCellClick(index)}
-                  disabled={cell !== null || gameOver || isCpuTurn}
-                  aria-label={`Casa ${index + 1}${cell ? `, ${cell}` : ""}`}
-                  className={cn(
-                    "flex items-center justify-center bg-polis-paper font-serif text-4xl font-bold transition-colors sm:text-5xl",
-                    outcome?.line.includes(index) ? "bg-polis-gold/15" : "hover:bg-polis-paper-soft",
-                    cell === "X" && "text-polis-ink",
-                    cell === "O" && "text-polis-gold-ink"
-                  )}
-                >
-                  {cell}
-                </button>
-              ))}
-            </div>
+          <div ref={boardWrapRef} className="flex min-h-0 w-full min-w-0 flex-1 items-center justify-center">
+            {renderBoard(boardBox)}
           </div>
 
-          <p className="min-h-5 shrink-0 text-center text-sm text-polis-ink-soft">
-            {outcome
-              ? `${outcome.winner === "X" ? nameX : nameO} venceu esta partida!`
-              : draw
-                ? "Empate!"
-                : isCpuTurn
-                  ? "Computador pensando..."
-                  : `Vez de ${currentPlayer === "X" ? nameX : nameO} (${currentPlayer})`}
-          </p>
+          <p className="min-h-5 shrink-0 text-center text-sm text-polis-ink-soft">{statusText}</p>
         </div>
+      )}
 
-        <aside className="hidden w-64 shrink-0 overflow-y-auto border-l border-polis-rule/20 pl-5 lg:block">
-          {settingsContent}
-        </aside>
-      </div>
+      {/* Desktop (lg+): grade CSS de 3 colunas — placar | tabuleiro | modo e
+          guia. min-w-0 na coluna central é essencial (não decorativo): sem
+          ele, o item de grid nunca encolhe abaixo do min-content do filho
+          de largura fixa (o tabuleiro, dimensionado via ResizeObserver), o
+          que cria um ciclo de realimentação que faz a coluna vazar pra fora
+          da grade a cada poucos frames — mesmo bug já corrigido em
+          Snake.tsx/Blocks.tsx. */}
+      {isDesktopLayout && (
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[220px_1fr_260px] lg:gap-8">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-r border-polis-rule/20 pr-6">
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Placar</p>
+              {renderScore()}
+            </div>
+            <p className="border-t border-polis-rule/20 pt-3 text-sm text-polis-ink-soft">{statusText}</p>
+          </div>
+
+          <div ref={desktopBoardWrapRef} className="flex min-h-0 min-w-0 items-center justify-center">
+            {renderBoard(desktopBoardBox)}
+          </div>
+
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto border-l border-polis-rule/20 pl-6">
+            {settingsContent}
+          </div>
+        </div>
+      )}
 
       <GameInfoDialog open={infoOpen} onOpenChange={setInfoOpen} title="Configurações e Guia">
         {settingsContent}
