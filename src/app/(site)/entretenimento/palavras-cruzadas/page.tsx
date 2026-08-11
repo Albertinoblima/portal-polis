@@ -28,26 +28,11 @@ export default function PalavrasCruzadasPage() {
       }
     >
       {puzzle ? (
-        <>
-          <div className="mx-auto mb-8 max-w-4xl text-center">
-            <h1 className="font-serif text-4xl font-bold text-polis-ink">Palavras Cruzadas</h1>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição de {formatDateOnly(puzzle.date)} · Tema: {puzzle.theme}
-            </p>
-            <p className="mx-auto mt-3 max-w-md text-sm text-polis-ink-soft">
-              Uma palavra cruzada nova todo dia, no espírito dos passatempos de jornal impresso —
-              só que com correção automática e progresso salvo no seu navegador.
-            </p>
-            {previous && (
-              <p className="mt-4 text-xs">
-                <Link href={`/entretenimento/palavras-cruzadas/${previous.slug}/`} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
-                  Ver edições anteriores ›
-                </Link>
-              </p>
-            )}
-          </div>
-          <Crossword puzzle={puzzle} />
-        </>
+        <Crossword
+          puzzle={puzzle}
+          dateLabel={`Edição de ${formatDateOnly(puzzle.date)}`}
+          nav={previous ? { archiveHref: `/entretenimento/palavras-cruzadas/${previous.slug}/` } : undefined}
+        />
       ) : (
         <p className="text-center text-polis-ink-soft">Nenhuma palavra cruzada publicada ainda.</p>
       )}

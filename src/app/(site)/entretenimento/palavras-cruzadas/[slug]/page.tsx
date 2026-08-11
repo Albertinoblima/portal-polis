@@ -47,42 +47,19 @@ export default async function PalavrasCruzadasEdicaoPage({ params }: PalavrasCru
         </Link>
       }
     >
-      <div className="mx-auto mb-8 max-w-4xl text-center">
-        <h1 className="font-serif text-4xl font-bold text-polis-ink">Palavras Cruzadas</h1>
-        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-          Edição de {formatDateOnly(puzzle.date)} · Tema: {puzzle.theme}
-        </p>
-        <p className="mx-auto mt-3 max-w-md text-sm text-polis-ink-soft">
-          Edição arquivada — as edições anteriores continuam disponíveis aqui, como no arquivo de
-          um jornal impresso.
-        </p>
-
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs font-semibold uppercase tracking-wide">
-          {older ? (
-            <Link
-              href={`/entretenimento/palavras-cruzadas/${older.slug}/`}
-              className="text-polis-ink-soft underline hover:text-polis-gold-ink"
-            >
-              ‹ Edição anterior
-            </Link>
-          ) : (
-            <span className="text-polis-ink-soft/40">‹ Edição anterior</span>
-          )}
-          {newer ? (
-            <Link
-              href={
-                index === 1 ? "/entretenimento/palavras-cruzadas/" : `/entretenimento/palavras-cruzadas/${newer.slug}/`
-              }
-              className="text-polis-ink-soft underline hover:text-polis-gold-ink"
-            >
-              Edição seguinte ›
-            </Link>
-          ) : (
-            <span className="text-polis-ink-soft/40">Edição seguinte ›</span>
-          )}
-        </div>
-      </div>
-      <Crossword puzzle={puzzle} />
+      <Crossword
+        puzzle={puzzle}
+        dateLabel={`Edição arquivada de ${formatDateOnly(puzzle.date)}`}
+        nav={{
+          older: older ? { href: `/entretenimento/palavras-cruzadas/${older.slug}/`, label: "‹ Edição anterior" } : undefined,
+          newer: newer
+            ? {
+              href: index === 1 ? "/entretenimento/palavras-cruzadas/" : `/entretenimento/palavras-cruzadas/${newer.slug}/`,
+              label: "Edição seguinte ›",
+            }
+            : undefined,
+        }}
+      />
     </PageChrome>
   );
 }
