@@ -246,3 +246,17 @@ body {
   padding-top: 0.05em;
   color: var(--color-ink);
 }
+
+/* Pulsação breve nas letras de uma palavra recém-encontrada no
+   Caça-Palavras (ver WordSearchGrid.tsx) — só transform (GPU, sem custo de
+   layout), disparada uma vez via classe Tailwind `animate-[ws-cell-pulse_...]`,
+   não infinita. */
+@keyframes ws-cell-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.22);
+  }
+}

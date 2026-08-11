@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { buildWordSearchGrid, type WordSearchCell, type WordSearchPuzzle } from "@/lib/wordsearch";
 import { cn, formatTime } from "@/lib/utils";
-import { cellKey as coordsKey } from "@/lib/grid";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { useElementSize } from "@/hooks/useElementSize";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { GameInfoDialog, GameSettingsButton } from "@/components/games/GameInfoDialog";
+import { WordSearchGrid } from "./WordSearchGrid";
+import { WordSearchOverlay, type FoundWordSegment } from "./WordSearchOverlay";
+import { WordSearchWordList } from "./WordSearchWordList";
 import { emitGameInteractionLock } from "./gameInteraction";
+import { buildPlacementIndex, cellFromClientPoint, cellKey, cellSetKey, lineCells, wordColorVar } from "./wordSearchEngine";
 
 interface Progress {
   foundWords: Set<string>;
@@ -17,84 +23,51 @@ interface StoredProgress {
   elapsedSeconds: number;
 }
 
-function cellKey(cell: WordSearchCell): string {
-  return coordsKey(cell.row, cell.col);
-}
-
-function cellSetKey(cells: WordSearchCell[]): string {
-  return cells
-    .map(cellKey)
-    .sort()
-    .join(",");
-}
-
-/** Se start->end forma uma linha reta em uma das 8 direções (incluindo o
- *  caso degenerado de uma única casa), retorna as casas intermediárias —
- *  caso contrário, `null` (seleção inválida, ex.: um "L"). */
-function lineCells(start: WordSearchCell, end: WordSearchCell): WordSearchCell[] | null {
-  const dRow = end.row - start.row;
-  const dCol = end.col - start.col;
-  if (dRow === 0 && dCol === 0) return [start];
-  if (dRow !== 0 && dCol !== 0 && Math.abs(dRow) !== Math.abs(dCol)) return null;
-
-  const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
-  const stepRow = Math.sign(dRow);
-  const stepCol = Math.sign(dCol);
-  const cells: WordSearchCell[] = [];
-  for (let i = 0; i <= steps; i++) {
-    cells.push({ row: start.row + stepRow * i, col: start.col + stepCol * i });
-  }
-  return cells;
-}
-
 function progressKey(slug: string): string {
   return `polis:wordsearch:${slug}`;
 }
 
-function segmentFor(cells: WordSearchCell[]) {
-  const start = cells[0];
-  const end = cells[cells.length - 1];
-  return { x1: start.col + 0.5, y1: start.row + 0.5, x2: end.col + 0.5, y2: end.row + 0.5 };
+const MIN_CELL_PX = 22;
+
+interface BoardBox {
+  cellPx: number;
+  px: number;
 }
 
-function cellFromPoint(clientX: number, clientY: number): WordSearchCell | null {
-  const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-  const target = el?.closest<HTMLElement>("[data-row]");
-  if (!target) return null;
-  const row = Number(target.dataset.row);
-  const col = Number(target.dataset.col);
-  if (Number.isNaN(row) || Number.isNaN(col)) return null;
-  return { row, col };
+/** Como a grade é sempre quadrada (`size x size`), o lado da célula é só o
+ *  menor entre largura/altura disponíveis dividido pelo tamanho — função
+ *  pura fora do componente para não precisar entrar como dependência dos
+ *  `useMemo` que a chamam. */
+function computeBoardBox(size: { width: number; height: number }, gridSize: number): BoardBox | null {
+  if (size.width <= 0 || size.height <= 0 || gridSize <= 0) return null;
+  const cellPx = Math.max(MIN_CELL_PX, Math.floor(Math.min(size.width, size.height) / gridSize));
+  return { cellPx, px: cellPx * gridSize };
+}
+
+interface EditionLink {
+  href: string;
+  label: string;
 }
 
 interface WordSearchProps {
   puzzle: WordSearchPuzzle;
-  layout?: "full" | "embedded";
+  dateLabel: string;
+  nav?: {
+    older?: EditionLink;
+    newer?: EditionLink;
+    archiveHref?: string;
+  };
 }
 
-export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
+export function WordSearch({ puzzle, dateLabel, nav }: WordSearchProps) {
   const grid = useMemo(() => buildWordSearchGrid(puzzle), [puzzle]);
-  const isEmbedded = layout === "embedded";
-  const [isCompactLandscape, setIsCompactLandscape] = useState(false);
-
-  const placementByKey = useMemo(() => {
-    const map = new Map<string, (typeof grid.placements)[number]>();
-    for (const placement of grid.placements) map.set(cellSetKey(placement.cells), placement);
-    return map;
-  }, [grid]);
-
-  const placementByWord = useMemo(() => {
-    const map = new Map<string, (typeof grid.placements)[number]>();
-    for (const placement of grid.placements) map.set(placement.word, placement);
-    return map;
-  }, [grid]);
+  const placementIndex = useMemo(() => buildPlacementIndex(grid.placements), [grid]);
 
   const [progress, setProgress] = useLocalStorageState<Progress>(
     progressKey(puzzle.slug),
     { foundWords: new Set(), elapsedSeconds: 0 },
     {
-      serialize: (value) =>
-        JSON.stringify({ foundWords: [...value.foundWords], elapsedSeconds: value.elapsedSeconds }),
+      serialize: (value) => JSON.stringify({ foundWords: [...value.foundWords], elapsedSeconds: value.elapsedSeconds }),
       deserialize: (raw) => {
         const parsed = JSON.parse(raw) as Partial<StoredProgress>;
         return {
@@ -105,17 +78,24 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
     }
   );
   const { foundWords, elapsedSeconds } = progress;
+  const completed = foundWords.size === puzzle.words.length;
 
   const [dragStart, setDragStart] = useState<WordSearchCell | null>(null);
   const [dragCurrent, setDragCurrent] = useState<WordSearchCell | null>(null);
   const [missCells, setMissCells] = useState<WordSearchCell[] | null>(null);
+  const [pulsingWord, setPulsingWord] = useState<string | null>(null);
   const [lastFound, setLastFound] = useState<string | null>(null);
-  const boardWrapperRef = useRef<HTMLDivElement>(null);
-  const [boardWidth, setBoardWidth] = useState(0);
-
+  const [guideOpen, setGuideOpen] = useState(false);
   const pointerActiveRef = useRef(false);
 
-  const completed = foundWords.size === puzzle.words.length;
+  // Decide qual dos dois layouts (mobile empilhado vs. desktop em 2
+  // colunas) efetivamente MONTA no DOM — mesmo raciocínio de Snake.tsx/
+  // Blocks.tsx/TicTacToe.tsx/Crossword.tsx (isDesktopLayout).
+  const isDesktopLayout = useMediaQuery("(min-width: 1024px)");
+  const [boardWrapRef, boardWrapSize] = useElementSize<HTMLDivElement>();
+  const [desktopBoardWrapRef, desktopBoardWrapSize] = useElementSize<HTMLDivElement>();
+  const mobileBoardBox = useMemo(() => computeBoardBox(boardWrapSize, grid.size), [boardWrapSize, grid.size]);
+  const desktopBoardBox = useMemo(() => computeBoardBox(desktopBoardWrapSize, grid.size), [desktopBoardWrapSize, grid.size]);
 
   useEffect(() => {
     if (completed) return;
@@ -132,94 +112,27 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   }, [missCells]);
 
   useEffect(() => {
-    const node = boardWrapperRef.current;
-    if (!node) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 0;
-      setBoardWidth(width);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+    if (!pulsingWord) return;
+    const timer = window.setTimeout(() => setPulsingWord(null), 500);
+    return () => window.clearTimeout(timer);
+  }, [pulsingWord]);
 
-  useEffect(() => {
-    return () => emitGameInteractionLock(false, "wordsearch");
-  }, []);
-
-  useEffect(() => {
-    if (!isEmbedded || typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia("(orientation: landscape) and (max-height: 560px)");
-    const handleChange = () => setIsCompactLandscape(mediaQuery.matches);
-    handleChange();
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [isEmbedded]);
-
-  const compactLandscape = isEmbedded && isCompactLandscape;
+  useEffect(() => () => emitGameInteractionLock(false, "wordsearch"), []);
 
   function tryFinalize(start: WordSearchCell, end: WordSearchCell) {
     const cells = lineCells(start, end);
     if (!cells || cells.length < 2) return;
 
-    const match = placementByKey.get(cellSetKey(cells));
+    const match = placementIndex.byKey.get(cellSetKey(cells));
     if (match && !foundWords.has(match.word)) {
       const nextFound = new Set(foundWords);
       nextFound.add(match.word);
       setProgress({ foundWords: nextFound, elapsedSeconds });
+      setPulsingWord(match.word);
       setLastFound(match.word);
     } else if (!match) {
       setMissCells(cells);
     }
-  }
-
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    const cell = cellFromPoint(event.clientX, event.clientY);
-    if (!cell) return;
-    emitGameInteractionLock(true, "wordsearch");
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-
-    if (dragStart && !pointerActiveRef.current) {
-      // Segunda ponta de uma seleção "toque, toque" (alternativa ao arrasto).
-      if (cell.row !== dragStart.row || cell.col !== dragStart.col) {
-        tryFinalize(dragStart, cell);
-      }
-      setDragStart(null);
-      setDragCurrent(null);
-      return;
-    }
-
-    pointerActiveRef.current = true;
-    setDragStart(cell);
-    setDragCurrent(cell);
-  }
-
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!pointerActiveRef.current) return;
-    event.stopPropagation();
-
-    if (!pointerActiveRef.current || !dragStart) return;
-    const cell = cellFromPoint(event.clientX, event.clientY);
-    if (!cell) return;
-    if (lineCells(dragStart, cell)) setDragCurrent(cell);
-  }
-
-  function handlePointerUp() {
-    emitGameInteractionLock(false, "wordsearch");
-
-    if (!pointerActiveRef.current) return;
-    pointerActiveRef.current = false;
-
-    const moved = dragStart && dragCurrent && (dragCurrent.row !== dragStart.row || dragCurrent.col !== dragStart.col);
-    if (dragStart && moved) {
-      tryFinalize(dragStart, dragCurrent as WordSearchCell);
-      setDragStart(null);
-      setDragCurrent(null);
-    }
-    // Sem arrasto: foi um toque simples — dragStart continua pendente,
-    // aguardando a segunda ponta da palavra.
   }
 
   function handleReveal() {
@@ -227,229 +140,225 @@ export function WordSearch({ puzzle, layout = "full" }: WordSearchProps) {
   }
 
   const dragCells = useMemo(
-    () => (dragStart ? lineCells(dragStart, dragCurrent ?? dragStart) ?? [dragStart] : []),
+    () => (dragStart ? (lineCells(dragStart, dragCurrent ?? dragStart) ?? [dragStart]) : []),
     [dragStart, dragCurrent]
   );
   const dragCellKeys = useMemo(() => new Set(dragCells.map(cellKey)), [dragCells]);
   const missCellKeys = useMemo(() => new Set((missCells ?? []).map(cellKey)), [missCells]);
-  const boardMaxPx = useMemo(() => {
-    const preferredCell = isEmbedded ? (compactLandscape ? 27 : 32) : 38;
-    const hardCap = isEmbedded ? (compactLandscape ? 420 : 500) : 620;
-    return Math.min(grid.size * preferredCell, hardCap);
-  }, [compactLandscape, grid.size, isEmbedded]);
-  const activeBoardPx = boardWidth > 0 ? Math.min(boardWidth, boardMaxPx) : boardMaxPx;
-  const cellPx = Math.max(26, Math.floor(activeBoardPx / grid.size));
   const foundCellKeys = useMemo(() => {
     const set = new Set<string>();
     for (const word of foundWords) {
-      const placement = placementByWord.get(word);
-      if (!placement) continue;
-      for (const cell of placement.cells) set.add(cellKey(cell));
+      const placement = placementIndex.byWord.get(word);
+      if (placement) for (const cell of placement.cells) set.add(cellKey(cell));
     }
     return set;
-  }, [foundWords, placementByWord]);
+  }, [foundWords, placementIndex]);
+  const pulsingCellKeys = useMemo(() => {
+    const placement = pulsingWord ? placementIndex.byWord.get(pulsingWord) : undefined;
+    return placement ? new Set(placement.cells.map(cellKey)) : new Set<string>();
+  }, [pulsingWord, placementIndex]);
+  const foundSegments = useMemo<FoundWordSegment[]>(() => {
+    const segments: FoundWordSegment[] = [];
+    puzzle.words.forEach((word, index) => {
+      if (!foundWords.has(word)) return;
+      const placement = placementIndex.byWord.get(word);
+      if (placement) segments.push({ word, colorVar: wordColorVar(index), cells: placement.cells });
+    });
+    return segments;
+  }, [puzzle.words, foundWords, placementIndex]);
 
-  return (
-    <div
-      className={cn(
-        "mx-auto flex w-full flex-col gap-6",
-        compactLandscape && "max-w-none flex-row items-start gap-3",
-        isEmbedded && !compactLandscape && "max-w-3xl",
-        !isEmbedded && "max-w-4xl lg:flex-row lg:flex-wrap lg:items-start lg:justify-center"
-      )}
-    >
-      <div className={cn("flex flex-col items-center gap-3", compactLandscape && "min-w-0 flex-1 gap-2")}>
+  function renderBoard(box: BoardBox | null) {
+    const cellPx = box?.cellPx ?? MIN_CELL_PX;
+    const px = box?.px ?? 0;
+
+    // Pointer Events unificados (pointerdown/pointermove/pointerup, com
+    // setPointerCapture) — funcionam de forma idêntica pra mouse, caneta e
+    // toque, sem precisar de handlers separados de touch/mouse. A casa sob
+    // o ponteiro é achada por geometria pura (cellFromClientPoint), não por
+    // hit-test no DOM.
+    function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const cell = cellFromClientPoint(rect, cellPx, grid.size, event.clientX, event.clientY);
+      if (!cell) return;
+      emitGameInteractionLock(true, "wordsearch");
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      if (dragStart && !pointerActiveRef.current) {
+        // Segunda ponta de uma seleção "toque, toque" (alternativa ao
+        // arrasto contínuo, mais confortável em casas pequenas no mobile).
+        if (cell.row !== dragStart.row || cell.col !== dragStart.col) tryFinalize(dragStart, cell);
+        setDragStart(null);
+        setDragCurrent(null);
+        return;
+      }
+
+      pointerActiveRef.current = true;
+      setDragStart(cell);
+      setDragCurrent(cell);
+    }
+
+    function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+      if (!pointerActiveRef.current || !dragStart) return;
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      const cell = cellFromClientPoint(rect, cellPx, grid.size, event.clientX, event.clientY);
+      if (!cell) return;
+      if (lineCells(dragStart, cell)) setDragCurrent(cell);
+    }
+
+    function handlePointerUp() {
+      emitGameInteractionLock(false, "wordsearch");
+      if (!pointerActiveRef.current) return;
+      pointerActiveRef.current = false;
+
+      const moved = dragStart && dragCurrent && (dragCurrent.row !== dragStart.row || dragCurrent.col !== dragStart.col);
+      if (dragStart && moved) {
+        tryFinalize(dragStart, dragCurrent as WordSearchCell);
+        setDragStart(null);
+        setDragCurrent(null);
+      }
+      // Sem arrasto: foi um toque simples — dragStart continua pendente,
+      // aguardando a segunda ponta da palavra.
+    }
+
+    return (
+      <div
+        className={cn("relative shrink-0 border-2 border-polis-ink bg-polis-ink p-px transition-opacity", box ? "opacity-100" : "opacity-0")}
+        style={{ width: px + 2, height: px + 2 }}
+      >
         <div
-          className={cn(
-            "flex items-center gap-4 text-sm text-polis-ink-soft",
-            compactLandscape && "gap-2 text-[11px] tracking-[0.12em]",
-            isEmbedded &&
-            "w-full justify-center border-y border-polis-rule/20 bg-polis-paper-soft/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em]"
-          )}
+          className="relative"
+          style={{ width: px, height: px }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          role="img"
+          aria-label={`Grade de ${grid.size} por ${grid.size} letras. ${foundWords.size} de ${puzzle.words.length} palavras encontradas. Arraste ou toque em duas pontas para marcar uma palavra.`}
         >
-          <span>
-            Tempo: <strong className="text-polis-ink">{formatTime(elapsedSeconds)}</strong>
-          </span>
-          <span>
-            Palavras: <strong className="text-polis-ink">{foundWords.size}/{puzzle.words.length}</strong>
-          </span>
-          {completed && (
-            <span className="font-semibold uppercase tracking-wide text-polis-gold-ink">Decifrado!</span>
-          )}
+          <WordSearchGrid
+            letters={grid.letters}
+            size={grid.size}
+            cellPx={cellPx}
+            foundCellKeys={foundCellKeys}
+            dragCellKeys={dragCellKeys}
+            missCellKeys={missCellKeys}
+            pulsingCellKeys={pulsingCellKeys}
+          />
+          <WordSearchOverlay size={grid.size} foundSegments={foundSegments} dragCells={dragCells} missCells={missCells} />
         </div>
+      </div>
+    );
+  }
 
-        <div ref={boardWrapperRef} className="w-full">
-          <div
-            className="mx-auto border-2 border-polis-ink bg-polis-ink p-px"
-            style={{ width: `min(100%, ${boardMaxPx}px)` }}
-          >
-            <div
-              className="relative touch-none select-none gap-px bg-polis-ink"
-              style={{ display: "grid", gridTemplateColumns: `repeat(${grid.size}, minmax(0, 1fr))` }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-              role="img"
-              aria-label={`Grade de ${grid.size} por ${grid.size} letras. ${foundWords.size} de ${puzzle.words.length} palavras encontradas. Use o mouse ou o toque para arrastar sobre uma palavra.`}
-            >
-              {grid.letters.map((rowLetters, r) =>
-                rowLetters.map((letter, c) => {
-                  const key = cellKey({ row: r, col: c });
-                  const isFound = foundCellKeys.has(key);
-                  const isDragging = dragCellKeys.has(key);
-                  const isMiss = missCellKeys.has(key);
-                  return (
-                    <div
-                      key={key}
-                      data-row={r}
-                      data-col={c}
-                      className={cn(
-                        "flex aspect-square w-full items-center justify-center bg-polis-paper font-serif font-bold uppercase text-polis-ink-soft transition-colors duration-150",
-                        (isDragging || isFound) && "text-polis-gold-ink",
-                        isMiss && "text-red-700"
-                      )}
-                      style={{ fontSize: `${Math.max(13, Math.floor(cellPx * 0.45))}px` }}
-                    >
-                      {letter}
-                    </div>
-                  );
-                })
-              )}
-
-              <svg
-                viewBox={`0 0 ${grid.size} ${grid.size}`}
-                preserveAspectRatio="none"
-                className="pointer-events-none absolute inset-0 h-full w-full"
-              >
-                {[...foundWords].map((word) => {
-                  const placement = placementByWord.get(word);
-                  if (!placement || placement.cells.length < 2) return null;
-                  const seg = segmentFor(placement.cells);
-                  return (
-                    <line
-                      key={word}
-                      x1={seg.x1}
-                      y1={seg.y1}
-                      x2={seg.x2}
-                      y2={seg.y2}
-                      stroke="#c9a227"
-                      strokeWidth={0.45}
-                      strokeLinecap="round"
-                      opacity={0.5}
-                    />
-                  );
-                })}
-                {dragCells.length >= 2 &&
-                  (() => {
-                    const seg = segmentFor(dragCells);
-                    return (
-                      <line
-                        x1={seg.x1}
-                        y1={seg.y1}
-                        x2={seg.x2}
-                        y2={seg.y2}
-                        stroke="#c9a227"
-                        strokeWidth={0.55}
-                        strokeLinecap="round"
-                        opacity={0.85}
-                      />
-                    );
-                  })()}
-                {missCells && missCells.length >= 2 && (
-                  <line
-                    {...segmentFor(missCells)}
-                    stroke="#b91c1c"
-                    strokeWidth={0.5}
-                    strokeLinecap="round"
-                    opacity={0.75}
-                  />
-                )}
-              </svg>
-            </div>
+  const settingsContent = (
+    <div className="flex flex-col gap-4 text-sm text-polis-ink">
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Guia Rápido</p>
+        <ul className="space-y-1.5 text-xs leading-relaxed text-polis-ink-soft">
+          <li>Arraste sobre as letras (ou toque numa casa e depois na outra ponta) para marcar uma palavra.</li>
+          <li>Vale nas 8 direções: horizontal, vertical e as duas diagonais — inclusive de trás para frente.</li>
+          <li>Cada palavra encontrada ganha uma cor própria, igual na lista e no tabuleiro.</li>
+          <li>O progresso é salvo automaticamente neste navegador.</li>
+        </ul>
+      </div>
+      <button
+        type="button"
+        onClick={handleReveal}
+        className="self-start border border-polis-rule/25 px-3 py-1.5 text-xs uppercase tracking-wide text-polis-ink-soft transition-colors hover:border-polis-gold-muted hover:text-polis-gold-ink"
+      >
+        Revelar todas
+      </button>
+      {(nav?.archiveHref || nav?.older || nav?.newer) && (
+        <div className="border-t border-polis-rule/20 pt-3">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-polis-ink-soft">Edições</p>
+          <div className="flex flex-col items-start gap-1.5 text-xs">
+            {nav?.older && (
+              <a href={nav.older.href} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
+                {nav.older.label}
+              </a>
+            )}
+            {nav?.newer && (
+              <a href={nav.newer.href} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
+                {nav.newer.label}
+              </a>
+            )}
+            {nav?.archiveHref && (
+              <a href={nav.archiveHref} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
+                Ver edições anteriores
+              </a>
+            )}
           </div>
         </div>
+      )}
+    </div>
+  );
 
-        <p aria-live="polite" className="sr-only">
-          {lastFound ? `Palavra encontrada: ${lastFound}.` : ""}
-        </p>
-
-        <p
-          className={cn(
-            "text-center text-xs text-polis-ink-soft",
-            compactLandscape && "max-w-none text-[11px] leading-snug",
-            isEmbedded ? "max-w-xl leading-relaxed" : "max-w-xs"
-          )}
-        >
-          {compactLandscape
-            ? "Arraste ou toque nas duas pontas da palavra para marcar."
-            : "Arraste (ou toque em uma casa e depois na outra ponta) sobre as letras para marcar uma palavra — nas 8 direções, inclusive de trás para frente."}
-        </p>
-
-        <button
-          type="button"
-          onClick={handleReveal}
-          className={cn(
-            "text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink",
-            compactLandscape && "py-0.5 text-[11px]",
-            isEmbedded &&
-            "border border-polis-rule/25 px-3 py-1 no-underline transition-colors hover:border-polis-gold-muted"
-          )}
-        >
-          Revelar todas
-        </button>
-      </div>
-
-      <div
-        className={cn(
-          "w-full flex-1",
-          compactLandscape &&
-          "max-h-[17rem] max-w-[44%] overflow-y-auto border-l border-polis-rule/20 pl-3 pr-1",
-          isEmbedded && !compactLandscape && "max-w-3xl border-t border-polis-rule/20 pt-4",
-          !isEmbedded && "max-w-sm lg:min-w-[16rem]"
-        )}
-      >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
-          {isEmbedded && (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-polis-ink-soft">
-              Grade {grid.size}x{grid.size}
-            </span>
-          )}
+  return (
+    <div className="relative flex h-full w-full flex-col gap-2 overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-serif text-lg font-bold text-polis-ink sm:text-xl">Caça-Palavras</h1>
+          <p className="text-[11px] uppercase tracking-[0.14em] text-polis-ink-soft">
+            {dateLabel} · {puzzle.theme}
+          </p>
         </div>
-        <div
-          className={cn(
-            "grid gap-2 text-sm",
-            compactLandscape && "gap-1.5 text-[12px]",
-            isEmbedded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 gap-x-4 gap-y-2"
-          )}
-        >
-          {puzzle.words.map((word) => {
-            const found = foundWords.has(word);
-            return (
-              <span
-                key={word}
-                className={cn(
-                  "flex items-center gap-2",
-                  compactLandscape && "min-h-7 px-2 py-0.5 text-[11px] tracking-[0.06em]",
-                  isEmbedded &&
-                  "min-h-9 border border-polis-rule/15 bg-polis-paper-soft/25 px-2.5 py-1 text-[12px] tracking-[0.08em]",
-                  found ? "text-polis-gold-ink" : "text-polis-ink-soft"
-                )}
-              >
-                <span
-                  className={cn(
-                    "inline-block h-2.5 w-2.5 shrink-0 border",
-                    found ? "border-polis-gold-ink bg-polis-gold-ink" : "border-polis-ink/30"
-                  )}
-                />
-                <span className={cn(found && "line-through decoration-2")}>{word}</span>
-              </span>
-            );
-          })}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-polis-ink-soft">
+            Tempo <strong className="text-polis-ink">{formatTime(elapsedSeconds)}</strong>
+          </span>
+          <span className="text-xs text-polis-ink-soft">
+            Palavras <strong className="text-polis-ink">{foundWords.size}/{puzzle.words.length}</strong>
+          </span>
+          {completed && <span className="text-xs font-semibold uppercase tracking-wide text-polis-gold-ink">Decifrado!</span>}
+          <GameSettingsButton onClick={() => setGuideOpen(true)} />
         </div>
       </div>
+
+      <p aria-live="polite" className="sr-only">
+        {lastFound ? `Palavra encontrada: ${lastFound}.` : ""}
+      </p>
+
+      {/* Mobile/tablet (< lg): tabuleiro maximizado (largura total, sem
+          rolagem horizontal), lista de palavras compacta logo abaixo,
+          riscando automaticamente conforme são encontradas. */}
+      {!isDesktopLayout && (
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3">
+          <div ref={boardWrapRef} className="flex min-h-0 w-full min-w-0 flex-1 items-center justify-center">
+            {renderBoard(mobileBoardBox)}
+          </div>
+
+          <div className="w-full max-w-md min-h-0 flex-1 overflow-y-auto border-t border-polis-rule/20 pt-2.5">
+            <WordSearchWordList words={puzzle.words} foundWords={foundWords} columns={2} />
+          </div>
+        </div>
+      )}
+
+      {/* Desktop (lg+): duas colunas — tabuleiro ampliado e centralizado à
+          esquerda, lista de palavras em colunas limpas à direita.
+          min-w-0 na coluna do tabuleiro é essencial (não decorativo): sem
+          ele, o item de grid nunca encolhe abaixo do min-content do filho
+          de largura fixa (o tabuleiro, dimensionado via ResizeObserver), o
+          que cria um ciclo de realimentação que faz a coluna vazar pra
+          fora da grade a cada poucos frames — mesmo bug já corrigido em
+          Snake.tsx/Blocks.tsx/TicTacToe.tsx/Crossword.tsx. */}
+      {isDesktopLayout && (
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_320px] lg:gap-8">
+          <div ref={desktopBoardWrapRef} className="flex min-h-0 min-w-0 w-full flex-1 items-center justify-center">
+            {renderBoard(desktopBoardBox)}
+          </div>
+
+          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto border-l border-polis-rule/20 pl-6">
+            <h2 className="font-serif text-lg font-bold text-polis-ink">Palavras do dia</h2>
+            <WordSearchWordList words={puzzle.words} foundWords={foundWords} columns={2} />
+          </div>
+        </div>
+      )}
+
+      <GameInfoDialog open={guideOpen} onOpenChange={setGuideOpen} title="Configurações e Guia">
+        {settingsContent}
+      </GameInfoDialog>
     </div>
   );
 }

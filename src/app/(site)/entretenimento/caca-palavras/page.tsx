@@ -28,26 +28,11 @@ export default function CacaPalavrasPage() {
       }
     >
       {puzzle ? (
-        <>
-          <div className="mx-auto mb-8 max-w-4xl text-center">
-            <h1 className="font-serif text-4xl font-bold text-polis-ink">Caça-Palavras</h1>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-polis-gold-ink">
-              Edição de {formatDateOnly(puzzle.date)} · Tema: {puzzle.theme}
-            </p>
-            <p className="mx-auto mt-3 max-w-md text-sm text-polis-ink-soft">
-              Um caça-palavras novo todo dia — arraste sobre as letras para encontrar cada termo,
-              nas 8 direções. Progresso salvo automaticamente no seu navegador.
-            </p>
-            {previous && (
-              <p className="mt-4 text-xs">
-                <Link href={`/entretenimento/caca-palavras/${previous.slug}/`} className="text-polis-ink-soft underline hover:text-polis-gold-ink">
-                  Ver edições anteriores ›
-                </Link>
-              </p>
-            )}
-          </div>
-          <WordSearch puzzle={puzzle} />
-        </>
+        <WordSearch
+          puzzle={puzzle}
+          dateLabel={`Edição de ${formatDateOnly(puzzle.date)}`}
+          nav={previous ? { archiveHref: `/entretenimento/caca-palavras/${previous.slug}/` } : undefined}
+        />
       ) : (
         <p className="text-center text-polis-ink-soft">Nenhum caça-palavras publicado ainda.</p>
       )}
