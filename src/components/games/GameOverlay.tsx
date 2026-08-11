@@ -13,10 +13,10 @@ interface GameOverlayProps {
  *  tabuleiro em tempo real (Cobrinha, Blocos), no visual do jornal. */
 export function GameOverlay({ title, subtitle, actionLabel, onAction, isNewHighScore }: GameOverlayProps) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-polis-paper/95 px-4 text-center">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-polis-paper/70 px-4 text-center backdrop-blur-md">
       <div
         className={cn(
-          "flex flex-col items-center gap-2 border px-6 py-5",
+          "flex flex-col items-center gap-2 border bg-polis-paper/90 px-6 py-5 shadow-lg",
           isNewHighScore ? "border-polis-gold" : "border-polis-rule/20"
         )}
       >

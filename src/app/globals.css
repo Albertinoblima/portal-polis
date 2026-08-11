@@ -63,6 +63,21 @@
   --color-blocks-l: #fb923c;
   --color-blocks-l-dark: #f97316;
 
+  /* Linhas de grade do tabuleiro do Jogo da Cobrinha — mesmo raciocínio de
+     --color-blocks-grid-line acima (sutil de propósito). */
+  --color-snake-grid-line: rgba(26, 24, 21, 0.08);
+
+  /* Cores da cobra e da comida — não dependem de tema (mesmas em claro/
+     escuro), lidas em tempo de execução pelo Canvas via getComputedStyle
+     (ver snakeRenderer.ts). Cabeça com paleta própria, mais escura/saturada,
+     para se diferenciar do resto do corpo à primeira vista. */
+  --color-snake-head: #059669;
+  --color-snake-head-dark: #065f46;
+  --color-snake-body: #34d399;
+  --color-snake-body-dark: #10b981;
+  --color-snake-food: #fbbf24;
+  --color-snake-food-dark: #f59e0b;
+
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -107,6 +122,7 @@
      invisível aqui). */
   --color-gold-ink: #d9b53c;
   --color-blocks-grid-line: rgba(237, 230, 214, 0.1);
+  --color-snake-grid-line: rgba(237, 230, 214, 0.1);
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
@@ -121,6 +137,7 @@
      papel claro. */
   --color-gold-ink: #5c4514;
   --color-blocks-grid-line: rgba(26, 24, 21, 0.08);
+  --color-snake-grid-line: rgba(26, 24, 21, 0.08);
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 }
