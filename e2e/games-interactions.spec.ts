@@ -85,10 +85,21 @@ test.describe("Jogos - teclado desktop", () => {
 test.describe("Jogos - toque retrato", () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-    test("Cobrinha responde a controles touch", async ({ page }) => {
+    test("Cobrinha responde a gestos de arrasto no tabuleiro", async ({ page }) => {
+        // Sem D-pad: arrastar sobre o tabuleiro vira a cobra (ver
+        // handleBoardPointer* em Snake.tsx — Pointer Events unificam mouse e
+        // toque, mesmo padrão já coberto para o Jogo dos Blocos abaixo).
         await startSnake(page);
 
-        await page.getByRole("button", { name: "Direita" }).tap();
+        const canvas = page.getByRole("img", { name: /Tabuleiro do Jogo da Cobrinha/ });
+        const box = await canvas.boundingBox();
+        if (!box) throw new Error("Tabuleiro sem bounding box");
+
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 5 });
+        await page.mouse.up();
+
         await page.getByRole("button", { name: "Pausar" }).first().tap();
         await expect(page.getByText("Pausado")).toBeVisible();
     });
@@ -127,8 +138,16 @@ test.describe("Jogos - paisagem", () => {
     test("Cobrinha permanece funcional em viewport horizontal", async ({ page }) => {
         await startSnake(page);
 
-        await expect(page.getByRole("button", { name: "Direita" })).toBeVisible();
-        await page.getByRole("button", { name: "Direita" }).click();
+        const canvas = page.getByRole("img", { name: /Tabuleiro do Jogo da Cobrinha/ });
+        await expect(canvas).toBeVisible();
+        const box = await canvas.boundingBox();
+        if (!box) throw new Error("Tabuleiro sem bounding box");
+
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 5 });
+        await page.mouse.up();
+
         await page.getByRole("button", { name: "Pausar" }).first().click();
         await expect(page.getByText("Pausado")).toBeVisible();
     });
