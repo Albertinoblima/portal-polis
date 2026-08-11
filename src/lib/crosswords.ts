@@ -438,6 +438,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "artistas-brasileiros",
+    date: "2026-08-11",
+    theme: "Artistas Brasileiros",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 0,
+        col: 7,
+        answer: "GILBERTO",
+        clue: "Cantor, compositor e ex-ministro da Cultura, um dos fundadores do movimento Tropicália ao lado de Caetano.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 3,
+        col: 4,
+        answer: "ELIS",
+        clue: "Cantora de 'Águas de Março' e 'Como Nossos Pais', uma das maiores vozes da história da MPB.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 4,
+        col: 1,
+        answer: "VOLPI",
+        clue: "Pintor de origem italiana radicado em São Paulo, famoso pelas fachadas e bandeirinhas de festa junina em suas telas.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 4,
+        col: 6,
+        answer: "CAETANO",
+        clue: "Cantor e compositor baiano, um dos criadores do Tropicalismo ao lado de Gilberto Gil.",
+      },
+      {
+        number: 5,
+        direction: "across",
+        row: 5,
+        col: 0,
+        answer: "PORTINARI",
+        clue: "Pintor de Brodósqui autor dos painéis 'Guerra e Paz', doados à sede da ONU em Nova York.",
+      },
+      {
+        number: 6,
+        direction: "down",
+        row: 5,
+        col: 3,
+        answer: "TARSILA",
+        clue: "Pintora modernista, autora de 'Abaporu' e 'Operários' — sobrenome do Amaral.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {
