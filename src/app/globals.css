@@ -230,6 +230,10 @@ body {
    causaria um "pulo" perceptível a cada palavra) dão o efeito de marca-texto
    sem interferir na tipografia normal do corpo da matéria. */
 .tts-word--active {
+  /* Fallback para Chrome < 111, que não suporta color-mix(). */
+  background-color: rgba(169, 133, 47, 0.45);
+  box-shadow: 0 0 0 0.05em rgba(169, 133, 47, 0.45);
+  /* Navegadores modernos usam a linha abaixo (sobrescreve o fallback). */
   background-color: color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
   box-shadow: 0 0 0 0.05em color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
   border-radius: 0.15em;
@@ -252,10 +256,12 @@ body {
    layout), disparada uma vez via classe Tailwind `animate-[ws-cell-pulse_...]`,
    não infinita. */
 @keyframes ws-cell-pulse {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   40% {
     transform: scale(1.22);
   }

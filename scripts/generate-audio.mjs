@@ -150,6 +150,10 @@ function extractPlainText(html) {
 
   text = text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ")
+    // Remove pontuação de frase/cláusula que ficou flutuante (sem palavra
+    // imediatamente antes) após substituição do AUTHOR_BLOCKLIST. Sem isso,
+    // um ponto isolado é lido em voz alta como "ponto" pelo Piper.
+    .replace(/\s+([.!?;:,])/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -160,8 +164,23 @@ async function synthesize(text, mp3Path) {
   const tmpDir = await fsMkdtemp();
   const wavPath = path.join(tmpDir, "output.wav");
 
+  // --noise_scale  (padrão 0.667): variação de prosódia/entonação. Valores
+  //   mais altos produzem fala mais expressiva; acima de ~1.0 pode soar
+  //   instável.
+  // --noise_w      (padrão 0.8): variação na duração das sílabas. Aumentar
+  //   torna o ritmo mais orgânico/humano.
+  // --length_scale (padrão 1.0): escala de velocidade. 1.05 = ligeiramente
+  //   mais pausada, como um locutor de rádio.
+  const piperArgs = [
+    "--model", PIPER_MODEL,
+    "--output_file", wavPath,
+    "--noise_scale", "0.85",
+    "--noise_w", "0.95",
+    "--length_scale", "1.05",
+  ];
+
   try {
-    await runProcess(PIPER_BIN, ["--model", PIPER_MODEL, "--output_file", wavPath], text);
+    await runProcess(PIPER_BIN, piperArgs, text);
     await runProcess(FFMPEG_BIN, ["-y", "-i", wavPath, "-codec:a", "libmp3lame", "-qscale:a", "4", mp3Path]);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
