@@ -493,6 +493,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "corrupcao",
+    date: "2026-08-20",
+    theme: "Corrupção",
+    entries: [
+      {
+        number: 1,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "CORRUPCAO",
+        clue: "Uso desonesto do poder público para obter vantagens privadas indevidas.",
+      },
+      {
+        number: 1,
+        direction: "down",
+        row: 3,
+        col: 0,
+        answer: "CARTEL",
+        clue: "Acordo secreto entre empresas para fraudar licitações e manipular preços.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 3,
+        col: 2,
+        answer: "ROUBO",
+        clue: "Ato de subtrair bens ou recursos alheios, muitas vezes públicos, sem direito.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 3,
+        col: 5,
+        answer: "PROPINA",
+        clue: "Quantia paga ilicitamente a um agente público para obter favorecimento.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 3,
+        col: 7,
+        answer: "AUDITORIA",
+        clue: "Exame minucioso de contas e processos, ferramenta essencial no combate à corrupção.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 3,
+        col: 8,
+        answer: "OMISSAO",
+        clue: "Falha em agir ou fiscalizar quando deveria, favorecendo a impunidade.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {

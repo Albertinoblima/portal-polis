@@ -155,6 +155,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "TAPEROA",
     ],
   },
+  {
+    slug: "corrupcao",
+    date: "2026-08-20",
+    theme: "Corrupção",
+    size: 14,
+    words: [
+      "CORRUPCAO",
+      "PROPINA",
+      "SUBORNO",
+      "PECULATO",
+      "LAVAGEM",
+      "DESVIO",
+      "FRAUDE",
+      "IMPUNIDADE",
+      "DELACAO",
+      "ESCANDALO",
+      "CARTEL",
+      "NEPOTISMO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
