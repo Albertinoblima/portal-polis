@@ -137,7 +137,11 @@ function hashText(text) {
  *   quebrariam o stdin do Piper.
  */
 function extractPlainText(html) {
-  const dom = new JSDOM(`<!doctype html><body>${html ?? ""}</body>`);
+  // Insere um espaço antes de cada tag de fechamento de bloco para garantir
+  // que parágrafos adjacentes não se colem no textContent. Sem isso,
+  // <p>Frase.</p><p>Próxima</p> vira "Frase.Próxima" e o Piper lê o ponto.
+  const spacedHtml = (html ?? "").replace(/<\/(p|li|h[1-6]|blockquote|div|td|th|dt|dd)>/gi, " </$1>");
+  const dom = new JSDOM(`<!doctype html><body>${spacedHtml}</body>`);
   const { document } = dom.window;
   for (const node of document.querySelectorAll("script, style")) {
     node.remove();
