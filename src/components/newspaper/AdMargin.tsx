@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Banner } from "@/types";
 
 interface AdMarginProps {
@@ -72,8 +73,13 @@ function AdSlot({ banner }: { banner: Banner }) {
       rel="noopener noreferrer"
       className="relative flex h-full min-h-0 w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={banner.imageUrl} alt={banner.title} className="h-full min-h-0 w-full object-contain lg:object-cover" />
+      <Image
+        src={banner.imageUrl}
+        alt={banner.title}
+        fill
+        sizes="(min-width: 1024px) 25vw, 50vw"
+        className="object-contain lg:object-cover"
+      />
     </a>
   );
 }
