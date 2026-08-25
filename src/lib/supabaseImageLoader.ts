@@ -21,7 +21,14 @@ interface SupabaseImageLoaderParams {
 }
 
 export default function supabaseImageLoader({ src, width, quality }: SupabaseImageLoaderParams): string {
-  if (!src.includes(STORAGE_OBJECT_PATH)) {
+  // GIF fica de fora de propósito: o endpoint de transformação do Supabase
+  // (imgproxy por baixo) achata GIF animado para o primeiro frame — vira
+  // imagem estática. Como a maioria das imagens de matéria/banner aqui é
+  // GIF, transformar quebraria a animação em quase todo o site. Sem suporte
+  // a preservar frames no plano gerenciado (só em self-hosted via
+  // IMGPROXY_MAX_ANIMATION_FRAMES), então GIF sempre serve o arquivo
+  // original — só JPEG/PNG/WebP passam pelo redimensionamento.
+  if (!src.includes(STORAGE_OBJECT_PATH) || src.toLowerCase().endsWith(".gif")) {
     return src;
   }
 
