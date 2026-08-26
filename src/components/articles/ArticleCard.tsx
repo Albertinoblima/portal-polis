@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Article, Editoria } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { EditoriaBadge } from "@/components/ui/Badge";
+import { FeaturedMedia } from "@/components/ui/FeaturedMedia";
 
 interface ArticleCardProps {
   article: Article;
@@ -26,8 +26,9 @@ export function ArticleCard({ article, editoria, size = "default" }: ArticleCard
           click sintético do toque, quebrando a navegação só no mobile. */}
       <div className="pointer-events-none aspect-square">
         <div className="relative h-full w-full overflow-hidden bg-polis-ink/5">
-          <Image
-            src={article.featuredImage}
+          <FeaturedMedia
+            imageUrl={article.featuredImage}
+            videoUrl={article.featuredVideoUrl}
             alt={article.featuredImageAlt}
             fill
             sizes={isLarge ? "100vw" : "(min-width: 768px) 33vw, 100vw"}

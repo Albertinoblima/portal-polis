@@ -47,6 +47,10 @@ yarn-error.log*
 /public/assets/audio/
 /src/content/audio-manifest.json
 
+# Vídeo (GIF convertido) gerado por scripts/transcode-gif-media.mjs — mesmo racional do áudio acima
+/public/assets/video/
+/src/content/video-manifest.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

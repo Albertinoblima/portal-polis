@@ -8,6 +8,7 @@ import { HotCorner } from "./HotCorner";
 import { AdMargin } from "./AdMargin";
 import { paginateHtml } from "./paginate";
 import { useIsClient } from "@/hooks/useIsClient";
+import { useInlineVideoAutoplay } from "@/hooks/useInlineVideoAutoplay";
 import { getActiveBanners } from "@/lib/banners";
 import { wrapWordsForHighlight } from "@/lib/ttsHighlight";
 import { ARTICLE_PROSE_CLASSNAME } from "./proseClassName";
@@ -332,6 +333,7 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
   }, []);
 
   const totalPages = preparedPages.length;
+  useInlineVideoAutoplay(totalPages);
 
   return (
     <div ref={viewportRef} className="relative h-full w-full">

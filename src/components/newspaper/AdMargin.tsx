@@ -1,5 +1,5 @@
-import Image from "next/image";
 import type { Banner } from "@/types";
+import { FeaturedMedia } from "@/components/ui/FeaturedMedia";
 
 interface AdMarginProps {
   banners: Banner[];
@@ -73,8 +73,9 @@ function AdSlot({ banner }: { banner: Banner }) {
       rel="noopener noreferrer"
       className="relative flex h-full min-h-0 w-full overflow-hidden border-[5px] border-double border-polis-ink/70 bg-polis-paper"
     >
-      <Image
-        src={banner.imageUrl}
+      <FeaturedMedia
+        imageUrl={banner.imageUrl}
+        videoUrl={banner.videoUrl}
         alt={banner.title}
         fill
         sizes="(min-width: 1024px) 25vw, 50vw"

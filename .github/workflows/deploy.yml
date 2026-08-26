@@ -79,6 +79,32 @@ jobs:
       - name: Instalar ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
+      # Mesmo racional do "Cache de áudio já gerado" abaixo: evita reprocessar
+      # (baixar + rodar ffmpeg) todo GIF já convertido a cada rodada,
+      # inclusive no cron de 30 em 30 min — o runner é efêmero, então o
+      # manifesto e os MP4/poster já gerados precisam de cache explícito para
+      # sobreviver entre execuções.
+      - name: Cache de vídeo já gerado (GIF → MP4)
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/assets/video
+            src/content/video-manifest.json
+          key: video-cache-${{ github.run_id }}
+          restore-keys: |
+            video-cache-
+
+      # Roda logo após o sync-content (precisa de articles.json/banners.json
+      # já sincronizados) e antes do build. Processa no máximo
+      # TRANSCODE_MAX_NEW GIFs novos por rodada, TRANSCODE_CONCURRENCY em
+      # paralelo — protege o job de um backlog grande na primeira rodada
+      # (ver scripts/transcode-gif-media.mjs).
+      - name: Transcodificar GIFs para vídeo
+        run: npm run transcode-media
+        env:
+          TRANSCODE_MAX_NEW: "20"
+          TRANSCODE_CONCURRENCY: "3"
+
       # Evita reprocessar todas as matérias a cada rodada (inclusive no cron de
       # 30 em 30 min): o script já pula matérias sem mudança via hash, mas só
       # consegue comparar se o MP3 e o manifesto da rodada anterior

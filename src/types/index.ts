@@ -81,6 +81,8 @@ export interface Article {
   content: string;
   featuredImage: string;
   featuredImageAlt: string;
+  /** Vídeo derivado (MP4) quando featuredImage era um GIF — ver scripts/transcode-gif-media.mjs. */
+  featuredVideoUrl?: string;
   editoriaId: string;
   authorId: string;
   categoryIds: string[];
@@ -109,6 +111,8 @@ export interface Banner {
   id: string;
   title: string;
   imageUrl: string;
+  /** Vídeo derivado (MP4) quando imageUrl era um GIF — ver scripts/transcode-gif-media.mjs. */
+  videoUrl?: string;
   linkUrl: string;
   position: "sidebar";
   startDate: string;

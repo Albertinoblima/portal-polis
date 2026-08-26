@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Article, Edition, Editoria, User } from "@/types";
 import type { NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { ListenButton } from "@/components/articles/ListenButton";
 import { AudioPlayerButton } from "@/components/articles/AudioPlayerButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
+import { FeaturedMedia } from "@/components/ui/FeaturedMedia";
 import { getEditoriaById, getAuthors } from "@/lib/content";
 import { getArticleAudioUrl } from "@/lib/audio";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
@@ -101,8 +101,9 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
       node: (
         <div className="flex h-full flex-col items-center justify-center">
           <div className="relative aspect-square w-full max-h-[280px] overflow-hidden rounded-sm bg-polis-ink/5 sm:max-h-[360px] lg:max-h-[440px]">
-            <Image
-              src={article.featuredImage}
+            <FeaturedMedia
+              imageUrl={article.featuredImage}
+              videoUrl={article.featuredVideoUrl}
               alt={article.featuredImageAlt}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
@@ -156,8 +157,9 @@ export function buildEditionBlocks(edition: Edition): NewspaperBlock[] {
             href={`/materia/${topStory.slug}`}
             className="relative block aspect-[4/3] w-full max-w-xl overflow-hidden rounded-sm bg-polis-ink/5"
           >
-            <Image
-              src={topStory.featuredImage}
+            <FeaturedMedia
+              imageUrl={topStory.featuredImage}
+              videoUrl={topStory.featuredVideoUrl}
               alt={topStory.featuredImageAlt}
               fill
               sizes="(min-width: 768px) 50vw, 100vw"

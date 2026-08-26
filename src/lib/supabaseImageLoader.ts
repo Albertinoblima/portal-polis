@@ -11,7 +11,8 @@
 // outro `src` (ex.: assets locais em /public, como logos e fallback de
 // avatar de colunista) passa direto, sem transformação — o endpoint de
 // render só existe para arquivos que estão de fato no Storage.
-const STORAGE_OBJECT_PATH = "/storage/v1/object/public/";
+import { STORAGE_OBJECT_PATH, isSupabaseGif } from "@/lib/mediaUrl";
+
 const STORAGE_RENDER_PATH = "/storage/v1/render/image/public/";
 
 interface SupabaseImageLoaderParams {
@@ -23,13 +24,20 @@ interface SupabaseImageLoaderParams {
 export default function supabaseImageLoader({ src, width, quality }: SupabaseImageLoaderParams): string {
   // GIF fica de fora de propósito: o endpoint de transformação do Supabase
   // (imgproxy por baixo) achata GIF animado para o primeiro frame — vira
-  // imagem estática. Como a maioria das imagens de matéria/banner aqui é
-  // GIF, transformar quebraria a animação em quase todo o site. Sem suporte
-  // a preservar frames no plano gerenciado (só em self-hosted via
-  // IMGPROXY_MAX_ANIMATION_FRAMES), então GIF sempre serve o arquivo
-  // original — só JPEG/PNG/WebP passam pelo redimensionamento.
-  if (!src.includes(STORAGE_OBJECT_PATH) || src.toLowerCase().endsWith(".gif")) {
-    return src;
+  // imagem estática. GIFs referenciados em featuredImage/content/banners que
+  // já foram convertidos por scripts/transcode-gif-media.mjs nem chegam aqui
+  // como `.gif` (viram poster + <video> antes do build) — isso só serve de
+  // rede de segurança para falha de transcodificação ou a rodada antes do
+  // manifest existir. Sem suporte a preservar frames no plano gerenciado (só
+  // em self-hosted via IMGPROXY_MAX_ANIMATION_FRAMES), então GIF cru sempre
+  // serve o arquivo original — só JPEG/PNG/WebP passam pelo redimensionamento.
+  if (!src.includes(STORAGE_OBJECT_PATH) || isSupabaseGif(src)) {
+    // O Next avisa em dev se o loader "ignora" `width` (não aparece na URL
+    // devolvida) — aqui isso é intencional (arquivo estático local ou GIF
+    // servido cru), mas anexamos `?w=` mesmo assim só para satisfazer essa
+    // checagem; um servidor estático (GitHub Pages) ignora query string e
+    // serve o mesmo arquivo de qualquer forma.
+    return `${src}${src.includes("?") ? "&" : "?"}w=${width}`;
   }
 
   const url = new URL(src);
