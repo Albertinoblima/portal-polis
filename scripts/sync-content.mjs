@@ -42,10 +42,12 @@ async function main() {
     fetchSettings(supabase),
   ]);
 
+  const articlesWithEdition = withEditionNumbers(articles);
+
   await Promise.all([
     writeJson("editorias.json", editorias),
     writeJson("authors.json", authors),
-    writeJson("articles.json", articles),
+    writeJson("articles.json", articlesWithEdition),
     writeJson("banners.json", banners),
     writeJson("settings.json", settings),
   ]);
@@ -187,6 +189,20 @@ async function fetchSettings(supabase) {
     footerLinks: data.footer_links ?? [],
     socialLinks: data.social_links ?? [],
   };
+}
+
+// Precisa bater com getAllEditionsAscending() em src/lib/editions.ts: agrupa
+// matérias publicadas pelo dia de publicação, numerando da edição mais
+// antiga (nº 1) pra mais recente. Calculado aqui (não em generate-audio.mjs)
+// porque este script já tem todas as matérias publicadas numa única
+// chamada — evita duplicar o agrupamento em dois scripts .mjs.
+function withEditionNumbers(articles) {
+  const dateKeys = [...new Set(articles.map((a) => a.publishedAt.slice(0, 10)))].sort();
+  const numberByDate = new Map(dateKeys.map((date, index) => [date, index + 1]));
+  return articles.map((article) => ({
+    ...article,
+    editionNumber: numberByDate.get(article.publishedAt.slice(0, 10)),
+  }));
 }
 
 async function writeJson(filename, data) {

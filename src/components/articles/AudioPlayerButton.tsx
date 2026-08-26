@@ -5,50 +5,88 @@ import { AudioButtonFrame } from "./AudioButtonFrame";
 import { useAudioPlaybackController } from "./AudioPlaybackContext";
 import { useAudioWordHighlight } from "./useAudioWordHighlight";
 
-/** Botão "Ouvir matéria" tocando o MP3 gerado pelo Piper TTS em build time. */
+type Phase = "preamble" | "body";
+
+/**
+ * Botão "Ouvir matéria": toca o preâmbulo (nome do jornal, edição, data,
+ * categoria, autor, título, subtítulo — ver src/lib/audioPreamble.ts) e, ao
+ * terminar, o corpo em seguida — dois MP3 do Piper gerados separados em
+ * scripts/generate-audio.mjs. Dois arquivos em vez de um só concatenado:
+ * useAudioWordHighlight (destaque de palavra) fica ligado só ao elemento do
+ * corpo, então nunca vê o preâmbulo — sem isso o destaque dessincronizaria.
+ *
+ * Sem listener de `pause`, de propósito: o único lugar que pausa um dos dois
+ * elementos é o próprio `toggle()` abaixo, que já atualiza `isPlaying`
+ * diretamente. Ouvir `pause` também dispararia no fim natural do preâmbulo
+ * (o navegador dispara `pause` antes de `ended`), o que piscaria o rótulo do
+ * botão entre as duas fases sem necessidade.
+ */
 export function AudioPlayerButton({
-  src,
+  bodySrc,
+  preambleSrc,
   articleTitle,
   articleSlug,
 }: {
-  src: string;
+  bodySrc: string;
+  preambleSrc?: string;
   articleTitle: string;
   articleSlug: string;
 }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const preambleRef = useRef<HTMLAudioElement>(null);
+  const bodyRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [phase, setPhase] = useState<Phase>(preambleSrc ? "preamble" : "body");
   const { setController } = useAudioPlaybackController();
 
-  useAudioWordHighlight(audioRef, articleSlug);
+  useAudioWordHighlight(bodyRef, articleSlug);
 
   function toggle() {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const activeRef = phase === "preamble" ? preambleRef : bodyRef;
+    const active = activeRef.current;
+    if (!active) return;
     if (isPlaying) {
-      audio.pause();
+      active.pause();
+      setIsPlaying(false);
     } else {
-      audio.play();
+      active.play();
     }
+  }
+
+  function handlePreambleEnded() {
+    setPhase("body");
+    bodyRef.current?.play();
   }
 
   // Publica o controle para o botão do cabeçalho (ver AudioPlaybackContext) —
   // única forma de pausar/parar depois que o flip-book já virou passou da
-  // página 1, onde este botão vive de verdade.
+  // página 1, onde este botão vive de verdade. `phase` entra nas deps: sem
+  // isso, o controle publicado na fase do preâmbulo ficaria com um `toggle`
+  // "preso" apontando pro elemento errado depois da transição pro corpo,
+  // porque `isPlaying` pode não mudar de valor entre as duas fases.
   useEffect(() => {
     setController({ articleTitle, isPlaying, toggle });
     return () => setController(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, articleTitle]);
+  }, [isPlaying, phase, articleTitle]);
 
   return (
     <>
+      {preambleSrc && (
+        <audio
+          ref={preambleRef}
+          src={preambleSrc}
+          preload="none"
+          className="hidden"
+          onPlay={() => setIsPlaying(true)}
+          onEnded={handlePreambleEnded}
+        />
+      )}
       <audio
-        ref={audioRef}
-        src={src}
+        ref={bodyRef}
+        src={bodySrc}
         preload="none"
         className="hidden"
         onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
       />
       <AudioButtonFrame

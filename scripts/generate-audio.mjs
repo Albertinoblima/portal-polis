@@ -1,22 +1,35 @@
-// Gera áudio (Piper TTS) para cada matéria publicada e injeta a URL do MP3
-// resultante em src/content/audio-manifest.json, consumido por
-// src/lib/content.ts (getArticleAudioUrl) e renderizado como <audio controls>
-// em src/components/newspaper/editionBlocks.tsx.
+// Gera áudio (Piper TTS) para cada matéria publicada: um MP3 de preâmbulo
+// (nome do jornal, edição, data, categoria, autor, título, subtítulo) e um
+// MP3 separado do corpo do texto — ver src/lib/audio.ts (getArticleAudio) e
+// src/components/articles/AudioPlayerButton.tsx (toca os dois em sequência).
+//
+// Por que dois arquivos separados em vez de um único MP3 com tudo junto: (1)
+// o destaque de palavra ativa (useAudioWordHighlight.ts) assume que 100% da
+// duração do áudio do CORPO mapeia às palavras do corpo — um preâmbulo
+// embutido no mesmo arquivo dessincronizaria esse destaque; com dois
+// elementos <audio>, o hook nunca vê o preâmbulo. (2) o hash de cache do
+// corpo continua sendo só hash(texto do corpo) — se cobrisse preâmbulo+corpo
+// combinados, toda matéria já publicada perderia cache no dia deste rollout
+// (o preâmbulo nunca existiu antes) e qualquer edição de metadado (renomear
+// uma editoria, corrigir nome de autor) forçaria resíntese do corpo inteiro.
 //
 // Ponto de integração: roda em CI logo após `sync-content` (que já grava o
-// HTML da matéria, sem chrome de página, sem tags de rastreamento) e antes de
-// `next build` (ver .github/workflows/deploy.yml). O site não tem servidor em
-// tempo de execução — não existe onde rodar um webhook de CMS de forma
-// duradoura — então a estratégia é reprocessar a lista publicada a cada
-// disparo do pipeline (push, "Sincronizar site" no admin, ou o cron de
-// segurança de 30 min) e pular tudo que já foi gerado (hash do texto
-// sanitizado não mudou). Isso dá o mesmo efeito prático de um hook "ao
-// publicar", sem exigir infraestrutura própria.
+// HTML da matéria, sem chrome de página, sem tags de rastreamento, e já
+// calcula `editionNumber` — ver withEditionNumbers em sync-content.mjs) e
+// antes de `next build` (ver .github/workflows/deploy.yml). O site não tem
+// servidor em tempo de execução — não existe onde rodar um webhook de CMS de
+// forma duradoura — então a estratégia é reprocessar a lista publicada a
+// cada disparo do pipeline (push, "Sincronizar site" no admin, ou o cron de
+// segurança de 30 min) e pular tudo que já foi gerado (hash do texto não
+// mudou). Isso dá o mesmo efeito prático de um hook "ao publicar", sem
+// exigir infraestrutura própria.
 //
 // Fail-safe: qualquer falha (binário ausente, Piper/ffmpeg com erro, timeout)
-// é registrada em stderr e a matéria correspondente fica sem áudio nesta
-// rodada — nunca derruba o build. Rode com --article=<slug> para regenerar
-// uma matéria específica sem varrer todas as outras.
+// é registrada em stderr e a matéria correspondente fica sem esse áudio
+// específico nesta rodada — nunca derruba o build, e nunca descarta o cache
+// do outro artefato (corpo/preâmbulo) da mesma matéria. Rode com
+// --article=<slug> para regenerar uma matéria específica sem varrer todas as
+// outras.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
@@ -27,8 +40,11 @@ import { JSDOM } from "jsdom";
 import { runProcess } from "./lib/runProcess.mjs";
 
 const ROOT = process.cwd();
-const ARTICLES_FILE = path.join(ROOT, "src", "content", "articles.json");
-const MANIFEST_FILE = path.join(ROOT, "src", "content", "audio-manifest.json");
+const CONTENT_DIR = path.join(ROOT, "src", "content");
+const ARTICLES_FILE = path.join(CONTENT_DIR, "articles.json");
+const EDITORIAS_FILE = path.join(CONTENT_DIR, "editorias.json");
+const AUTHORS_FILE = path.join(CONTENT_DIR, "authors.json");
+const MANIFEST_FILE = path.join(CONTENT_DIR, "audio-manifest.json");
 const AUDIO_DIR = path.join(ROOT, "public", "assets", "audio");
 const PUBLIC_AUDIO_PREFIX = "/assets/audio";
 
@@ -43,6 +59,28 @@ const PROCESS_TIMEOUT_MS = 120_000;
 // `content` do Supabase nunca vai conter chrome de página.
 const AUTHOR_BLOCKLIST = ["Albertino Bezerra Lima"];
 
+// Precisa bater com src/lib/audioPreamble.ts — este script roda via
+// `node scripts/x.mjs` puro, sem transpilador de TS, então não dá pra
+// importar aquele módulo diretamente (mesmo padrão de duplicação já usado
+// para isSupabaseGif em scripts/transcode-gif-media.mjs).
+function formatDateSpoken(iso) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function buildAudioPreambleText({ editionNumber, publishedAt, editoriaName, authorName, title, subtitle }) {
+  const parts = ["Jornal Portal Pólis — Onde a Política faz sentido."];
+  parts.push(
+    editionNumber
+      ? `Edição número ${editionNumber}, ${formatDateSpoken(publishedAt)}.`
+      : `${formatDateSpoken(publishedAt)}.`
+  );
+  if (editoriaName) parts.push(`Editoria: ${editoriaName}.`);
+  if (authorName) parts.push(`Por ${authorName}.`);
+  parts.push(`${title}.`);
+  if (subtitle) parts.push(`${subtitle}.`);
+  return parts.join(" ");
+}
+
 async function main() {
   const onlySlug = getArgValue("--article");
 
@@ -56,6 +94,8 @@ async function main() {
   }
 
   const articles = JSON.parse(await readFile(ARTICLES_FILE, "utf-8"));
+  const editoriaNameById = await readIdNameMap(EDITORIAS_FILE);
+  const authorNameById = await readIdNameMap(AUTHORS_FILE);
   const published = articles.filter(
     (a) => a.status === "published" && new Date(a.publishedAt) <= new Date() && (!onlySlug || a.slug === onlySlug)
   );
@@ -73,29 +113,54 @@ async function main() {
   let failed = 0;
 
   for (const article of published) {
+    manifest[article.slug] ??= {};
+    const entry = manifest[article.slug];
+
+    const preambleText = buildAudioPreambleText({
+      editionNumber: article.editionNumber,
+      publishedAt: article.publishedAt,
+      editoriaName: editoriaNameById.get(article.editoriaId),
+      authorName: authorNameById.get(article.authorId),
+      title: article.title,
+      subtitle: article.subtitle,
+    });
+
+    const preambleResult = await synthesizeUnit({
+      text: preambleText,
+      mp3Path: path.join(AUDIO_DIR, `audio-${article.slug}-preamble.mp3`),
+      publicFile: `${PUBLIC_AUDIO_PREFIX}/audio-${article.slug}-preamble.mp3`,
+      cached: entry.preamble,
+      label: `${article.slug}/preâmbulo`,
+    });
+    if (preambleResult.status === "generated") {
+      entry.preamble = preambleResult.entry;
+      generated++;
+    } else if (preambleResult.status === "skipped") {
+      skipped++;
+    } else {
+      failed++;
+    }
+
     const plainText = extractPlainText(article.content);
     if (!plainText) {
-      console.warn(`⚠ [${article.slug}] matéria sem texto legível após sanitização — pulando.`);
+      console.warn(`⚠ [${article.slug}] matéria sem texto legível após sanitização — pulando corpo.`);
       continue;
     }
 
-    const hash = hashText(plainText);
-    const mp3Path = path.join(AUDIO_DIR, `audio-${article.slug}.mp3`);
-    const cached = manifest[article.slug];
-
-    if (cached?.hash === hash && existsSync(mp3Path)) {
-      skipped++;
-      continue;
-    }
-
-    try {
-      await synthesize(plainText, mp3Path);
-      manifest[article.slug] = { hash, file: `${PUBLIC_AUDIO_PREFIX}/audio-${article.slug}.mp3`, updatedAt: new Date().toISOString() };
+    const bodyResult = await synthesizeUnit({
+      text: plainText,
+      mp3Path: path.join(AUDIO_DIR, `audio-${article.slug}.mp3`),
+      publicFile: `${PUBLIC_AUDIO_PREFIX}/audio-${article.slug}.mp3`,
+      cached: entry.body,
+      label: `${article.slug}/corpo`,
+    });
+    if (bodyResult.status === "generated") {
+      entry.body = bodyResult.entry;
       generated++;
-      console.log(`✓ [${article.slug}] áudio gerado.`);
-    } catch (error) {
+    } else if (bodyResult.status === "skipped") {
+      skipped++;
+    } else {
       failed++;
-      console.error(`✗ [${article.slug}] falha ao gerar áudio — publicando sem player: ${error.message}`);
     }
   }
 
@@ -103,10 +168,37 @@ async function main() {
   console.log(`Áudio: ${generated} gerado(s), ${skipped} sem mudança, ${failed} falha(s).`);
 }
 
+/** Sintetiza um texto (preâmbulo ou corpo) se o cache não bater, com o mesmo fail-safe de sempre. */
+async function synthesizeUnit({ text, mp3Path, publicFile, cached, label }) {
+  const hash = hashText(text);
+  if (cached?.hash === hash && existsSync(mp3Path)) {
+    return { status: "skipped" };
+  }
+
+  try {
+    await synthesize(text, mp3Path);
+    console.log(`✓ [${label}] áudio gerado.`);
+    return { status: "generated", entry: { hash, file: publicFile, updatedAt: new Date().toISOString() } };
+  } catch (error) {
+    console.error(`✗ [${label}] falha ao gerar áudio — mantendo o que já existia: ${error.message}`);
+    return { status: "failed" };
+  }
+}
+
 function getArgValue(flag) {
   const prefix = `${flag}=`;
   const arg = process.argv.find((a) => a.startsWith(prefix));
   return arg ? arg.slice(prefix.length) : undefined;
+}
+
+async function readIdNameMap(filePath) {
+  if (!existsSync(filePath)) return new Map();
+  try {
+    const rows = JSON.parse(await readFile(filePath, "utf-8"));
+    return new Map(rows.map((row) => [row.id, row.name]));
+  } catch {
+    return new Map();
+  }
 }
 
 async function readManifest() {

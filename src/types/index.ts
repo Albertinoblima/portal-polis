@@ -83,6 +83,11 @@ export interface Article {
   featuredImageAlt: string;
   /** Vídeo derivado (MP4) quando featuredImage era um GIF — ver scripts/transcode-gif-media.mjs. */
   featuredVideoUrl?: string;
+  /** Calculado em scripts/sync-content.mjs (precisa bater com getAllEditionsAscending() em
+   * src/lib/editions.ts). Redundante por design — o site calcula o número de edição em
+   * build via editions.ts; este campo existe só pro preâmbulo falado do áudio
+   * (scripts/generate-audio.mjs), que não pode importar módulos TS. */
+  editionNumber?: number;
   editoriaId: string;
   authorId: string;
   categoryIds: string[];

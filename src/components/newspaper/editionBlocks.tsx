@@ -6,7 +6,8 @@ import { AudioPlayerButton } from "@/components/articles/AudioPlayerButton";
 import { EditoriaBadge } from "@/components/ui/Badge";
 import { FeaturedMedia } from "@/components/ui/FeaturedMedia";
 import { getEditoriaById, getAuthors } from "@/lib/content";
-import { getArticleAudioUrl } from "@/lib/audio";
+import { getArticleAudio } from "@/lib/audio";
+import { buildAudioPreambleText } from "@/lib/audioPreamble";
 import { getCrosswordForEdition, getWordSearchForEdition } from "@/lib/editions";
 import { formatDate } from "@/lib/utils";
 
@@ -23,8 +24,16 @@ interface ArticleBlockOptions {
  * sequência sem esses blocos extras.
  */
 export function buildArticleBlocks(article: Article, { editoria, author }: ArticleBlockOptions): NewspaperBlock[] {
-  const plainTextContent = article.content.replace(/<[^>]+>/g, " ");
-  const audioUrl = getArticleAudioUrl(article.slug);
+  const preambleText = buildAudioPreambleText({
+    editionNumber: article.editionNumber,
+    publishedAt: article.publishedAt,
+    editoriaName: editoria?.name,
+    authorName: author?.name,
+    title: article.title,
+    subtitle: article.subtitle,
+  });
+  const plainTextContent = `${preambleText} ${article.content.replace(/<[^>]+>/g, " ")}`;
+  const audio = getArticleAudio(article.slug);
 
   const blocks: NewspaperBlock[] = [
     {
@@ -55,8 +64,13 @@ export function buildArticleBlocks(article: Article, { editoria, author }: Artic
           </h1>
 
           <div className="mt-3">
-            {audioUrl ? (
-              <AudioPlayerButton src={audioUrl} articleTitle={article.title} articleSlug={article.slug} />
+            {audio ? (
+              <AudioPlayerButton
+                bodySrc={audio.bodySrc}
+                preambleSrc={audio.preambleSrc}
+                articleTitle={article.title}
+                articleSlug={article.slug}
+              />
             ) : (
               // Sem áudio do Piper ainda gerado para esta matéria (build mais
               // recente que a publicação, ou falha silenciosa do TTS) —

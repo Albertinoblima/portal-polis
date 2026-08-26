@@ -12,7 +12,18 @@ import { fileURLToPath } from "node:url";
 // build`. Lido via fs (em vez de `import ... from "@/content/audio-manifest.json"`)
 // porque esse arquivo só existe depois da primeira rodada do script — um
 // import estático quebraria o build antes disso.
-function loadAudioManifest(): Record<string, { file: string }> {
+interface AudioManifestEntry {
+  hash: string;
+  file: string;
+  updatedAt: string;
+}
+
+interface AudioManifestArticleEntry {
+  body?: AudioManifestEntry;
+  preamble?: AudioManifestEntry;
+}
+
+function loadAudioManifest(): Record<string, AudioManifestArticleEntry> {
   try {
     const manifestPath = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
@@ -28,6 +39,14 @@ function loadAudioManifest(): Record<string, { file: string }> {
 
 const audioManifest = loadAudioManifest();
 
-export function getArticleAudioUrl(slug: string): string | undefined {
-  return audioManifest[slug]?.file;
+/**
+ * `preambleSrc` toca antes de `bodySrc` (ver AudioPlayerButton.tsx) — nome do
+ * jornal, edição, data, categoria, autor, título e subtítulo, gerado
+ * separado do corpo por scripts/generate-audio.mjs. Sem entrada de corpo,
+ * não há player Piper para esta matéria (cai no fallback ListenButton).
+ */
+export function getArticleAudio(slug: string): { bodySrc: string; preambleSrc?: string } | undefined {
+  const entry = audioManifest[slug];
+  if (!entry?.body) return undefined;
+  return { bodySrc: entry.body.file, preambleSrc: entry.preamble?.file };
 }
