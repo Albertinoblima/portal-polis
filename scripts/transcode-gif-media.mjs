@@ -253,9 +253,21 @@ function escapeHtmlAttr(text) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
+// `preload="none"` + `data-video-src` (em vez de um <source src> direto): a
+// Home concatena TODAS as edições publicadas sem paginar (getAllEditions(),
+// sem limite), e o PageFlipEngine nunca desmonta página nenhuma — então todo
+// vídeo embutido no corpo de toda matéria, de toda edição já publicada, fica
+// sempre presente no DOM. Um <source src> direto dispara uma requisição por
+// vídeo assim que a página carrega, crescendo pra sempre a cada matéria
+// nova, mesmo pras que o leitor nunca rola até ver. useInlineVideoAutoplay.ts
+// (que já tinha o IntersectionObserver de play/pause) passa a materializar o
+// <source> de verdade só quando o vídeo entra em viewport pela primeira
+// vez — mesmo raciocínio do `shouldLoad` em FeaturedMedia.tsx, só que via DOM
+// manual porque este HTML é injetado como string estática
+// (dangerouslySetInnerHTML), não é um componente React.
 function buildVideoSnippet(entry, alt) {
   const altAttr = alt ? ` aria-label="${escapeHtmlAttr(alt)}"` : "";
-  return `<video class="w-full h-auto" muted loop playsinline preload="metadata" poster="${entry.poster}" data-inline-video${altAttr}><source src="${entry.video}" type="video/mp4" /></video>`;
+  return `<video class="w-full h-auto" muted loop playsinline preload="none" poster="${entry.poster}" data-inline-video data-video-src="${entry.video}"${altAttr}></video>`;
 }
 
 function rewriteArticle(article, manifest) {
