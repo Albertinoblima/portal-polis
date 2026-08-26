@@ -15,6 +15,7 @@ import { GAME_INTERACTION_EVENT } from "@/components/games/gameInteraction";
 export interface PageFlipHandle {
   flipNext: () => void;
   flipPrev: () => void;
+  /** Vira para a página com a mesma curva/sombra de flipNext/flipPrev — nunca um corte seco. */
   turnToPage: (page: number) => void;
   getCurrentPageIndex: () => number;
   getPageCount: () => number;
@@ -207,7 +208,13 @@ export const PageFlipEngine = forwardRef<PageFlipHandle, PageFlipEngineProps>(
     useImperativeHandle(ref, () => ({
       flipNext: () => pageFlipRef.current?.flipNext(),
       flipPrev: () => pageFlipRef.current?.flipPrev(),
-      turnToPage: (page: number) => pageFlipRef.current?.turnToPage(page),
+      // A lib expõe DOIS métodos de ir para uma página: `turnToPage` (salto
+      // seco, `pages.show(page)` — pensado pra posicionar sem efeito nenhum,
+      // ex.: ao remontar) e `flip` (mesma curva/sombra animada de
+      // flipNext/flipPrev, só que para uma página arbitrária). Chamamos
+      // `flip` aqui de propósito — quem usa `PageFlipHandle.turnToPage`
+      // espera "virar a página", não "saltar para ela".
+      turnToPage: (page: number) => pageFlipRef.current?.flip(page),
       getCurrentPageIndex: () => pageFlipRef.current?.getCurrentPageIndex() ?? 0,
       getPageCount: () => pageFlipRef.current?.getPageCount() ?? 0,
     }));
