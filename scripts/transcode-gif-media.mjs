@@ -64,8 +64,14 @@ function isSupabaseGif(src) {
 // pixels transparentes de um GIF com transparência virariam preto sólido) e
 // limita a largura máxima mantendo proporção (nunca upscale, dimensão par
 // exigida por yuv420p).
+// Usa scale2ref (não o "scale=rw:rh" mais novo sugerido pelo aviso de
+// depreciação do ffmpeg): o runner de CI instala ffmpeg via
+// `apt-get install ffmpeg` (Ubuntu 24.04 → ffmpeg 6.1.1), que ainda não tem
+// as variáveis `rw`/`rh` no filtro `scale` (só chegaram em versões bem mais
+// novas) — testado e confirmado quebrado em CI antes desta escolha. scale2ref
+// funciona em ambas as versões, só com aviso de depreciação (inofensivo).
 const COMPOSITE_FILTER =
-  "[0:v]scale='min(960,iw)':-2:flags=lanczos[fg];[1:v][fg]scale=rw:rh[bg];[bg][fg]overlay=shortest=1[out]";
+  "[0:v]scale='min(960,iw)':-2:flags=lanczos[fg];[1:v][fg]scale2ref[bg][fg2];[bg][fg2]overlay=shortest=1[out]";
 
 async function main() {
   if (!existsSync(ARTICLES_FILE) || !existsSync(BANNERS_FILE)) {
