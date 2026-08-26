@@ -1,10 +1,12 @@
 import { NavBar } from "@/components/newspaper/NavBar";
 import { RouteFlipTransition } from "@/components/newspaper/RouteFlipTransition";
 import { AudioPlaybackProvider } from "@/components/articles/AudioPlaybackContext";
+import { WelcomeChime } from "@/components/layout/WelcomeChime";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <AudioPlaybackProvider>
+      <WelcomeChime />
       <div className="flex h-dvh w-dvw flex-col overflow-hidden bg-polis-paper">
         <NavBar />
         <div className="min-h-0 flex-1" style={{ perspective: "1600px" }}>

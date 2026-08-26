@@ -59,6 +59,14 @@ const PROCESS_TIMEOUT_MS = 120_000;
 // `content` do Supabase nunca vai conter chrome de página.
 const AUTHOR_BLOCKLIST = ["Albertino Bezerra Lima"];
 
+// Saudação tocada no primeiro clique do leitor em qualquer página do site
+// (ver src/components/layout/WelcomeChime.tsx) — texto fixo, independente de
+// matéria, gerado uma única vez e reaproveitado até o texto mudar (mesmo
+// cache por hash de sempre). "__welcome" nunca colide com um slug real de
+// matéria (Supabase nunca gera slug começando com "__").
+const WELCOME_TEXT = "Bem-vindo ao Portal Pólis, onde a Política faz sentido!";
+const WELCOME_MANIFEST_KEY = "__welcome";
+
 // Precisa bater com src/lib/audioPreamble.ts — este script roda via
 // `node scripts/x.mjs` puro, sem transpilador de TS, então não dá pra
 // importar aquele módulo diretamente (mesmo padrão de duplicação já usado
@@ -93,6 +101,33 @@ async function main() {
     return;
   }
 
+  await mkdir(AUDIO_DIR, { recursive: true });
+  const manifest = await readManifest();
+
+  let generated = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  // Roda mesmo com --article=<slug> (regenerar só uma matéria não deveria
+  // pular a saudação se o texto dela também mudou) e mesmo sem nenhuma
+  // matéria publicada ainda — ela toca no site inteiro, não numa página de
+  // matéria específica.
+  const welcomeResult = await synthesizeUnit({
+    text: WELCOME_TEXT,
+    mp3Path: path.join(AUDIO_DIR, "welcome.mp3"),
+    publicFile: `${PUBLIC_AUDIO_PREFIX}/welcome.mp3`,
+    cached: manifest[WELCOME_MANIFEST_KEY],
+    label: "boas-vindas",
+  });
+  if (welcomeResult.status === "generated") {
+    manifest[WELCOME_MANIFEST_KEY] = welcomeResult.entry;
+    generated++;
+  } else if (welcomeResult.status === "skipped") {
+    skipped++;
+  } else {
+    failed++;
+  }
+
   const articles = JSON.parse(await readFile(ARTICLES_FILE, "utf-8"));
   const editoriaNameById = await readIdNameMap(EDITORIAS_FILE);
   const authorNameById = await readIdNameMap(AUTHORS_FILE);
@@ -102,15 +137,7 @@ async function main() {
 
   if (published.length === 0) {
     console.warn(onlySlug ? `⚠ Nenhuma matéria publicada com slug "${onlySlug}".` : "⚠ Nenhuma matéria publicada encontrada.");
-    return;
   }
-
-  await mkdir(AUDIO_DIR, { recursive: true });
-  const manifest = await readManifest();
-
-  let generated = 0;
-  let skipped = 0;
-  let failed = 0;
 
   for (const article of published) {
     manifest[article.slug] ??= {};
