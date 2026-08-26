@@ -2,11 +2,16 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { buildWordSchedule, findActiveWordIndex, TTS_ACTIVE_WORD_CLASS, TTS_WORD_CLASS } from "@/lib/ttsHighlight";
+import { useTtsPageSync } from "@/components/newspaper/TtsPageSyncContext";
 
 /**
  * Destaca, dentro do corpo da matéria, a palavra correspondente à posição
  * atual de reprodução do `<audio>` (ver ttsHighlight.ts para a estimativa de
- * tempo por palavra — o Piper não gera timestamps reais).
+ * tempo por palavra — o Piper não gera timestamps reais). Também é quem
+ * decide se o flip-book precisa virar de página para acompanhar a leitura —
+ * a cada palavra ativa nova, avisa `TtsPageSyncContext` (ver lá), que sabe em
+ * que página do jornal aquela palavra cai; a interação do leitor com o
+ * player fica só em "ouvir/parar", o resto acontece sozinho.
  *
  * Reconsulta os spans a cada `timeupdate` em vez de cachear os elementos uma
  * única vez: um resize de viewport re-pagina a matéria (ver paginate.ts) e
@@ -17,6 +22,7 @@ import { buildWordSchedule, findActiveWordIndex, TTS_ACTIVE_WORD_CLASS, TTS_WORD
 export function useAudioWordHighlight(audioRef: RefObject<HTMLAudioElement | null>, articleSlug: string) {
   const scheduleRef = useRef<number[] | null>(null);
   const activeIndexRef = useRef(-1);
+  const { syncToWord } = useTtsPageSync();
 
   useEffect(() => {
     const maybeAudio = audioRef.current;
@@ -34,6 +40,9 @@ export function useAudioWordHighlight(audioRef: RefObject<HTMLAudioElement | nul
       words[activeIndexRef.current]?.classList.remove(TTS_ACTIVE_WORD_CLASS);
       words[index]?.classList.add(TTS_ACTIVE_WORD_CLASS);
       activeIndexRef.current = index;
+      // -1 é só o estado de "nada destacado" (limpeza/fim) — nunca corresponde
+      // a uma página real, então não há o que sincronizar nesse caso.
+      if (index >= 0) syncToWord(articleSlug, index);
     }
 
     function handleLoadedMetadata() {
@@ -74,5 +83,5 @@ export function useAudioWordHighlight(audioRef: RefObject<HTMLAudioElement | nul
       audio.removeEventListener("ended", handleEnded);
       setActiveIndex(-1, getWords());
     };
-  }, [audioRef, articleSlug]);
+  }, [audioRef, articleSlug, syncToWord]);
 }

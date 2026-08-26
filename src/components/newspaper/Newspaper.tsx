@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PageFlipEngine, type PageFlipHandle } from "./PageFlipEngine";
 import { PageChrome } from "./PageChrome";
 import { Masthead } from "./Masthead";
@@ -10,8 +10,9 @@ import { paginateHtml } from "./paginate";
 import { useIsClient } from "@/hooks/useIsClient";
 import { useInlineVideoAutoplay } from "@/hooks/useInlineVideoAutoplay";
 import { getActiveBanners } from "@/lib/banners";
-import { wrapWordsForHighlight } from "@/lib/ttsHighlight";
+import { countWords, wrapWordsForHighlight } from "@/lib/ttsHighlight";
 import { ARTICLE_PROSE_CLASSNAME } from "./proseClassName";
+import { TtsPageSyncContext, type TtsPageSyncApi } from "./TtsPageSyncContext";
 
 const SIDEBAR_BANNERS = getActiveBanners("sidebar");
 
@@ -90,6 +91,21 @@ interface PreparedPage {
   isMasthead?: boolean;
 }
 
+/**
+ * Quantas palavras (mesma contagem usada pelo destaque de áudio, ver
+ * ttsHighlight.ts) cada página do flip-book consumiu do corpo de UMA matéria
+ * (`ttsId`), em ordem. `cumulativeWordCounts[k]` é o total de palavras já
+ * consumidas até o FIM da k-ésima página dessa matéria; `startPageIndex` é o
+ * índice absoluto (em `preparedPages`/`flipPages`) da primeira dessas
+ * páginas — as demais são sempre consecutivas, porque cada matéria vira
+ * exatamente um bloco `type: "html"` (ver buildArticleBlocks em
+ * editionBlocks.tsx), nunca fragmentado entre blocos diferentes.
+ */
+interface TtsPageMapEntry {
+  startPageIndex: number;
+  cumulativeWordCounts: number[];
+}
+
 export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, edition, blocks }: NewspaperProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlipHandle>(null);
@@ -137,8 +153,12 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
    */
   const contentHeightAdPage = Math.max(pageHeight - CHROME_FOOTER_PX - PAGE_PADDING_Y_PX, 0);
 
-  const preparedPages = useMemo<PreparedPage[]>(() => {
-    if (contentWidth <= 0 || contentHeight <= 0) return [];
+  const { pages: preparedPages, ttsPageMap } = useMemo<{
+    pages: PreparedPage[];
+    ttsPageMap: Map<string, TtsPageMapEntry>;
+  }>(() => {
+    const ttsPageMap = new Map<string, TtsPageMapEntry>();
+    if (contentWidth <= 0 || contentHeight <= 0) return { pages: [], ttsPageMap };
 
     const out: PreparedPage[] = [];
 
@@ -247,6 +267,14 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
           columnsPerPage: columns,
         })
         : [block.html];
+      // Registrado ANTES do forEach: a primeira página deste bloco é sempre
+      // a próxima que `out.push` vai criar, e (ver comentário em
+      // TtsPageMapEntry) as páginas de uma mesma matéria nunca se misturam
+      // com as de outra — startPageIndex + k localiza a página k sem precisar
+      // procurar por ela depois.
+      const ttsStartPageIndex = out.length;
+      const ttsCumulativeWordCounts: number[] = [];
+      let ttsWordsSoFar = 0;
       fragments.forEach((html, fragmentIndex) => {
         // O wrap de palavras em spans (para o destaque de leitura em áudio)
         // roda DEPOIS da paginação, em cada fragmento (1 página) já pronto —
@@ -276,7 +304,22 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
           contentHeightPx: fragmentIndex === 0 ? budgetHeight : contentHeight,
           isMasthead: fragmentIndex === 0 && isMasthead,
         });
+        if (block.ttsId) {
+          // Mesma contagem de tokens usada por wrapWordsForHighlight, sobre o
+          // fragmento ANTES do wrap (os <span> extras não mudam a contagem,
+          // já que a regex ignora tags) — mantém a agenda de página no mesmo
+          // "relógio" de palavras que useAudioWordHighlight usa para achar a
+          // palavra ativa.
+          ttsWordsSoFar += countWords(html);
+          ttsCumulativeWordCounts.push(ttsWordsSoFar);
+        }
       });
+      if (block.ttsId) {
+        ttsPageMap.set(block.ttsId, {
+          startPageIndex: ttsStartPageIndex,
+          cumulativeWordCounts: ttsCumulativeWordCounts,
+        });
+      }
       isFirstContentBlock = false;
     }
 
@@ -296,8 +339,21 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
       });
     }
 
-    return out;
+    return { pages: out, ttsPageMap };
   }, [blocks, contentWidth, contentHeight, contentHeightCover, contentHeightAdPage, columnsDefault, isDesktop, isClient, showMasthead]);
+
+  // Espelhado num ref (em vez de lido diretamente do useMemo) porque quem
+  // consome esse mapa é `syncToWord`, abaixo — chamada várias vezes por
+  // segundo pelo destaque de áudio, fora do ciclo de render do React. Um ref
+  // sempre expõe o valor mais recente sem exigir que `syncToWord` mude de
+  // identidade a cada recalculo de página (ver TtsPageSyncContext.tsx).
+  // A cópia acontece num efeito, não no corpo do componente: escrever em
+  // `.current` durante o render quebra a suposição de pureza que o React
+  // Compiler faz sobre essa fase (`react-hooks/refs`).
+  const ttsPageMapRef = useRef(ttsPageMap);
+  useEffect(() => {
+    ttsPageMapRef.current = ttsPageMap;
+  }, [ttsPageMap]);
 
   if (preparedPages.length !== pageCountSeen) {
     setPageCountSeen(preparedPages.length);
@@ -335,8 +391,49 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
   const totalPages = preparedPages.length;
   useInlineVideoAutoplay(totalPages);
 
+  // Último alvo de virada já disparado por `syncToWord`, para não chamar
+  // `turnToPage` de novo a cada `timeupdate` enquanto a leitura ainda está na
+  // mesma página (o próprio destaque de palavra dispara isso várias vezes
+  // por segundo). Zerado a cada repaginação (`totalPages` muda): os índices
+  // absolutos de página são recalculados do zero nesse momento (mesmo motivo
+  // do `key={totalPages}` no PageFlipEngine logo abaixo), então um alvo
+  // "antigo" perderia o sentido.
+  const lastTtsSyncRef = useRef<{ ttsId: string; page: number } | null>(null);
+  useEffect(() => {
+    lastTtsSyncRef.current = null;
+  }, [totalPages]);
+
+  // `syncToWord` só lê refs (nunca estado reativo), então pode ter identidade
+  // estável para sempre (deps vazias) sem correr o risco de "fechar" sobre
+  // valores desatualizados — cada chamada lê `.current` na hora de rodar, não
+  // na hora em que a função foi definida. É essa estabilidade que permite
+  // publicá-la via TtsPageSyncContext sem provocar um re-render em toda
+  // matéria com áudio tocando a cada virada de página.
+  const syncToWord = useCallback((ttsId: string, wordIndex: number) => {
+    const entry = ttsPageMapRef.current.get(ttsId);
+    if (!entry) return;
+
+    const { startPageIndex, cumulativeWordCounts } = entry;
+    let localPageIndex = 0;
+    while (
+      localPageIndex < cumulativeWordCounts.length - 1 &&
+      cumulativeWordCounts[localPageIndex] <= wordIndex
+    ) {
+      localPageIndex += 1;
+    }
+    const targetPage = startPageIndex + localPageIndex;
+
+    const last = lastTtsSyncRef.current;
+    if (last && last.ttsId === ttsId && last.page === targetPage) return;
+    lastTtsSyncRef.current = { ttsId, page: targetPage };
+    flipRef.current?.turnToPage(targetPage);
+  }, []);
+
+  const ttsPageSyncApi = useMemo<TtsPageSyncApi>(() => ({ syncToWord }), [syncToWord]);
+
   return (
-    <div ref={viewportRef} className="relative h-full w-full">
+    <TtsPageSyncContext.Provider value={ttsPageSyncApi}>
+      <div ref={viewportRef} className="relative h-full w-full">
       {flipPages.length > 0 && contentWidth > 0 && (
         <>
           <div className={hasMeasuredViewport ? "h-full w-full" : "pointer-events-none h-full w-full opacity-0"}>
@@ -398,5 +495,6 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
         </>
       )}
     </div>
+    </TtsPageSyncContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWordSchedule, findActiveWordIndex, wrapWordsForHighlight } from "./ttsHighlight";
+import { buildWordSchedule, countWords, findActiveWordIndex, wrapWordsForHighlight } from "./ttsHighlight";
 
 describe("wrapWordsForHighlight", () => {
   it("envolve cada palavra em um span, preservando as tags intactas", () => {
@@ -20,6 +20,30 @@ describe("wrapWordsForHighlight", () => {
   it("mantém o texto vazio/só-tags sem alterações", () => {
     expect(wrapWordsForHighlight("<p></p>")).toBe("<p></p>");
     expect(wrapWordsForHighlight("")).toBe("");
+  });
+});
+
+describe("countWords", () => {
+  it("conta o mesmo nº de tokens que wrapWordsForHighlight envolve em spans", () => {
+    const html = "<p>O <strong>Congresso</strong> aprovou.</p>";
+    expect(countWords(html)).toBe(3);
+  });
+
+  it("ignora atributos de tag (ex.: alt de imagem) na contagem", () => {
+    const html = '<img src="a.jpg" alt="uma foto qualquer">Legenda</img>';
+    expect(countWords(html)).toBe(1);
+  });
+
+  it("retorna 0 para texto vazio/só-tags", () => {
+    expect(countWords("<p></p>")).toBe(0);
+    expect(countWords("")).toBe(0);
+  });
+
+  it("bate com o nº de spans que wrapWordsForHighlight de fato produz", () => {
+    const html = "<p>Texto de teste com <em>várias</em> palavras diferentes.</p>";
+    const wrapped = wrapWordsForHighlight(html);
+    const spanCount = (wrapped.match(/class="tts-word"/g) ?? []).length;
+    expect(countWords(html)).toBe(spanCount);
   });
 });
 

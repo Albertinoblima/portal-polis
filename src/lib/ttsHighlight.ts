@@ -21,6 +21,20 @@ export function wrapWordsForHighlight(html: string): string {
   });
 }
 
+/**
+ * Conta quantas "palavras" (mesmo critério de tokenização de `wrapWordsForHighlight`,
+ * ignorando tags) existem em `html`. Usado para mapear, por página já paginada,
+ * quantas palavras do áudio cada uma consome — sem isso não dá para saber a que
+ * página do flip-book corresponde a palavra ativa (ver Newspaper.tsx).
+ */
+export function countWords(html: string): number {
+  let count = 0;
+  for (const match of html.matchAll(TAG_OR_WORD)) {
+    if (!match[1]) count += 1; // match[1] = grupo de tag; ausente => é palavra
+  }
+  return count;
+}
+
 const SENTENCE_PAUSE_CHARS = new Set([".", "!", "?", "…"]);
 const CLAUSE_PAUSE_CHARS = new Set([",", ";", ":"]);
 
