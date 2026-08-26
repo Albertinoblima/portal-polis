@@ -19,6 +19,10 @@ export function AudioButtonFrame({
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      // Marcador lido por WelcomeChime.tsx: se o primeiro clique do leitor
+      // no site for justo este botão, a saudação de boas-vindas não deve
+      // tocar por cima do áudio da matéria que ele acabou de pedir.
+      data-audio-control
       className="paper-texture group relative inline-flex items-center gap-3 border-2 border-polis-ink bg-polis-paper-soft px-6 py-2.5 transition-colors hover:bg-polis-ink"
     >
       <span className="pointer-events-none absolute inset-[3px] border border-polis-ink/70 group-hover:border-polis-paper/70" />

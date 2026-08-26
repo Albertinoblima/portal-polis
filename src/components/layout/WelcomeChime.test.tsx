@@ -47,4 +47,25 @@ describe("WelcomeChime", () => {
 
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
+
+  it("não toca se o primeiro clique for num controle de áudio (evita sobrepor com o áudio da matéria), mas ainda marca a sessão", () => {
+    render(<WelcomeChime />);
+    document.body.innerHTML = '<button data-audio-control>Ouvir matéria</button>';
+    const audioButton = document.querySelector("[data-audio-control]") as HTMLButtonElement;
+
+    fireEvent.click(audioButton);
+
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(SESSION_KEY)).toBe("1");
+  });
+
+  it("também não toca se o clique cair num elemento filho do controle de áudio (ex.: ícone/label)", () => {
+    render(<WelcomeChime />);
+    document.body.innerHTML = '<button data-audio-control><span>Ouvir matéria</span></button>';
+    const label = document.querySelector("span") as HTMLSpanElement;
+
+    fireEvent.click(label);
+
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  });
 });

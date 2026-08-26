@@ -19,13 +19,26 @@ const SESSION_KEY = "portal-polis:welcome-played";
  * primeiro clique da visita já dispara isso. O sessionStorage cobre os casos
  * em que o componente remonta do zero (recarregar a página, abrir o site
  * numa aba nova) sem tocar de novo até a aba/sessão fechar.
+ *
+ * Se o PRIMEIRO clique da visita for justo em "Ouvir matéria" (ou no
+ * controle de áudio do cabeçalho — ver `data-audio-control` em
+ * AudioButtonFrame.tsx/HeaderAudioControl.tsx), a saudação não toca: os dois
+ * cliques disparam no mesmo evento nativo (o clique borbulha do botão até
+ * `window`), e tocar os dois áudios ao mesmo tempo seria uma sobreposição de
+ * vozes, não um "efeito legal". A sessão ainda é marcada como tocada nesse
+ * caso — sem isso, a saudação apareceria de surpresa num clique seguinte,
+ * possivelmente no meio da leitura da matéria.
  */
 export function WelcomeChime() {
   useEffect(() => {
     if (alreadyPlayedThisSession()) return;
 
-    function handleFirstClick() {
+    function handleFirstClick(event: MouseEvent) {
       markPlayedThisSession();
+
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-audio-control]")) return;
+
       new Audio(WELCOME_AUDIO_SRC).play().catch(() => {});
     }
 

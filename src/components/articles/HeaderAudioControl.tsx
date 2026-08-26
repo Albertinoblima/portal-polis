@@ -17,6 +17,9 @@ export function HeaderAudioControl() {
       aria-pressed={controller.isPlaying}
       aria-label={`${controller.isPlaying ? "Pausar" : "Retomar"} leitura: ${controller.articleTitle}`}
       title={controller.articleTitle}
+      // Ver o mesmo atributo em AudioButtonFrame.tsx — WelcomeChime.tsx lê
+      // os dois pra saber se um clique é, ele mesmo, um pedido de áudio.
+      data-audio-control
       className="rounded-full p-2 text-polis-ink hover:bg-polis-ink/10"
     >
       {controller.isPlaying ? <PauseIcon /> : <PlayIcon />}
