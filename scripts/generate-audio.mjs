@@ -19,12 +19,12 @@
 // uma matéria específica sem varrer todas as outras.
 
 import { createHash } from "node:crypto";
-import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { JSDOM } from "jsdom";
+import { runProcess } from "./lib/runProcess.mjs";
 
 const ROOT = process.cwd();
 const ARTICLES_FILE = path.join(ROOT, "src", "content", "articles.json");
@@ -184,8 +184,10 @@ async function synthesize(text, mp3Path) {
   ];
 
   try {
-    await runProcess(PIPER_BIN, piperArgs, text);
-    await runProcess(FFMPEG_BIN, ["-y", "-i", wavPath, "-codec:a", "libmp3lame", "-qscale:a", "4", mp3Path]);
+    await runProcess(PIPER_BIN, piperArgs, { stdinText: text, timeoutMs: PROCESS_TIMEOUT_MS });
+    await runProcess(FFMPEG_BIN, ["-y", "-i", wavPath, "-codec:a", "libmp3lame", "-qscale:a", "4", mp3Path], {
+      timeoutMs: PROCESS_TIMEOUT_MS,
+    });
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }
@@ -194,42 +196,6 @@ async function synthesize(text, mp3Path) {
 async function fsMkdtemp() {
   const { mkdtemp } = await import("node:fs/promises");
   return mkdtemp(path.join(os.tmpdir(), "piper-"));
-}
-
-/** Executa um binário com argumentos fixos (sem shell); texto vai por stdin, nunca por interpolação de comando. */
-function runProcess(command, args, stdinText) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["pipe", "ignore", "pipe"] });
-    let stderr = "";
-
-    const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new Error(`${command} excedeu o tempo limite de ${PROCESS_TIMEOUT_MS}ms`));
-    }, PROCESS_TIMEOUT_MS);
-
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-
-    child.on("close", (code) => {
-      clearTimeout(timeout);
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`${command} saiu com código ${code}: ${stderr.trim()}`));
-      }
-    });
-
-    if (stdinText !== undefined) {
-      child.stdin.write(stdinText);
-    }
-    child.stdin?.end();
-  });
 }
 
 main().catch((error) => {
