@@ -548,6 +548,61 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "eleicoes",
+    date: "2026-08-27",
+    theme: "Eleições",
+    entries: [
+      {
+        number: 1,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "ELEICAO",
+        clue: "Processo pelo qual o povo escolhe seus representantes pelo voto direto.",
+      },
+      {
+        number: 1,
+        direction: "down",
+        row: 3,
+        col: 0,
+        answer: "ELEITOR",
+        clue: "Cidadão que possui título e pode votar nas urnas.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 3,
+        col: 2,
+        answer: "ELETRONICA",
+        clue: "Tipo de urna usada no Brasil desde 1996, que agilizou a apuração dos votos.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 3,
+        col: 4,
+        answer: "CANDIDATO",
+        clue: "Pessoa que se apresenta para disputar um cargo eletivo.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 3,
+        col: 5,
+        answer: "APURACAO",
+        clue: "Contagem oficial dos votos após o encerramento da votação.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 3,
+        col: 6,
+        answer: "OPOSICAO",
+        clue: "Conjunto de partidos ou candidatos que se posicionam contra o governo eleito.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {

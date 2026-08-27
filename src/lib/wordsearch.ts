@@ -175,6 +175,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "NEPOTISMO",
     ],
   },
+  {
+    slug: "eleicoes",
+    date: "2026-08-27",
+    theme: "Eleições",
+    size: 14,
+    words: [
+      "ELEICAO",
+      "VOTO",
+      "URNA",
+      "CANDIDATO",
+      "CAMPANHA",
+      "DEBATE",
+      "APURACAO",
+      "PLEITO",
+      "ELEITOR",
+      "MAIORIA",
+      "PARTIDO",
+      "COLIGACAO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
