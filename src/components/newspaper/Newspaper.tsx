@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, isValidElement, type ReactNode, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PageFlipEngine, type PageFlipHandle } from "./PageFlipEngine";
 import { PageChrome } from "./PageChrome";
 import { Masthead } from "./Masthead";
@@ -341,34 +341,6 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
 
     return { pages: out, ttsPageMap };
   }, [blocks, contentWidth, contentHeight, contentHeightCover, contentHeightAdPage, columnsDefault, isDesktop, isClient, showMasthead]);
-
-  // Debug logging when requested via query string ?debugPaginate=1
-  useEffect(() => {
-    if (!isClient) return;
-    try {
-      const debug = window.location && window.location.search && window.location.search.includes("debugPaginate=1");
-      if (!debug) return;
-      console.info("[Newspaper] preparedPages count", preparedPages.length);
-      preparedPages.forEach((p, i) => {
-        try {
-          let html: string | null = null;
-          if (isValidElement(p.content)) {
-            // Forçar um tipo conhecido para props antes de acessar __html,
-            // evitando erro TS no pipeline onde o tipo do ReactElement
-            // aparece como '***' e não expõe __html.
-            const elem = p.content as ReactElement<unknown>;
-            const maybe = (elem.props as unknown) as { dangerouslySetInnerHTML?: { __html?: string } };
-            html = maybe.dangerouslySetInnerHTML?.__html ?? null;
-          }
-          console.info(`[Newspaper] page ${i} columns=${p.columns} height=${p.contentHeightPx} htmlLength=${(html && html.length) || "<non-html>"}`);
-        } catch (e) {
-          console.info(`[Newspaper] page ${i} (info unavailable)`, e);
-        }
-      });
-    } catch (e) {
-      console.warn("[Newspaper] debug logging failed", e);
-    }
-  }, [isClient, preparedPages]);
 
   // Espelhado num ref (em vez de lido diretamente do useMemo) porque quem
   // consome esse mapa é `syncToWord`, abaixo — chamada várias vezes por

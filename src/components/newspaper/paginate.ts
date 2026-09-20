@@ -31,44 +31,52 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
 
   const source = document.createElement("div");
   source.innerHTML = html;
-  // Garantir que imagens muito altas não estoure a altura da coluna durante a
-  // paginação: aplicamos estilos inline dependentes de `columnHeightPx` para
-  // que a árvore clonada pela sonda/probe já carregue uma versão reduzida da
-  // imagem. Isso previne que uma imagem muito alta seja colocada inteira e
-  // acabe cortada pelo `overflow-hidden` do `PageChrome` em runtime.
+  // Normalização de mídia no HTML do artigo antes de medir/paginar:
+  // 1) remove dimensões inline problemáticas vindas do CMS (width/height/style),
+  // 2) aplica regras de escala previsíveis para desktop/mobile,
+  // 3) evita distorção (sempre height:auto) e evita recorte silencioso.
+  const mediaMaxHeightPx = Math.max(Math.floor(columnHeightPx * 0.82), 180);
+
   for (const img of Array.from(source.querySelectorAll("img")) as HTMLImageElement[]) {
-    // Mantém proporção mas força largura máxima e altura máxima da coluna.
-    img.style.maxWidth = "100%";
-    img.style.width = "auto";
+    img.removeAttribute("width");
+    img.removeAttribute("height");
+    img.style.removeProperty("width");
+    img.style.removeProperty("height");
+    img.style.removeProperty("max-width");
+    img.style.removeProperty("max-height");
+    img.style.removeProperty("object-fit");
+
+    img.style.width = "100%";
     img.style.height = "auto";
-    img.style.maxHeight = `${columnHeightPx}px`;
-    // Use contain para evitar recorte de imagens 1x1 quando a largura
-    // da coluna diminui — preserva toda a imagem e adiciona letterboxing
-    // se necessário. "cover" pode recortar partes importantes em telas
-    // menores, por isso trocamos para "contain".
-    img.style.objectFit = "contain";
+    img.style.maxWidth = "100%";
+    img.style.maxHeight = `${mediaMaxHeightPx}px`;
     img.style.display = "block";
     img.style.margin = "0 auto";
   }
-  // Ajuste similar para vídeos (caso GIFs já tenham sido transcodados para <video>)
+
+  // Ajuste similar para vídeos (GIFs transcodados para <video>):
+  // preserva proporção e limita altura para caber no orçamento da coluna.
   for (const vid of Array.from(source.querySelectorAll("video")) as HTMLVideoElement[]) {
+    vid.removeAttribute("width");
+    vid.removeAttribute("height");
+    vid.style.removeProperty("width");
+    vid.style.removeProperty("height");
+    vid.style.removeProperty("max-width");
+    vid.style.removeProperty("max-height");
+    vid.style.removeProperty("object-fit");
+
+    vid.style.width = "100%";
+    vid.style.height = "auto";
     vid.style.maxWidth = "100%";
-    vid.style.width = "auto";
-    vid.style.maxHeight = `${columnHeightPx}px`;
-    // Mesma lógica para vídeos convertidos: preservar o conteúdo sem
-    // recortar quando a coluna fica estreita.
-    vid.style.objectFit = "contain";
+    vid.style.maxHeight = `${mediaMaxHeightPx}px`;
     vid.style.display = "block";
     vid.style.margin = "0 auto";
-    // Garantir que o elemento não estoure a coluna quando ainda sem <source>
-    vid.style.height = "auto";
+    vid.style.objectFit = "contain";
   }
   const queue: HTMLElement[] = Array.from(source.children) as HTMLElement[];
   if (queue.length === 0) return [html];
 
   const probe = createProbe(pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx);
-  const debug = typeof window !== "undefined" && window.location && window.location.search && window.location.search.includes("debugPaginate=1");
-  if (debug) console.info("[paginate] options:", { pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx });
   document.body.appendChild(probe);
 
   const overflowed = () => probe.scrollWidth > probe.clientWidth + 1;
@@ -103,22 +111,6 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   }
 
   if (current.length > 0) pages.push(serialize(current));
-
-  if (debug) {
-    try {
-      console.info("[paginate] probe measurements", {
-        probeClientWidth: probe.clientWidth,
-        probeClientHeight: probe.clientHeight,
-        probeScrollWidth: probe.scrollWidth,
-      });
-      console.info("[paginate] pagesProduced", pages.length);
-      const last = pages[pages.length - 1] ?? "";
-      console.info("[paginate] lastPageHtmlLength", (last && last.length) || 0);
-      if (last && last.length < 2000) console.info("[paginate] lastPageHtmlPreview", last);
-    } catch (e) {
-      console.warn("[paginate] debug logging failed", e);
-    }
-  }
 
   document.body.removeChild(probe);
   return pages.length > 0 ? pages : [html];
