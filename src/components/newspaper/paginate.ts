@@ -31,47 +31,57 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
 
   const source = document.createElement("div");
   source.innerHTML = html;
-  // Normalização de mídia no HTML do artigo antes de medir/paginar:
-  // 1) remove dimensões inline problemáticas vindas do CMS (width/height/style),
-  // 2) aplica regras de escala previsíveis para desktop/mobile,
-  // 3) evita distorção (sempre height:auto) e evita recorte silencioso.
+  // Normalização de mídia no HTML do artigo antes de medir/paginar.
+  //
+  // Causa raiz do bug anterior (imagem 1x1 esticada em algumas resoluções e
+  // some por completo em outras, com mobile/desktop divergindo): aplicar
+  // `width: 100%` (valor definido) JUNTO com `max-height` menor que a altura
+  // que o navegador calcularia a partir dessa largura via `height: auto` faz
+  // o algoritmo de redimensionamento de elementos substituídos (img/video)
+  // do CSS recalcular só a ALTURA para respeitar o `max-height`, sem tocar
+  // de novo na largura (que já era um valor definido, não "auto") — o
+  // resultado é a imagem esticada/comprimida verticalmente sem preservar a
+  // proporção original, e o comportamento exato varia entre motores de
+  // renderização (por isso mobile e desktop divergiam).
+  //
+  // Correção definitiva: em vez de aplicar `max-height` diretamente no
+  // `<img>`/`<video>`, ele é encapsulado num wrapper com ALTURA FIXA (não
+  // `max-height`, que quando aplicada sozinha sobre um elemento cujo tamanho
+  // já é definido por outra propriedade não força recomputar as duas
+  // dimensões junto) — o mesmo padrão "fill + object-fit" já usado com
+  // sucesso em `FeaturedMedia` (Next/Image `fill` + `object-contain`), que
+  // nunca deforma porque a altura do CONTAINER é sempre um valor definido e
+  // não dependente da proporção da mídia.
   const mediaMaxHeightPx = Math.max(Math.floor(columnHeightPx * 0.82), 180);
 
+  const wrapMedia = (el: HTMLImageElement | HTMLVideoElement) => {
+    el.removeAttribute("width");
+    el.removeAttribute("height");
+    el.removeAttribute("style");
+    el.style.display = "block";
+    el.style.width = "100%";
+    el.style.height = "100%";
+    el.style.objectFit = "contain";
+
+    // `<span>` (elemento inline) nunca força o parser a fechar um `<p>` ao
+    // redor — diferente de um `<div>`, que seria HTML inválido dentro de um
+    // parágrafo e corromperia a árvore. O `display: block` via CSS não muda
+    // essa regra de fechamento automático, que olha só o nome da tag.
+    const wrapper = document.createElement("span");
+    wrapper.style.display = "block";
+    wrapper.style.width = "100%";
+    wrapper.style.height = `${mediaMaxHeightPx}px`;
+    wrapper.style.margin = "0 auto";
+    el.replaceWith(wrapper);
+    wrapper.appendChild(el);
+  };
+
   for (const img of Array.from(source.querySelectorAll("img")) as HTMLImageElement[]) {
-    img.removeAttribute("width");
-    img.removeAttribute("height");
-    img.style.removeProperty("width");
-    img.style.removeProperty("height");
-    img.style.removeProperty("max-width");
-    img.style.removeProperty("max-height");
-    img.style.removeProperty("object-fit");
-
-    img.style.width = "100%";
-    img.style.height = "auto";
-    img.style.maxWidth = "100%";
-    img.style.maxHeight = `${mediaMaxHeightPx}px`;
-    img.style.display = "block";
-    img.style.margin = "0 auto";
+    wrapMedia(img);
   }
-
-  // Ajuste similar para vídeos (GIFs transcodados para <video>):
-  // preserva proporção e limita altura para caber no orçamento da coluna.
+  // Ajuste similar para vídeos (GIFs transcodados para <video>).
   for (const vid of Array.from(source.querySelectorAll("video")) as HTMLVideoElement[]) {
-    vid.removeAttribute("width");
-    vid.removeAttribute("height");
-    vid.style.removeProperty("width");
-    vid.style.removeProperty("height");
-    vid.style.removeProperty("max-width");
-    vid.style.removeProperty("max-height");
-    vid.style.removeProperty("object-fit");
-
-    vid.style.width = "100%";
-    vid.style.height = "auto";
-    vid.style.maxWidth = "100%";
-    vid.style.maxHeight = `${mediaMaxHeightPx}px`;
-    vid.style.display = "block";
-    vid.style.margin = "0 auto";
-    vid.style.objectFit = "contain";
+    wrapMedia(vid);
   }
   const queue: HTMLElement[] = Array.from(source.children) as HTMLElement[];
   if (queue.length === 0) return [html];
