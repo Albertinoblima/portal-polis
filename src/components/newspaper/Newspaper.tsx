@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, isValidElement, type ReactNode, type ReactElement } from "react";
 import { PageFlipEngine, type PageFlipHandle } from "./PageFlipEngine";
 import { PageChrome } from "./PageChrome";
 import { Masthead } from "./Masthead";
@@ -351,9 +351,11 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
       console.info("[Newspaper] preparedPages count", preparedPages.length);
       preparedPages.forEach((p, i) => {
         try {
-          const html = typeof p.content === "object" && (p.content as any).props && (p.content as any).props.dangerouslySetInnerHTML
-            ? (p.content as any).props.dangerouslySetInnerHTML.__html
-            : null;
+          let html: string | null = null;
+          if (isValidElement(p.content)) {
+            const props = (p.content as ReactElement).props as { dangerouslySetInnerHTML?: { __html?: string } } | Record<string, unknown>;
+            html = props.dangerouslySetInnerHTML?.__html ?? null;
+          }
           console.info(`[Newspaper] page ${i} columns=${p.columns} height=${p.contentHeightPx} htmlLength=${(html && html.length) || "<non-html>"}`);
         } catch (e) {
           console.info(`[Newspaper] page ${i} (info unavailable)`, e);
