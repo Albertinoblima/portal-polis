@@ -39,10 +39,23 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   for (const img of Array.from(source.querySelectorAll("img")) as HTMLImageElement[]) {
     // Mantém proporção mas força largura máxima e altura máxima da coluna.
     img.style.maxWidth = "100%";
+    img.style.width = "100%"; // imagens 1x1 devem preencher a coluna horizontalmente
     img.style.height = "auto";
     img.style.maxHeight = `${columnHeightPx}px`;
+    img.style.objectFit = "cover";
     img.style.display = "block";
     img.style.margin = "0 auto";
+  }
+  // Ajuste similar para vídeos (caso GIFs já tenham sido transcodados para <video>)
+  for (const vid of Array.from(source.querySelectorAll("video")) as HTMLVideoElement[]) {
+    vid.style.maxWidth = "100%";
+    vid.style.width = "100%";
+    vid.style.maxHeight = `${columnHeightPx}px`;
+    vid.style.objectFit = "cover";
+    vid.style.display = "block";
+    vid.style.margin = "0 auto";
+    // Garantir que o elemento não estoure a coluna quando ainda sem <source>
+    vid.style.height = "auto";
   }
   const queue: HTMLElement[] = Array.from(source.children) as HTMLElement[];
   if (queue.length === 0) return [html];
