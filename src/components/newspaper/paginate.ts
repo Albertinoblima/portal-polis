@@ -42,7 +42,11 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
     img.style.width = "100%"; // imagens 1x1 devem preencher a coluna horizontalmente
     img.style.height = "auto";
     img.style.maxHeight = `${columnHeightPx}px`;
-    img.style.objectFit = "cover";
+    // Use contain para evitar recorte de imagens 1x1 quando a largura
+    // da coluna diminui — preserva toda a imagem e adiciona letterboxing
+    // se necessário. "cover" pode recortar partes importantes em telas
+    // menores, por isso trocamos para "contain".
+    img.style.objectFit = "contain";
     img.style.display = "block";
     img.style.margin = "0 auto";
   }
@@ -51,7 +55,9 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
     vid.style.maxWidth = "100%";
     vid.style.width = "100%";
     vid.style.maxHeight = `${columnHeightPx}px`;
-    vid.style.objectFit = "cover";
+    // Mesma lógica para vídeos convertidos: preservar o conteúdo sem
+    // recortar quando a coluna fica estreita.
+    vid.style.objectFit = "contain";
     vid.style.display = "block";
     vid.style.margin = "0 auto";
     // Garantir que o elemento não estoure a coluna quando ainda sem <source>
