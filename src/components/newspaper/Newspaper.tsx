@@ -353,8 +353,12 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
         try {
           let html: string | null = null;
           if (isValidElement(p.content)) {
-            const props = (p.content as ReactElement).props as { dangerouslySetInnerHTML?: { __html?: string } } | Record<string, unknown>;
-            html = props.dangerouslySetInnerHTML?.__html ?? null;
+            // Forçar um tipo conhecido para props antes de acessar __html,
+            // evitando erro TS no pipeline onde o tipo do ReactElement
+            // aparece como '***' e não expõe __html.
+            const elem = p.content as ReactElement<unknown>;
+            const maybe = (elem.props as unknown) as { dangerouslySetInnerHTML?: { __html?: string } };
+            html = maybe.dangerouslySetInnerHTML?.__html ?? null;
           }
           console.info(`[Newspaper] page ${i} columns=${p.columns} height=${p.contentHeightPx} htmlLength=${(html && html.length) || "<non-html>"}`);
         } catch (e) {
