@@ -284,18 +284,26 @@ function rewriteArticle(article, manifest) {
   let content = article.content;
   if (content) {
     const dom = new JSDOM(`<!doctype html><body>${content}</body>`);
-    for (const img of dom.window.document.querySelectorAll("img")) {
+    let replacedAny = false;
+    // Iterar sobre uma cópia da lista porque replaceWith altera a coleção
+    for (const img of Array.from(dom.window.document.querySelectorAll("img"))) {
       const src = img.getAttribute("src");
       if (!isSupabaseGif(src)) continue;
       const entry = manifest[hashUrl(src)];
       if (!entry) continue;
 
-      const outerHTML = img.outerHTML;
-      if (!content.includes(outerHTML)) {
-        console.warn(`⚠ [${article.slug}] <img> não bateu como substring exata no content — pulando (src=${src}).`);
-        continue;
+      // Criar o nó <video> a partir do HTML gerado e substituir o <img>
+      const videoHtml = buildVideoSnippet(entry, img.getAttribute("alt") ?? "");
+      const wrapper = dom.window.document.createElement("div");
+      wrapper.innerHTML = videoHtml;
+      const videoNode = wrapper.firstElementChild;
+      if (videoNode) {
+        img.replaceWith(videoNode);
+        replacedAny = true;
       }
-      content = content.split(outerHTML).join(buildVideoSnippet(entry, img.getAttribute("alt") ?? ""));
+    }
+    if (replacedAny) {
+      content = dom.window.document.body.innerHTML;
     }
   }
 
