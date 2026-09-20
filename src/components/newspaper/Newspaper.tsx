@@ -76,7 +76,7 @@ const CHROME_HEADER_PX = 33;
  *  fina de título corrido usada nas demais páginas. */
 const MASTHEAD_HEADER_PX = { desktop: 220, mobile: 195 };
 const CHROME_FOOTER_PX = 24; // Reduzido significativamente para dar espaço às publicidades
-const PAGE_PADDING_Y_PX = 20; // Corresponds to Tailwind py-5 (1.25rem = 20px), applied in PageChrome
+const PAGE_PADDING_Y_PX = 40; // Total vertical padding (py-5 = 20px per side, top+bottom = 40px)
 const PAGE_PADDING_X_PX = 48;
 const MOBILE_ADS_PER_PAGE = 2;
 /** Quantos anúncios cada quebra de meio de livro (`type: "ad"`) mostra — igual
@@ -434,67 +434,67 @@ export function Newspaper({ sectionLabel, runningTitle, showMasthead = false, ed
   return (
     <TtsPageSyncContext.Provider value={ttsPageSyncApi}>
       <div ref={viewportRef} className="relative h-full w-full">
-      {flipPages.length > 0 && contentWidth > 0 && (
-        <>
-          <div className={hasMeasuredViewport ? "h-full w-full" : "pointer-events-none h-full w-full opacity-0"}>
-            <PageFlipEngine
-              // Força remontagem completa sempre que a contagem de páginas muda
-              // (ex.: da paginação de fallback do SSR para a real do cliente, ou
-              // após um resize). Sem isso, o React tentaria reconciliar (inserir/
-              // remover) filhos individuais que a biblioteca já reparentou para
-              // dentro do próprio DOM dela — removeChild falha porque o nó não
-              // está mais onde o React acha que está. Remontar em vez de
-              // reconciliar evita esse conflito de propriedade do DOM por completo.
-              key={totalPages}
-              ref={flipRef}
-              pages={flipPages}
-              width={Math.max(pageWidth, 280)}
-              height={Math.max(pageHeight, 360)}
-              usePortrait={!isDesktop}
-              // showCover:false (padrão) de propósito: a biblioteca marca a
-              // capa como folha "dura" e vira com rotação rígida, sem a curva
-              // macia das folhas internas — errado para um jornal, que não tem
-              // capa de papelão. Ver o preenchimento de folha em branco acima:
-              // junto disso, garante nº par de folhas, evitando que qualquer
-              // folha sobre sozinha numa dobra e também vire rígida.
-              className="mx-auto h-full"
-              onFlip={setPageIndex}
-            />
+        {flipPages.length > 0 && contentWidth > 0 && (
+          <>
+            <div className={hasMeasuredViewport ? "h-full w-full" : "pointer-events-none h-full w-full opacity-0"}>
+              <PageFlipEngine
+                // Força remontagem completa sempre que a contagem de páginas muda
+                // (ex.: da paginação de fallback do SSR para a real do cliente, ou
+                // após um resize). Sem isso, o React tentaria reconciliar (inserir/
+                // remover) filhos individuais que a biblioteca já reparentou para
+                // dentro do próprio DOM dela — removeChild falha porque o nó não
+                // está mais onde o React acha que está. Remontar em vez de
+                // reconciliar evita esse conflito de propriedade do DOM por completo.
+                key={totalPages}
+                ref={flipRef}
+                pages={flipPages}
+                width={Math.max(pageWidth, 280)}
+                height={Math.max(pageHeight, 360)}
+                usePortrait={!isDesktop}
+                // showCover:false (padrão) de propósito: a biblioteca marca a
+                // capa como folha "dura" e vira com rotação rígida, sem a curva
+                // macia das folhas internas — errado para um jornal, que não tem
+                // capa de papelão. Ver o preenchimento de folha em branco acima:
+                // junto disso, garante nº par de folhas, evitando que qualquer
+                // folha sobre sozinha numa dobra e também vire rígida.
+                className="mx-auto h-full"
+                onFlip={setPageIndex}
+              />
 
-            <HotCorner />
+              <HotCorner />
 
-            {/* Recurso de acessibilidade (teclado/leitor de tela) — a interação
+              {/* Recurso de acessibilidade (teclado/leitor de tela) — a interação
                 principal é clicar/arrastar o canto da página, como num jornal real. */}
-            <nav
-              aria-label="Navegação de páginas"
-              className="pointer-events-none absolute inset-x-0 bottom-1 z-30 flex items-center justify-center gap-3 opacity-60 transition-opacity hover:opacity-100"
-            >
-              <button
-                type="button"
-                onClick={() => flipRef.current?.flipPrev()}
-                disabled={pageIndex <= 0}
-                aria-label="Página anterior"
-                className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
+              <nav
+                aria-label="Navegação de páginas"
+                className="pointer-events-none absolute inset-x-0 bottom-1 z-30 flex items-center justify-center gap-3 opacity-60 transition-opacity hover:opacity-100"
               >
-                ‹
-              </button>
-              <span className="pointer-events-none text-[11px] text-polis-ink-soft">
-                {pageIndex + 1} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => flipRef.current?.flipNext()}
-                disabled={pageIndex >= totalPages - 1}
-                aria-label="Próxima página"
-                className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
-              >
-                ›
-              </button>
-            </nav>
-          </div>
-        </>
-      )}
-    </div>
+                <button
+                  type="button"
+                  onClick={() => flipRef.current?.flipPrev()}
+                  disabled={pageIndex <= 0}
+                  aria-label="Página anterior"
+                  className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
+                >
+                  ‹
+                </button>
+                <span className="pointer-events-none text-[11px] text-polis-ink-soft">
+                  {pageIndex + 1} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => flipRef.current?.flipNext()}
+                  disabled={pageIndex >= totalPages - 1}
+                  aria-label="Próxima página"
+                  className="pointer-events-auto rounded-full border border-polis-rule/20 bg-polis-paper/80 px-2.5 py-0.5 text-[11px] text-polis-ink-soft disabled:opacity-30"
+                >
+                  ›
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
+      </div>
     </TtsPageSyncContext.Provider>
   );
 }
