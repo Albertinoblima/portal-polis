@@ -61,6 +61,8 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   if (queue.length === 0) return [html];
 
   const probe = createProbe(pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx);
+  const debug = typeof window !== "undefined" && window.location && window.location.search && window.location.search.includes("debugPaginate=1");
+  if (debug) console.info("[paginate] options:", { pageWidthPx, columnHeightPx, columnsPerPage, columnGapPx });
   document.body.appendChild(probe);
 
   const overflowed = () => probe.scrollWidth > probe.clientWidth + 1;
@@ -95,6 +97,22 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   }
 
   if (current.length > 0) pages.push(serialize(current));
+
+  if (debug) {
+    try {
+      console.info("[paginate] probe measurements", {
+        probeClientWidth: probe.clientWidth,
+        probeClientHeight: probe.clientHeight,
+        probeScrollWidth: probe.scrollWidth,
+      });
+      console.info("[paginate] pagesProduced", pages.length);
+      const last = pages[pages.length - 1] ?? "";
+      console.info("[paginate] lastPageHtmlLength", (last && last.length) || 0);
+      if (last && last.length < 2000) console.info("[paginate] lastPageHtmlPreview", last);
+    } catch (e) {
+      console.warn("[paginate] debug logging failed", e);
+    }
+  }
 
   document.body.removeChild(probe);
   return pages.length > 0 ? pages : [html];
