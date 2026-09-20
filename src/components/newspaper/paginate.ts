@@ -39,7 +39,7 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   for (const img of Array.from(source.querySelectorAll("img")) as HTMLImageElement[]) {
     // Mantém proporção mas força largura máxima e altura máxima da coluna.
     img.style.maxWidth = "100%";
-    img.style.width = "100%"; // imagens 1x1 devem preencher a coluna horizontalmente
+    img.style.width = "auto";
     img.style.height = "auto";
     img.style.maxHeight = `${columnHeightPx}px`;
     // Use contain para evitar recorte de imagens 1x1 quando a largura
@@ -53,7 +53,7 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
   // Ajuste similar para vídeos (caso GIFs já tenham sido transcodados para <video>)
   for (const vid of Array.from(source.querySelectorAll("video")) as HTMLVideoElement[]) {
     vid.style.maxWidth = "100%";
-    vid.style.width = "100%";
+    vid.style.width = "auto";
     vid.style.maxHeight = `${columnHeightPx}px`;
     // Mesma lógica para vídeos convertidos: preservar o conteúdo sem
     // recortar quando a coluna fica estreita.
