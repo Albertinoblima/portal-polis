@@ -31,6 +31,19 @@ export function paginateHtml(html: string, options: PaginateOptions): string[] {
 
   const source = document.createElement("div");
   source.innerHTML = html;
+  // Garantir que imagens muito altas não estoure a altura da coluna durante a
+  // paginação: aplicamos estilos inline dependentes de `columnHeightPx` para
+  // que a árvore clonada pela sonda/probe já carregue uma versão reduzida da
+  // imagem. Isso previne que uma imagem muito alta seja colocada inteira e
+  // acabe cortada pelo `overflow-hidden` do `PageChrome` em runtime.
+  for (const img of Array.from(source.querySelectorAll("img")) as HTMLImageElement[]) {
+    // Mantém proporção mas força largura máxima e altura máxima da coluna.
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    img.style.maxHeight = `${columnHeightPx}px`;
+    img.style.display = "block";
+    img.style.margin = "0 auto";
+  }
   const queue: HTMLElement[] = Array.from(source.children) as HTMLElement[];
   if (queue.length === 0) return [html];
 
