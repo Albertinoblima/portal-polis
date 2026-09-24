@@ -17,6 +17,14 @@
 // Rodado em CI antes de `next build` (veja .github/workflows/deploy.yml).
 // Localmente, se as variáveis de ambiente não estiverem definidas, mantém
 // o conteúdo de exemplo já versionado em src/content/ (não falha o dev).
+//
+// Resiliente a indisponibilidade do Supabase (projeto pausado/removido,
+// falha de rede/DNS etc.): se a busca falhar mesmo com as credenciais
+// configuradas, o build NÃO é interrompido — mantém os arquivos já
+// versionados em src/content/*.json (podem ficar desatualizados até o
+// Supabase voltar, mas o site continua no ar). Isso é intencional: com o
+// login admin e as matérias já migrados para o GitHub, um Supabase fora do
+// ar não deve mais conseguir travar o deploy inteiro.
 
 import { createClient } from "@supabase/supabase-js";
 import { writeFile } from "node:fs/promises";
@@ -42,12 +50,20 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const [editorias, authors, banners, settings] = await Promise.all([
-    fetchEditorias(supabase),
-    fetchAuthors(supabase),
-    fetchBanners(supabase),
-    fetchSettings(supabase),
-  ]);
+  let editorias, authors, banners, settings;
+  try {
+    [editorias, authors, banners, settings] = await Promise.all([
+      fetchEditorias(supabase),
+      fetchAuthors(supabase),
+      fetchBanners(supabase),
+      fetchSettings(supabase),
+    ]);
+  } catch (error) {
+    console.warn(
+      `⚠ Falha ao sincronizar conteúdo do Supabase (${error.message}) — mantendo os arquivos já versionados em src/content/ para não travar o build.`
+    );
+    return;
+  }
 
   await Promise.all([
     writeJson("editorias.json", editorias),
