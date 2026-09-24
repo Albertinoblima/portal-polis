@@ -18,15 +18,16 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// As demais seções (matérias, categorias, tags, banners, aparência,
-// comentários, newsletter, mensagens, usuários, auditoria, configurações)
-// ainda dependem do Supabase Auth (RLS) e ficam fora da navegação até serem
-// migradas para o novo modelo baseado em GitHub.
+// As demais seções (categorias, tags, banners, aparência, comentários,
+// newsletter, mensagens, usuários, auditoria, configurações) ainda dependem
+// do Supabase Auth (RLS) e ficam fora da navegação até serem migradas para
+// o novo modelo baseado em GitHub.
 const navGroups: NavGroup[] = [
   {
     label: "Conteúdo",
     items: [
       { href: "/admin/dashboard/", label: "Dashboard", icon: GridIcon },
+      { href: "/admin/materias/", label: "Matérias", icon: DocumentIcon },
       { href: "/admin/midia/", label: "Biblioteca de Mídia", icon: ImageIcon },
     ],
   },
@@ -119,6 +120,16 @@ function ImageIcon(props: SVGProps<SVGSVGElement>) {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <circle cx="8.5" cy="8.5" r="1.5" />
       <path d="m21 15-5-5L5 21" />
+    </svg>
+  );
+}
+
+function DocumentIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h6" />
     </svg>
   );
 }

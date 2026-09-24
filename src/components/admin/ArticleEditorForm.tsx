@@ -2,18 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ArticleStatus } from "@/types/database";
-import {
-  createArticle,
-  getArticleById,
-  getEditorias,
-  getStaffProfiles,
-  setArticleTags,
-  triggerSiteRebuild,
-  updateArticle,
-} from "@/lib/supabase/queries";
+import type { ArticleStatus } from "@/types";
+import { createArticle, getArticleById, updateArticle } from "@/lib/github/articles";
+import { getAuthors, getEditorias } from "@/lib/content";
 import { useAdminSession } from "@/components/admin/AuthProvider";
-import { logAction } from "@/lib/supabase/audit";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/admin/Card";
 import { MediaLibraryModal } from "@/components/admin/MediaLibraryModal";
@@ -33,17 +25,17 @@ interface ArticleEditorFormProps {
 
 const PUBLISH_ROLES = ["admin", "editor_chief", "editor"];
 
-type Editoria = Awaited<ReturnType<typeof getEditorias>>[number];
-type StaffProfile = Awaited<ReturnType<typeof getStaffProfiles>>[number];
-
 export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   const router = useRouter();
-  const { profile } = useAdminSession();
+  const { profile, accessToken } = useAdminSession();
   const canPublish = PUBLISH_ROLES.includes(profile.role);
 
-  const [loading, setLoading] = useState(true);
-  const [editorias, setEditorias] = useState<Editoria[]>([]);
-  const [staff, setStaff] = useState<StaffProfile[]>([]);
+  // Editorias e autores vêm de src/content/*.json (sincronizados do
+  // Supabase em build, mas somente leitura — não dependem de login).
+  const [editorias] = useState(() => getEditorias());
+  const [staff] = useState(() => getAuthors());
+
+  const [loading, setLoading] = useState(Boolean(articleId));
   const [currentStatus, setCurrentStatus] = useState<ArticleStatus>("draft");
 
   const [title, setTitle] = useState("");
@@ -51,8 +43,8 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   const [slugEdited, setSlugEdited] = useState(false);
   const [subtitle, setSubtitle] = useState("");
   const [content, setContent] = useState("");
-  const [editoriaId, setEditoriaId] = useState("");
-  const [authorId, setAuthorId] = useState(profile.id);
+  const [editoriaId, setEditoriaId] = useState(() => editorias[0]?.id ?? "");
+  const [authorId, setAuthorId] = useState(() => staff[0]?.id ?? "");
   const [tagsInput, setTagsInput] = useState("");
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
@@ -73,33 +65,31 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     let isMounted = true;
 
     async function load() {
-      const [editoriasData, staffData] = await Promise.all([getEditorias(), getStaffProfiles()]);
-      if (!isMounted) return;
-      setEditorias(editoriasData);
-      setStaff(staffData);
-      if (!articleId && editoriasData[0]) setEditoriaId(editoriasData[0].id);
-
       if (articleId) {
-        const article = await getArticleById(articleId);
-        if (!isMounted || !article) return;
+        const article = await getArticleById(accessToken, articleId);
+        if (!isMounted) return;
+        if (!article) {
+          setFormError("Matéria não encontrada.");
+          setLoading(false);
+          return;
+        }
         setTitle(article.title);
         setSlug(article.slug);
         setSlugEdited(true);
         setSubtitle(article.subtitle);
         setContent(article.content);
-        setEditoriaId(article.editoria_id);
-        setAuthorId(article.author_id);
-        setSeoTitle(article.seo_title ?? "");
-        setSeoDescription(article.seo_description ?? "");
-        setFeaturedImage(article.featured_image);
-        setFeaturedImageAlt(article.featured_image_alt);
-        setScheduledAt(article.scheduled_at?.slice(0, 16) ?? "");
+        setEditoriaId(article.editoriaId);
+        setAuthorId(article.authorId);
+        setSeoTitle(article.seoTitle ?? "");
+        setSeoDescription(article.seoDescription ?? "");
+        setFeaturedImage(article.featuredImage || null);
+        setFeaturedImageAlt(article.featuredImageAlt);
+        setScheduledAt(article.scheduledAt?.slice(0, 16) ?? "");
         setCurrentStatus(article.status);
-        const tagNames = (article.article_tags ?? [])
-          .map((row) => row.tags?.name)
-          .filter((name): name is string => Boolean(name));
-        setTagsInput(tagNames.join(", "));
+        setTagsInput(article.tagIds.join(", "));
       }
+
+      if (!isMounted) return;
 
       const storedDraft = window.localStorage.getItem(draftKey);
       if (storedDraft) {
@@ -118,7 +108,7 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     return () => {
       isMounted = false;
     };
-  }, [articleId, draftKey]);
+  }, [articleId, accessToken, draftKey]);
 
   // Rascunho automático em localStorage — protege contra perda de texto se a
   // aba fechar antes de salvar. Só começa a gravar depois que o aviso de
@@ -154,9 +144,9 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
     if (!slugEdited) setSlug(slugify(value));
   }
 
-  function handleFeaturedImageSelect(selected: { url: string; alt_text: string }) {
-    setFeaturedImage(selected.url);
-    if (!featuredImageAlt.trim() && selected.alt_text) setFeaturedImageAlt(selected.alt_text);
+  function handleFeaturedImageSelect(selected: { path: string; altText: string }) {
+    setFeaturedImage(selected.path);
+    if (!featuredImageAlt.trim() && selected.altText) setFeaturedImageAlt(selected.altText);
   }
 
   async function handleSave(status: ArticleStatus) {
@@ -173,49 +163,32 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
       const wordCount = plainTextContent ? plainTextContent.split(/\s+/).filter(Boolean).length : 0;
       const readingTime = Math.max(1, Math.round(wordCount / 200));
 
+      const tagList = tagsInput
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
       const input = {
         title: title.trim(),
         slug: slug.trim(),
         subtitle: subtitle.trim(),
         content,
-        featured_image: featuredImage,
-        featured_image_alt: featuredImageAlt.trim(),
-        editoria_id: editoriaId,
-        author_id: authorId,
+        featuredImage: featuredImage ?? "",
+        featuredImageAlt: featuredImageAlt.trim(),
+        editoriaId,
+        authorId,
         status,
-        scheduled_at: status === "scheduled" && scheduledAt ? new Date(scheduledAt).toISOString() : null,
-        seo_title: seoTitle.trim() || null,
-        seo_description: seoDescription.trim() || null,
-        reading_time_minutes: readingTime,
+        scheduledAt: status === "scheduled" && scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        seoTitle: seoTitle.trim() || null,
+        seoDescription: seoDescription.trim() || null,
+        readingTimeMinutes: readingTime,
+        tagIds: tagList,
       };
 
-      const savedArticle = articleId
-        ? await updateArticle(articleId, input)
-        : await createArticle(input);
-
-      const tagNames = tagsInput
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-      await setArticleTags(savedArticle.id, tagNames);
-
-      await logAction({
-        userId: profile.id,
-        action: articleId ? "update" : "create",
-        entity: "article",
-        entityId: savedArticle.id,
-        newValue: { title: input.title, status: input.status },
-      });
-
-      if (status === "published") {
-        try {
-          await triggerSiteRebuild();
-        } catch {
-          setFormError(
-            "Matéria salva e publicada, mas não foi possível disparar a atualização automática do site. Use \"Sincronizar site\" no Dashboard."
-          );
-          return;
-        }
+      if (articleId) {
+        await updateArticle(accessToken, articleId, input);
+      } else {
+        await createArticle(accessToken, input);
       }
 
       window.localStorage.removeItem(draftKey);
@@ -322,7 +295,12 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
           </div>
           {editorMode === "visual" ? (
             <div className="mt-2">
-              <RichTextEditor value={content} onChange={setContent} uploadedBy={profile.id} />
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                accessToken={accessToken}
+                uploadedBy={profile.name}
+              />
             </div>
           ) : (
             <textarea
@@ -493,11 +471,12 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
             className="mt-3 flex h-20 w-full flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold"
           >
             <span>Selecionar da biblioteca de mídia</span>
-            <span className="text-[10px] text-polis-gray/70">ou envie uma imagem nova (até 100MB)</span>
+            <span className="text-[10px] text-polis-gray/70">ou envie uma imagem nova (até 20MB)</span>
           </button>
           {isMediaLibraryOpen && (
             <MediaLibraryModal
-              uploadedBy={profile.id}
+              accessToken={accessToken}
+              uploadedBy={profile.name}
               onSelect={handleFeaturedImageSelect}
               onClose={() => setIsMediaLibraryOpen(false)}
             />

@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "sync-content": "node scripts/sync-content.mjs",
     "sync-analytics": "node scripts/sync-analytics.mjs",
+    "export-supabase-media": "node scripts/export-supabase-media.mjs",
     "generate-audio": "node scripts/generate-audio.mjs",
     "transcode-media": "node scripts/transcode-gif-media.mjs"
   },

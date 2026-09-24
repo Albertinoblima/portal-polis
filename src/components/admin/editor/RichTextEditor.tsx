@@ -10,11 +10,12 @@ import { EditorToolbar } from "@/components/admin/editor/EditorToolbar";
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
+  accessToken: string;
   uploadedBy: string;
   placeholder?: string;
 }
 
-export function RichTextEditor({ value, onChange, uploadedBy, placeholder }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, accessToken, uploadedBy, placeholder }: RichTextEditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -52,7 +53,7 @@ export function RichTextEditor({ value, onChange, uploadedBy, placeholder }: Ric
 
   return (
     <div>
-      <EditorToolbar editor={editor} uploadedBy={uploadedBy} />
+      <EditorToolbar editor={editor} accessToken={accessToken} uploadedBy={uploadedBy} />
       <EditorContent editor={editor} />
     </div>
   );

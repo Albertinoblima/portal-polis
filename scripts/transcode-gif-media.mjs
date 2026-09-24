@@ -1,15 +1,19 @@
 // Converte GIF animado (featuredImage de matéria, banner de publicidade, e
 // <img> inline no corpo da matéria) para vídeo MP4/H.264 mudo + poster
 // estático, e reescreve src/content/articles.json e src/content/banners.json
-// para apontar pros derivados locais em vez do GIF cru do Supabase Storage.
+// para apontar pros derivados locais em vez do GIF cru.
 //
-// Por quê: quase todo o conteúdo do site é GIF, servido hoje direto do
-// Supabase Storage — isso foi a causa raiz do estouro de "Saída em cache" do
-// plano Pro (GIF é um formato de compressão fraca, e o Image Transformations
-// gerenciado do Supabase achata animação no primeiro frame, então não ajuda
-// aqui). Vídeo equivalente costuma pesar 5-20x menos, e ao virar asset
-// estático do próprio GitHub Pages (public/assets/video/), esse tráfego sai
-// do Supabase por completo.
+// Por quê continua valendo sem Supabase: a motivação original (evitar
+// estourar o "Saída em cache" do plano Pro do Supabase Storage) deixou de
+// existir depois que a Biblioteca de Mídia migrou para arquivos estáticos
+// commitados em public/biblioteca-midias/ (ver src/lib/github/mediaLibrary.ts)
+// — mas o ganho de peso continua relevante: GIF é um formato de compressão
+// fraca, e um vídeo equivalente costuma pesar 5-20x menos, o que reduz o
+// tamanho do repositório/checkout e o tempo de download no site (GitHub
+// Pages também serve esses bytes, só que sem custo de "egress" cobrado por
+// uso). Por isso a conversão foi mantida e AMPLIADA: cobre tanto GIFs
+// legados do antigo Supabase Storage quanto GIFs novos enviados direto pela
+// Biblioteca de Mídia (public/biblioteca-midias/*.gif).
 //
 // Ponto de integração: roda em CI logo após `sync-content` e antes de
 // `generate-audio`/`next build` (ver .github/workflows/deploy.yml) — mesmo
@@ -20,12 +24,12 @@
 // forma de ter algo equivalente a um hook "ao publicar" sem infraestrutura
 // própria.
 //
-// Fail-safe: qualquer falha (ffmpeg ausente, download com erro, timeout)
-// é registrada em stderr e aquele GIF específico fica sem vídeo nesta rodada
-// — o featuredImage/imageUrl/content correspondente simplesmente não é
-// reescrito, e o site continua servindo o GIF cru (src/lib/supabaseImageLoader.ts
-// já faz bypass de transformação pra `.gif`, então isso é seguro). Nunca
-// derruba o build.
+// Fail-safe: qualquer falha (ffmpeg ausente, download/leitura com erro,
+// timeout) é registrada em stderr e aquele GIF específico fica sem vídeo
+// nesta rodada — o featuredImage/imageUrl/content correspondente
+// simplesmente não é reescrito, e o site continua servindo o GIF cru
+// (src/lib/supabaseImageLoader.ts já faz bypass de transformação pra
+// `.gif`, então isso é seguro). Nunca derruba o build.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, rm, mkdtemp } from "node:fs/promises";
@@ -55,8 +59,19 @@ const CONCURRENCY = Number(process.env.TRANSCODE_CONCURRENCY ?? 3);
 // já usado em MAX_MEDIA_UPLOAD_BYTES (src/lib/supabase/queries.ts) vs o
 // limite do bucket em supabase/migrations/0009_media_bucket_limits_100mb.sql.
 const STORAGE_OBJECT_PATH = "/storage/v1/object/public/";
+// Prefixo da nova Biblioteca de Mídia (src/lib/github/mediaLibrary.ts) —
+// GIFs enviados por ali ficam em public/biblioteca-midias/ e são referenciados
+// no conteúdo como caminho relativo ("/biblioteca-midias/arquivo.gif").
+const LOCAL_MEDIA_PATH = "/biblioteca-midias/";
+
 function isSupabaseGif(src) {
   return typeof src === "string" && src.includes(STORAGE_OBJECT_PATH) && src.toLowerCase().endsWith(".gif");
+}
+function isLocalLibraryGif(src) {
+  return typeof src === "string" && src.startsWith(LOCAL_MEDIA_PATH) && src.toLowerCase().endsWith(".gif");
+}
+function isTranscodableGif(src) {
+  return isSupabaseGif(src) || isLocalLibraryGif(src);
 }
 
 // Filtro comum aos dois comandos ffmpeg abaixo: compõe sobre fundo branco
@@ -156,23 +171,23 @@ function isCached(manifest, url) {
   return existsSync(videoPath) && existsSync(posterPath);
 }
 
-/** Extrai `src` de todo `<img>` cujo GIF é do Storage público do Supabase, dentro de um HTML de corpo de matéria. */
+/** Extrai `src` de todo `<img>` cujo GIF é transcodificável (Supabase Storage ou Biblioteca de Mídia local), dentro de um HTML de corpo de matéria. */
 function extractGifImgSrcs(content) {
   if (!content) return [];
   const dom = new JSDOM(`<!doctype html><body>${content}</body>`);
   return Array.from(dom.window.document.querySelectorAll("img"))
     .map((img) => img.getAttribute("src"))
-    .filter(isSupabaseGif);
+    .filter(isTranscodableGif);
 }
 
 function collectGifUrls(articles, banners) {
   const urls = new Set();
   for (const article of articles) {
-    if (isSupabaseGif(article.featuredImage)) urls.add(article.featuredImage);
+    if (isTranscodableGif(article.featuredImage)) urls.add(article.featuredImage);
     for (const src of extractGifImgSrcs(article.content)) urls.add(src);
   }
   for (const banner of banners) {
-    if (isSupabaseGif(banner.imageUrl)) urls.add(banner.imageUrl);
+    if (isTranscodableGif(banner.imageUrl)) urls.add(banner.imageUrl);
   }
   return [...urls];
 }
@@ -235,6 +250,16 @@ async function transcodeOne(url) {
 }
 
 async function downloadFile(url, destPath) {
+  // GIF local da Biblioteca de Mídia (caminho relativo, ex.:
+  // "/biblioteca-midias/arquivo.gif") — lê direto do checkout em vez de
+  // fazer uma requisição HTTP, já que o arquivo já está no disco do runner.
+  if (url.startsWith(LOCAL_MEDIA_PATH) || url.startsWith("/")) {
+    const localPath = path.join(ROOT, "public", url.replace(/^\//, ""));
+    const buffer = await readFile(localPath);
+    await writeFile(destPath, buffer);
+    return;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {

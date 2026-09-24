@@ -6,33 +6,30 @@ import { AdminTopbar } from "@/components/admin/Topbar";
 import { StatusBadge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getArticlesForAdmin, softDeleteArticle } from "@/lib/supabase/queries";
+import { listArticles, setArticleStatus } from "@/lib/github/articles";
+import { getAuthors, getEditoriaById } from "@/lib/content";
 import { useAdminSession } from "@/components/admin/AuthProvider";
-import { logAction } from "@/lib/supabase/audit";
 import { formatDate } from "@/lib/utils";
 import { SITE_URL } from "@/lib/seo";
 
 export default function AdminMateriasPage() {
-  const { profile } = useAdminSession();
-  const { data: articles, loading, error, refetch } = useSupabaseQuery(getArticlesForAdmin);
+  const { profile, accessToken } = useAdminSession();
+  const { data: articles, loading, error, refetch } = useSupabaseQuery(
+    () => listArticles(accessToken),
+    [accessToken]
+  );
   const [search, setSearch] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const canDelete = profile.role === "admin" || profile.role === "editor_chief";
+  const authors = getAuthors();
 
   const filtered = (articles ?? []).filter((article) =>
     article.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  async function handleDelete(id: string, title: string) {
+  async function handleArchive(id: string, title: string) {
     if (!confirm(`Arquivar a matéria "${title}"? Ela deixa de aparecer no site.`)) return;
-    await softDeleteArticle(id);
-    await logAction({
-      userId: profile.id,
-      action: "archive",
-      entity: "article",
-      entityId: id,
-      newValue: { title },
-    });
+    await setArticleStatus(accessToken, id, "archived");
     refetch();
   }
 
@@ -92,12 +89,16 @@ export default function AdminMateriasPage() {
                     <td className="max-w-xs truncate px-5 py-3 font-medium text-polis-navy">
                       {article.title}
                     </td>
-                    <td className="px-5 py-3 text-polis-slate">{article.editoria?.name}</td>
-                    <td className="px-5 py-3 text-polis-slate">{article.author?.name}</td>
+                    <td className="px-5 py-3 text-polis-slate">
+                      {getEditoriaById(article.editoriaId)?.name}
+                    </td>
+                    <td className="px-5 py-3 text-polis-slate">
+                      {authors.find((author) => author.id === article.authorId)?.name}
+                    </td>
                     <td className="px-5 py-3">
                       <StatusBadge status={article.status} />
                     </td>
-                    <td className="px-5 py-3 text-polis-slate">{formatDate(article.updated_at)}</td>
+                    <td className="px-5 py-3 text-polis-slate">{formatDate(article.updatedAt)}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <Link
@@ -113,10 +114,10 @@ export default function AdminMateriasPage() {
                         >
                           {copiedId === article.id ? "Copiado!" : "Copiar link"}
                         </button>
-                        {canDelete && (
+                        {canDelete && article.status !== "archived" && (
                           <button
                             type="button"
-                            onClick={() => handleDelete(article.id, article.title)}
+                            onClick={() => handleArchive(article.id, article.title)}
                             className="font-semibold text-red-700 hover:underline"
                           >
                             Arquivar

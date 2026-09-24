@@ -66,8 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ profile, accessToken: session.accessToken, signOut }}>
       <div className="border-b border-yellow-400 bg-yellow-50 px-4 py-2 text-center text-xs text-yellow-900">
-        Painel em migração para login via GitHub: por enquanto, só Dashboard e Biblioteca de Mídia
-        estão disponíveis. As demais seções voltam nas próximas etapas.
+        Painel em migração para login via GitHub: por enquanto, Dashboard, Matérias e Biblioteca de
+        Mídia estão disponíveis. As demais seções voltam nas próximas etapas.
       </div>
       {children}
     </AuthContext.Provider>

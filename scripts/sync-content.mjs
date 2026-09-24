@@ -6,6 +6,14 @@
 // Pages, e reduz a superfície de dados exposta ao público ao mínimo
 // necessário (não inclui e-mail de autores, dados de rascunho, etc).
 //
+// IMPORTANTE: `articles.json` NÃO é mais sincronizado por este script. As
+// matérias agora são gerenciadas 100% via GitHub Contents API pelo painel
+// admin (ver src/lib/github/articles.ts) — cada publicação/edição já é um
+// commit direto em `src/content/articles.json`, então rodar este script de
+// novo sobrescreveria (e perderia) o conteúdo publicado pelo painel. Os
+// demais arquivos (editorias, autores, banners, configurações) continuam
+// vindo do Supabase normalmente.
+//
 // Rodado em CI antes de `next build` (veja .github/workflows/deploy.yml).
 // Localmente, se as variáveis de ambiente não estiverem definidas, mantém
 // o conteúdo de exemplo já versionado em src/content/ (não falha o dev).
@@ -34,26 +42,22 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const [editorias, authors, articles, banners, settings] = await Promise.all([
+  const [editorias, authors, banners, settings] = await Promise.all([
     fetchEditorias(supabase),
     fetchAuthors(supabase),
-    fetchArticles(supabase),
     fetchBanners(supabase),
     fetchSettings(supabase),
   ]);
 
-  const articlesWithEdition = withEditionNumbers(articles);
-
   await Promise.all([
     writeJson("editorias.json", editorias),
     writeJson("authors.json", authors),
-    writeJson("articles.json", articlesWithEdition),
     writeJson("banners.json", banners),
     writeJson("settings.json", settings),
   ]);
 
   console.log(
-    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${articles.length} matérias publicadas, ${banners.length} banners ativos, configurações de aparência atualizadas.`
+    `✓ Conteúdo sincronizado: ${editorias.length} editorias, ${authors.length} autores, ${banners.length} banners ativos, configurações de aparência atualizadas. (articles.json não foi tocado — gerenciado pelo painel admin.)`
   );
 }
 
@@ -90,48 +94,6 @@ async function fetchAuthors(supabase) {
     role: row.role,
     bio: row.bio ?? undefined,
     socials: row.socials ?? {},
-  }));
-}
-
-async function fetchArticles(supabase) {
-  const { data, error } = await supabase
-    .from("articles")
-    .select(
-      `id, title, slug, subtitle, content, featured_image, featured_image_alt,
-       editoria_id, author_id, status, published_at, scheduled_at,
-       seo_title, seo_description, reading_time_minutes, view_count,
-       created_at, updated_at,
-       article_categories ( category_id ),
-       article_tags ( tag_id )`
-    )
-    .eq("status", "published")
-    .lte("published_at", new Date().toISOString())
-    .is("deleted_at", null)
-    .order("published_at", { ascending: false });
-
-  if (error) throw new Error(`Falha ao buscar matérias: ${error.message}`);
-
-  return data.map((row) => ({
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    subtitle: row.subtitle,
-    content: row.content,
-    featuredImage: row.featured_image,
-    featuredImageAlt: row.featured_image_alt,
-    editoriaId: row.editoria_id,
-    authorId: row.author_id,
-    categoryIds: (row.article_categories ?? []).map((c) => c.category_id),
-    tagIds: (row.article_tags ?? []).map((t) => t.tag_id),
-    status: row.status,
-    publishedAt: row.published_at,
-    scheduledAt: row.scheduled_at ?? undefined,
-    seoTitle: row.seo_title ?? undefined,
-    seoDescription: row.seo_description ?? undefined,
-    readingTimeMinutes: row.reading_time_minutes,
-    viewCount: row.view_count,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
   }));
 }
 
@@ -189,20 +151,6 @@ async function fetchSettings(supabase) {
     footerLinks: data.footer_links ?? [],
     socialLinks: data.social_links ?? [],
   };
-}
-
-// Precisa bater com getAllEditionsAscending() em src/lib/editions.ts: agrupa
-// matérias publicadas pelo dia de publicação, numerando da edição mais
-// antiga (nº 1) pra mais recente. Calculado aqui (não em generate-audio.mjs)
-// porque este script já tem todas as matérias publicadas numa única
-// chamada — evita duplicar o agrupamento em dois scripts .mjs.
-function withEditionNumbers(articles) {
-  const dateKeys = [...new Set(articles.map((a) => a.publishedAt.slice(0, 10)))].sort();
-  const numberByDate = new Map(dateKeys.map((date, index) => [date, index + 1]));
-  return articles.map((article) => ({
-    ...article,
-    editionNumber: numberByDate.get(article.publishedAt.slice(0, 10)),
-  }));
 }
 
 async function writeJson(filename, data) {

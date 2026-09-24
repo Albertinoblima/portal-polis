@@ -40,7 +40,7 @@ async function getImageDimensions(url: string): Promise<{ width: number; height:
 }
 
 export default function AdminBannersPage() {
-  const { profile } = useAdminSession();
+  const { profile, accessToken } = useAdminSession();
   const { data: banners, loading, refetch } = useSupabaseQuery(getBanners);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
@@ -79,10 +79,10 @@ export default function AdminBannersPage() {
     }
   }
 
-  async function handleBannerImageSelect(media: { url: string }) {
+  async function handleBannerImageSelect(media: { path: string }) {
     try {
-      const dimensions = await getImageDimensions(media.url);
-      setImageUrl(media.url);
+      const dimensions = await getImageDimensions(media.path);
+      setImageUrl(media.path);
       setImageDimensions(dimensions);
       setError(null);
     } catch (err) {
@@ -191,7 +191,8 @@ export default function AdminBannersPage() {
               </button>
               {isMediaLibraryOpen && (
                 <MediaLibraryModal
-                  uploadedBy={profile.id}
+                  accessToken={accessToken}
+                  uploadedBy={profile.name}
                   onSelect={handleBannerImageSelect}
                   onClose={() => setIsMediaLibraryOpen(false)}
                 />

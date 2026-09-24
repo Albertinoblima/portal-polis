@@ -7,14 +7,15 @@ import { MediaLibraryModal } from "@/components/admin/MediaLibraryModal";
 
 interface EditorToolbarProps {
   editor: Editor;
+  accessToken: string;
   uploadedBy: string;
 }
 
-export function EditorToolbar({ editor, uploadedBy }: EditorToolbarProps) {
+export function EditorToolbar({ editor, accessToken, uploadedBy }: EditorToolbarProps) {
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
 
-  function handleImageSelect(selected: { url: string; alt_text: string }) {
-    editor.chain().focus().setImage({ src: selected.url, alt: selected.alt_text }).run();
+  function handleImageSelect(selected: { path: string; altText: string }) {
+    editor.chain().focus().setImage({ src: selected.path, alt: selected.altText }).run();
   }
 
   return (
@@ -97,6 +98,7 @@ export function EditorToolbar({ editor, uploadedBy }: EditorToolbarProps) {
       </ToolbarButton>
       {isMediaLibraryOpen && (
         <MediaLibraryModal
+          accessToken={accessToken}
           uploadedBy={uploadedBy}
           onSelect={handleImageSelect}
           onClose={() => setIsMediaLibraryOpen(false)}

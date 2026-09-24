@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getMedia, uploadMedia } from "@/lib/supabase/queries";
+import { listMedia, uploadMedia } from "@/lib/github/mediaLibrary";
 
 interface MediaLibraryModalProps {
+  accessToken: string;
   uploadedBy: string;
-  onSelect: (media: { url: string; alt_text: string }) => void;
+  onSelect: (media: { path: string; altText: string }) => void;
   onClose: () => void;
 }
 
-export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibraryModalProps) {
-  const { data: media, loading, refetch } = useSupabaseQuery(getMedia);
+export function MediaLibraryModal({ accessToken, uploadedBy, onSelect, onClose }: MediaLibraryModalProps) {
+  const { data: media, loading, refetch } = useSupabaseQuery(() => listMedia(accessToken), [accessToken]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,9 +24,9 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
     setIsUploading(true);
     setError(null);
     try {
-      const uploaded = await uploadMedia(file, uploadedBy, file.name);
+      const uploaded = await uploadMedia(accessToken, file, file.name, uploadedBy);
       refetch();
-      onSelect({ url: uploaded.url, alt_text: uploaded.alt_text });
+      onSelect({ path: uploaded.path, altText: uploaded.altText });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao enviar arquivo.");
@@ -61,7 +62,7 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
         <div className="border-b border-polis-navy/10 px-5 py-3">
           <label className="flex h-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-sm border-2 border-dashed border-polis-navy/20 text-xs text-polis-gray hover:border-polis-gold">
             <span>{isUploading ? "Enviando..." : "Não achou? Envie uma imagem do computador"}</span>
-            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 100MB</span>
+            <span className="text-[10px] text-polis-gray/70">JPG, PNG, WEBP ou GIF — até 20MB</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
@@ -85,7 +86,7 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
                   key={item.id}
                   type="button"
                   onClick={() => {
-                    onSelect({ url: item.url, alt_text: item.alt_text });
+                    onSelect({ path: item.path, altText: item.altText });
                     onClose();
                   }}
                   title={item.filename}
@@ -93,8 +94,8 @@ export function MediaLibraryModal({ uploadedBy, onSelect, onClose }: MediaLibrar
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={item.url}
-                    alt={item.alt_text}
+                    src={item.path}
+                    alt={item.altText}
                     className="h-full w-full object-contain p-1 transition-transform group-hover:scale-105"
                   />
                 </button>
