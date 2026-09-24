@@ -28,6 +28,11 @@ env:
   NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
   GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
   GA_SERVICE_ACCOUNT_KEY: ${{ secrets.GA_SERVICE_ACCOUNT_KEY }}
+  NEXT_PUBLIC_GH_OWNER: "Albertinoblima"
+  NEXT_PUBLIC_GH_REPO: "portal-polis"
+  NEXT_PUBLIC_GH_BRANCH: "main"
+  NEXT_PUBLIC_GH_OAUTH_CLIENT_ID: "Ov23linpdThAx0xcC1zo"
+  NEXT_PUBLIC_GH_OAUTH_PROXY_URL: "https://polis-github-oauth-proxy.github-oauth-proxy.workers.dev"
   PIPER_VERSION: "2023.11.14-2"
   PIPER_VOICE: "pt_BR-faber-medium"
 
