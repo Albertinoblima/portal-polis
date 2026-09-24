@@ -1,38 +1,18 @@
 [
   {
-    "id": "au-ana-clara",
-    "email": "ana.clara@portalpolis.com.br",
-    "name": "Ana Clara Ribeiro",
-    "avatarUrl": "/brand/LOGO_MARCA.png",
-    "role": "columnist",
-    "bio": "Analista política e colunista do Pólis. Escreve sobre Congresso Nacional e política econômica.",
-    "socials": { "twitter": "https://twitter.com/", "linkedin": "https://linkedin.com/" },
+    "id": "d5ec4876-65a8-452b-8389-65a6ab3d7df3",
+    "name": "Albertino Blima",
+    "role": "admin",
     "isActive": true,
-    "createdAt": "2026-01-10T00:00:00.000Z",
-    "updatedAt": "2026-01-10T00:00:00.000Z"
+    "createdAt": "2026-07-11T03:28:19.862Z",
+    "updatedAt": "2026-07-11T03:28:19.862Z"
   },
   {
-    "id": "au-mariana-lopes",
-    "email": "mariana.lopes@portalpolis.com.br",
-    "name": "Mariana Lopes",
-    "avatarUrl": "/brand/LOGO_MARCA.png",
-    "role": "editor",
-    "bio": "Editora da editoria Municípios. Cobre política local e o impacto das leis nas cidades brasileiras.",
-    "socials": { "instagram": "https://instagram.com/" },
-    "isActive": true,
-    "createdAt": "2026-01-10T00:00:00.000Z",
-    "updatedAt": "2026-01-10T00:00:00.000Z"
-  },
-  {
-    "id": "au-roberto-mendes",
-    "email": "roberto.mendes@portalpolis.com.br",
-    "name": "Roberto Mendes",
-    "avatarUrl": "/brand/LOGO_MARCA.png",
+    "id": "366b971c-88c2-4744-8234-e21f08466079",
+    "name": "Jurandir Junior",
     "role": "columnist",
-    "bio": "Professor de Ciência Política e colunista convidado. Escreve análises de fundo para a editoria Opinião.",
-    "socials": {},
     "isActive": true,
-    "createdAt": "2026-01-10T00:00:00.000Z",
-    "updatedAt": "2026-01-10T00:00:00.000Z"
+    "createdAt": "2026-07-11T14:23:17.259Z",
+    "updatedAt": "2026-07-11T14:23:17.259Z"
   }
 ]

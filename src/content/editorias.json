@@ -1,6 +1,6 @@
 [
   {
-    "id": "ed-politica",
+    "id": "c26d8b62-90aa-41dc-ab13-75c744e656ce",
     "name": "Política",
     "slug": "politica",
     "color": "#0A192F",
@@ -8,23 +8,7 @@
     "isActive": true
   },
   {
-    "id": "ed-municipios",
-    "name": "Municípios",
-    "slug": "municipios",
-    "color": "#1E5128",
-    "description": "Política local nos municípios brasileiros: prefeituras, câmaras municipais e o impacto das leis no dia a dia do cidadão.",
-    "isActive": true
-  },
-  {
-    "id": "ed-eleicoes",
-    "name": "Eleições",
-    "slug": "eleicoes",
-    "color": "#7A1F2B",
-    "description": "Tudo sobre pleitos eleitorais: candidaturas, pesquisas, propaganda eleitoral e resultados.",
-    "isActive": true
-  },
-  {
-    "id": "ed-editorial",
+    "id": "a6ffb741-b175-4c29-ad2f-4cc553f67e4d",
     "name": "Editorial",
     "slug": "editorial",
     "color": "#C9A227",
@@ -32,7 +16,7 @@
     "isActive": true
   },
   {
-    "id": "ed-opiniao",
+    "id": "e636ee40-441e-4713-b792-06f4491361d6",
     "name": "Opinião",
     "slug": "opiniao",
     "color": "#4A3F6B",
@@ -40,19 +24,67 @@
     "isActive": true
   },
   {
-    "id": "ed-bastidores",
+    "id": "d5d51adc-fe40-46eb-a471-c817ba59f55a",
     "name": "Bastidores",
     "slug": "bastidores",
     "color": "#334155",
     "description": "O que não sai no noticiário tradicional: articulações, negociações e os bastidores do poder.",
-    "isActive": true
+    "isActive": false
   },
   {
-    "id": "ed-radar",
+    "id": "ed4a8c4e-3d91-4776-be6d-60692322648d",
+    "name": "Eleições",
+    "slug": "eleicoes",
+    "color": "#7A1F2B",
+    "description": "Tudo sobre pleitos eleitorais: candidaturas, pesquisas, propaganda eleitoral e resultados.",
+    "isActive": false
+  },
+  {
+    "id": "f7444863-bc91-4bf3-b153-ab12382f53e8",
+    "name": "Municípios",
+    "slug": "municipios",
+    "color": "#1E5128",
+    "description": "Política local nos municípios brasileiros: prefeituras, câmaras municipais e o impacto das leis no dia a dia do cidadão.",
+    "isActive": false
+  },
+  {
+    "id": "72a9b235-a681-4293-9fba-00252e4aa088",
     "name": "Radar Político",
     "slug": "radar-politico",
     "color": "#0E7490",
     "description": "Curadoria das matérias e temas mais relevantes do momento, atualizada continuamente.",
+    "isActive": false
+  },
+  {
+    "id": "2f962e72-97b2-46cd-b6ae-a0472894723a",
+    "name": "Coluna",
+    "slug": "coluna",
+    "color": "#0A192F",
+    "description": "Coluna",
+    "isActive": true
+  },
+  {
+    "id": "46b410be-5a53-4e07-b51c-f54e31b86d5c",
+    "name": "Policial",
+    "slug": "policial",
+    "color": "#e16666",
+    "description": "Matérias policiais",
+    "isActive": true
+  },
+  {
+    "id": "ecab78ae-b5ec-4076-a409-07f875e11c34",
+    "name": "Economia e Mercado",
+    "slug": "economia-e-mercado",
+    "color": "#f5cf0f",
+    "description": "Econimia",
+    "isActive": true
+  },
+  {
+    "id": "896dd10b-d33e-4c68-b8ae-3c5c60e8d4f3",
+    "name": "Justiça e Segurança",
+    "slug": "justica-e-seguranca",
+    "color": "#c35050",
+    "description": "",
     "isActive": true
   }
 ]

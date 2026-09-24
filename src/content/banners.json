@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": "6e254b66-27c6-4387-adaa-92765eb31854",
+    "title": "iDialog",
+    "imageUrl": "/biblioteca-midias/1786132539459-iDialog.gif",
+    "linkUrl": "idialog.com.br",
+    "position": "sidebar",
+    "startDate": "2026-08-07T20:16:44.658Z",
+    "isActive": true
+  },
+  {
+    "id": "79a81f7b-c961-426b-8e7a-71ebe8d0d2fe",
+    "title": "Anuncie aqui",
+    "imageUrl": "/biblioteca-midias/1786369815358-Publicidade_portal_polis.gif",
+    "linkUrl": "https://wa.me/5587988568605",
+    "position": "sidebar",
+    "startDate": "2026-08-10T13:52:58.190Z",
+    "isActive": true
+  },
+  {
+    "id": "9892361f-f019-488f-82ac-ba8b1e3a3513",
+    "title": "Prefeitura Municipal de Flores",
+    "imageUrl": "/biblioteca-midias/1786371721405-Publicidade_portal_polis_Flores_PE.gif",
+    "linkUrl": "https://flores.pe.gov.br/",
+    "position": "sidebar",
+    "startDate": "2026-08-10T14:22:18.608Z",
+    "isActive": true
+  },
+  {
+    "id": "844deade-fc32-4e92-9c5d-c849492d339b",
+    "title": "Patrocinio",
+    "imageUrl": "/biblioteca-midias/1789944141647-Publicidade_portal_polis.gif",
+    "linkUrl": "https://wa.me/5587988568605",
+    "position": "sidebar",
+    "startDate": "2026-08-10T14:42:08.187Z",
+    "isActive": true
+  }
+]

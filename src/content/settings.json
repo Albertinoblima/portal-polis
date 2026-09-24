@@ -1,8 +1,8 @@
 {
   "siteName": "Portal Pólis",
   "tagline": "Onde a política faz sentido",
-  "defaultSeoTitle": "Pólis — Onde a política faz sentido",
-  "defaultSeoDescription": "Jornalismo político contextual, plural e confiável. O Portal Pólis é onde a política faz sentido.",
+  "defaultSeoTitle": "Portal Pólis — Onde a política faz sentido",
+  "defaultSeoDescription": "Jornalismo político contextual, plural e confiável.",
   "colorPrimary": "#0a192f",
   "colorAccent": "#c9a227",
   "colorPaper": "#f4f1e9",
@@ -31,5 +31,10 @@
       "label": "LGPD"
     }
   ],
-  "socialLinks": []
+  "socialLinks": [
+    {
+      "url": "https://www.instagram.com/portal_polis/",
+      "platform": "Instagram"
+    }
+  ]
 }
