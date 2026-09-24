@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { GameRegistrationForm, type GameRegistrationSlot } from "@/components/forms/GameRegistrationForm";
 import { cn } from "@/lib/utils";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useElementSize } from "@/hooks/useElementSize";
@@ -22,7 +21,7 @@ import {
   type Player,
 } from "./tictactoeEngine";
 
-type Stage = "mode" | "registration" | "playing";
+type Stage = "mode" | "playing";
 
 interface Score {
   x: number;
@@ -78,14 +77,8 @@ export function TicTacToe() {
 
   function selectMode(selected: Mode) {
     setMode(selected);
-    setStage("registration");
-  }
-
-  function handleRegistered(names: string[]) {
-    const x = names[0]?.trim() || "Jogador 1";
-    const o = mode === "cpu" ? "Computador" : names[1]?.trim() || "Jogador 2";
-    setNameX(x);
-    setNameO(o);
+    setNameX(selected === "cpu" ? "Você" : "Jogador 1");
+    setNameO(selected === "cpu" ? "Computador" : "Jogador 2");
     // Mudar nameX/nameO muda a chave usada por useLocalStorageState acima,
     // que recarrega sozinho o placar salvo para este par assim que a chave
     // muda — não precisa carregar manualmente aqui.
@@ -166,35 +159,6 @@ export function TicTacToe() {
             Com outra pessoa
           </button>
         </div>
-      </div>
-    );
-  }
-
-  if (stage === "registration") {
-    const slots: GameRegistrationSlot[] =
-      mode === "cpu"
-        ? [{ label: "Seu nome", symbol: "X" }]
-        : [
-          { label: "Jogador 1", symbol: "X" },
-          { label: "Jogador 2", symbol: "O" },
-        ];
-
-    return (
-      <div className="mx-auto flex h-full max-w-md flex-col justify-center gap-6">
-        <div className="text-center">
-          <h1 className="font-serif text-3xl font-bold text-polis-ink">Cadastro de Jogadores</h1>
-          <p className="mt-1 text-sm text-polis-ink-soft">
-            Antes de começar, identifique quem vai jogar.
-          </p>
-        </div>
-        <GameRegistrationForm slots={slots} onRegistered={handleRegistered} />
-        <button
-          type="button"
-          onClick={() => setStage("mode")}
-          className="mx-auto text-xs uppercase tracking-wide text-polis-ink-soft underline hover:text-polis-gold-ink"
-        >
-          Voltar
-        </button>
       </div>
     );
   }

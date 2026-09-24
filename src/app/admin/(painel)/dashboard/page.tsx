@@ -6,7 +6,6 @@ import { KpiCard } from "@/components/admin/KpiCard";
 import { StatusBadge } from "@/components/ui/Badge";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { getArticlesForAdmin, getEditorias } from "@/lib/supabase/queries";
-import { supabase } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
 import { getAnalyticsSnapshot } from "@/lib/analytics";
 
@@ -20,14 +19,6 @@ export default function AdminDashboardPage() {
   const analytics = getAnalyticsSnapshot();
   const { data: articles, loading: loadingArticles } = useSupabaseQuery(getArticlesForAdmin);
   const { data: editorias } = useSupabaseQuery(getEditorias);
-  const { data: subscriberCount } = useSupabaseQuery(async () => {
-    const { count, error } = await supabase
-      .from("newsletter_subscribers")
-      .select("*", { count: "exact", head: true })
-      .is("unsubscribed_at", null);
-    if (error) throw error;
-    return count ?? 0;
-  });
 
   const published = articles?.filter((a) => a.status === "published") ?? [];
   const inReview = articles?.filter((a) => a.status === "in_review") ?? [];
@@ -55,7 +46,7 @@ export default function AdminDashboardPage() {
       <AdminTopbar title="Dashboard" description="Visão geral da operação editorial do Pólis." />
 
       <div className="p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KpiCard
             label="Publicadas"
             value={loadingArticles ? "…" : published.length}
@@ -70,11 +61,6 @@ export default function AdminDashboardPage() {
             label="Visualizações"
             value={loadingArticles ? "…" : totalViews.toLocaleString("pt-BR")}
             hint="Acumulado de todas as matérias"
-          />
-          <KpiCard
-            label="Newsletter"
-            value={subscriberCount ?? "…"}
-            hint="Inscritos ativos"
           />
         </div>
 

@@ -46,7 +46,7 @@ O planejamento completo do produto está documentado em [`docs/`](./docs).
 ## Stack
 
 | Camada | Tecnologia |
-|---|---|
+| --- | --- |
 | Framework | Next.js (App Router), export estático (`output: "export"`) |
 | Linguagem | TypeScript |
 | Estilo | Tailwind CSS v4 (tema com a identidade visual do Pólis) |
@@ -74,8 +74,10 @@ PORTAL-POLIS/
 │   │   │                            institucionais, Entretenimento, ...) — layout "jornal
 │   │   │                            impresso" com page-flip (ver src/components/newspaper/)
 │   │   └── admin/                  Painel administrativo
-│   │       ├── login/, esqueci-senha/, redefinir-senha/   (sem sidebar)
-│   │       └── (painel)/           Rotas protegidas por AuthProvider + AdminSidebar
+│   │       ├── login/                                     Login via GitHub OAuth Device Flow (sem sidebar)
+│   │       └── (painel)/           Rotas protegidas por AuthProvider + AdminSidebar (nesta fase,
+│   │           │                    só Dashboard e Mídia estão navegáveis — demais seções ainda
+│   │           │                    dependem do Supabase Auth e serão migradas nas próximas etapas)
 │   │           ├── dashboard/, materias/, materias/nova/, materias/editar/
 │   │           ├── categorias/, tags/, usuarios/, midia/, banners/, comentarios/
 │   │           ├── mensagens/, newsletter/, auditoria/, configuracoes/
@@ -84,13 +86,15 @@ PORTAL-POLIS/
 │   │   ├── layout/                  ThemeToggle (claro/escuro do site público)
 │   │   ├── articles/                ArticleCard, ListenButton (TTS), ShareButtons, SearchResults
 │   │   ├── games/                   TicTacToe, Crossword (seção Entretenimento — ver CLAUDE.md)
-│   │   ├── forms/                   ContactForm, NewsletterForm, GameRegistrationForm
+│   │   ├── forms/                   ContactForm
 │   │   ├── admin/                   AuthProvider, Sidebar, Topbar, KpiCard, ArticleEditorForm
 │   │   └── ui/                      Button, Badge (Design System)
 │   ├── content/                    Conteúdo público (gerado por sync-content.mjs em CI;
 │   │                                versão de exemplo commitada para dev local sem Supabase)
-│   ├── hooks/                      useSession, useSupabaseQuery
+│   ├── hooks/                      useSession (sessão GitHub), useSupabaseQuery
 │   ├── lib/
+│   │   ├── github/                  Cliente da API do GitHub: login (Device Flow) e Biblioteca
+│   │   │                            de Mídia (Contents API) — ver cloudflare/github-oauth-proxy/
 │   │   ├── content.ts               Camada de leitura do site público (lê src/content/*.json)
 │   │   ├── crosswords.ts            Dados + motor de grade das Palavras Cruzadas (ver CLAUDE.md)
 │   │   └── supabase/                 client.ts, auth.ts, queries.ts, audit.ts (admin, runtime)
@@ -168,9 +172,11 @@ Matérias e o proprio usuário staff só existem depois de um login real (o trig
 1. No painel do Supabase → Authentication → Users → **Add user**, crie seu usuário com e-mail e
    senha.
 2. No SQL Editor, promova-o a admin:
+
    ```sql
    update public.profiles set role = 'admin' where email = 'voce@exemplo.com';
    ```
+
 3. Faça login em `/admin/login` com esse e-mail/senha.
 
 Os próximos usuários podem ser convidados direto pela tela **Usuários** do painel (que chama a
@@ -199,7 +205,7 @@ automaticamente dentro das Edge Functions — não precisam ser configurados man
 No repositório GitHub → Settings → Secrets and variables → Actions, adicione:
 
 | Secret | Valor |
-|---|---|
+| --- | --- |
 | `SUPABASE_URL` | Project URL do Supabase |
 | `SUPABASE_ANON_KEY` | anon key do Supabase |
 

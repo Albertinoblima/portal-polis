@@ -1,17 +1,16 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { useSession } from "@/hooks/useSession";
-import type { Session } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+import type { Database, UserRole } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface AuthContextValue {
-  session: Session;
   profile: Profile;
+  accessToken: string;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,7 +24,7 @@ export function useAdminSession(): AuthContextValue {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { session, profile, loading, isStaff } = useSession();
+  const { session, loading, isStaff, signOut } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -42,9 +41,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session || !profile || !isStaff) {
+  if (!session || !isStaff) {
     return null;
   }
 
-  return <AuthContext.Provider value={{ session, profile }}>{children}</AuthContext.Provider>;
+  // Perfil "sintético" a partir dos dados do GitHub — mantém a mesma forma
+  // usada quando o painel ainda dependia de `profiles` no Supabase, para não
+  // exigir alterações em todas as telas que já leem `profile.*` (várias
+  // dessas telas continuam usando Supabase para dados/gravações e serão
+  // migradas nas próximas etapas).
+  const profile: Profile = {
+    id: String(session.user.id),
+    email: session.user.email ?? `${session.user.login}@users.noreply.github.com`,
+    name: session.user.name ?? session.user.login,
+    avatar_url: session.user.avatar_url,
+    role: "admin" as UserRole,
+    bio: null,
+    socials: {},
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  return (
+    <AuthContext.Provider value={{ profile, accessToken: session.accessToken, signOut }}>
+      <div className="border-b border-yellow-400 bg-yellow-50 px-4 py-2 text-center text-xs text-yellow-900">
+        Painel em migração para login via GitHub: por enquanto, só Dashboard e Biblioteca de Mídia
+        estão disponíveis. As demais seções voltam nas próximas etapas.
+      </div>
+      {children}
+    </AuthContext.Provider>
+  );
 }

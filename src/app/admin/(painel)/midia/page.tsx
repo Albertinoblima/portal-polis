@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { deleteMedia, getMedia, updateMediaAltText, uploadMedia } from "@/lib/supabase/queries";
+import { deleteMedia, listMedia, updateMediaAltText, uploadMedia, type MediaItem } from "@/lib/github/mediaLibrary";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 
 export default function AdminMidiaPage() {
-  const { profile } = useAdminSession();
-  const { data: media, loading, refetch } = useSupabaseQuery(getMedia);
+  const { profile, accessToken } = useAdminSession();
+  const { data: media, loading, refetch } = useSupabaseQuery(() => listMedia(accessToken), [accessToken]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ export default function AdminMidiaPage() {
     setError(null);
     try {
       for (const file of Array.from(files)) {
-        await uploadMedia(file, profile.id, file.name);
+        await uploadMedia(accessToken, file, file.name, profile.name);
       }
       refetch();
     } catch (err) {
@@ -31,14 +31,14 @@ export default function AdminMidiaPage() {
     }
   }
 
-  async function handleDelete(id: string, filename: string) {
-    if (!confirm(`Remover "${filename}" da biblioteca?`)) return;
-    await deleteMedia(id, filename);
+  async function handleDelete(item: MediaItem) {
+    if (!confirm(`Remover "${item.filename}" da biblioteca?`)) return;
+    await deleteMedia(accessToken, item);
     refetch();
   }
 
-  async function handleAltTextBlur(id: string, value: string) {
-    await updateMediaAltText(id, value);
+  async function handleAltTextBlur(item: MediaItem, value: string) {
+    await updateMediaAltText(accessToken, item, value);
   }
 
   return (
@@ -51,11 +51,12 @@ export default function AdminMidiaPage() {
       <div className="p-6">
         <label className="mb-1 flex h-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-polis-navy/20 text-sm text-polis-gray hover:border-polis-gold">
           <span>{isUploading ? "Enviando..." : "Arraste arquivos aqui ou clique para enviar"}</span>
-          <span className="text-xs text-polis-gray/70">JPG, PNG, WEBP ou GIF (animados) — até 100MB</span>
+          <span className="text-xs text-polis-gray/70">JPG, PNG, WEBP ou GIF (animados) — até 20MB</span>
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
         </label>
         <p className="mb-4 text-xs text-polis-gray/70">
-          GIFs mantêm a animação; a exibição no site se ajusta automaticamente ao espaço disponível.
+          Cada arquivo enviado é commitado diretamente no repositório e fica disponível após o
+          próximo deploy automático.
         </p>
 
         {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
@@ -73,10 +74,10 @@ export default function AdminMidiaPage() {
               >
                 <div className="relative aspect-square">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.url} alt={item.alt_text} className="h-full w-full object-contain p-2" />
+                  <img src={item.path} alt={item.altText} className="h-full w-full object-contain p-2" />
                   <button
                     type="button"
-                    onClick={() => handleDelete(item.id, item.filename)}
+                    onClick={() => handleDelete(item)}
                     className="absolute right-1 top-1 hidden rounded-sm bg-red-700 px-2 py-1 text-xs font-semibold text-white group-hover:block"
                   >
                     Remover
@@ -84,9 +85,9 @@ export default function AdminMidiaPage() {
                 </div>
                 <input
                   aria-label={`Texto alternativo de ${item.filename}`}
-                  defaultValue={item.alt_text}
+                  defaultValue={item.altText}
                   placeholder="Texto alternativo (alt)"
-                  onBlur={(event) => handleAltTextBlur(item.id, event.target.value)}
+                  onBlur={(event) => handleAltTextBlur(item, event.target.value)}
                   className="w-full border-t border-polis-navy/10 px-2 py-1 text-xs focus:border-polis-gold focus:outline-none"
                 />
               </div>
