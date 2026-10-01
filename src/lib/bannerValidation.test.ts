@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidBannerDimensions } from "./page";
+import { isValidBannerDimensions } from "@/lib/bannerValidation";
 
 describe("isValidBannerDimensions", () => {
     it("accepts proportional 5:4 variants such as 1200x960 and 960x768", () => {
