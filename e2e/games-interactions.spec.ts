@@ -16,8 +16,6 @@ async function startTicTacToeCpu(page: Page) {
     await page.goto("/entretenimento/jogos/jogo-da-velha/");
     await expect(page.getByRole("heading", { level: 1, name: "Jogo da Velha" })).toBeVisible();
     await page.getByRole("button", { name: "Contra o computador" }).click();
-    await page.getByLabel("Nome").fill("Leitor");
-    await page.getByRole("button", { name: "Começar a jogar" }).click();
 }
 
 test.describe("Jogos - teclado desktop", () => {
@@ -118,11 +116,6 @@ test.describe("Jogos - toque retrato", () => {
     test("Jogo da Velha local registra toques nos lances", async ({ page }) => {
         await page.goto("/entretenimento/jogos/jogo-da-velha/");
         await page.getByRole("button", { name: "Com outra pessoa" }).tap();
-
-        const names = page.getByLabel("Nome");
-        await names.nth(0).fill("Leitor A");
-        await names.nth(1).fill("Leitor B");
-        await page.getByRole("button", { name: "Começar a jogar" }).tap();
 
         await page.getByRole("button", { name: /Casa 1/ }).tap();
         await expect(page.getByRole("button", { name: /Casa 1, X/ })).toBeVisible();
