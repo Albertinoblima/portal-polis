@@ -603,6 +603,53 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "eleicoes-democracia",
+    date: "2026-10-01",
+    theme: "Eleições e Democracia",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 0,
+        col: 0,
+        answer: "ELEITOR",
+        clue: "Cidadão que possui direito de voto e pode escolher seus representantes.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 0,
+        col: 2,
+        answer: "DEMOCRACIA",
+        clue: "Sistema de governo em que o poder emana do povo, exercido diretamente ou por representantes.",
+      },
+      {
+        number: 3,
+        direction: "down",
+        row: 0,
+        col: 6,
+        answer: "OPOSICAO",
+        clue: "Partidos ou candidatos que se posicionam contra as políticas do governo eleito.",
+      },
+      {
+        number: 4,
+        direction: "across",
+        row: 2,
+        col: 0,
+        answer: "ELEICAO",
+        clue: "Processo democrático pelo qual os cidadãos escolhem seus representantes pelo voto.",
+      },
+      {
+        number: 5,
+        direction: "down",
+        row: 2,
+        col: 4,
+        answer: "CICLO",
+        clue: "Sequência de eventos ou fenômenos que se repetem na mesma ordem e duração.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {

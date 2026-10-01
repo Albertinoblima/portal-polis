@@ -195,6 +195,26 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "COLIGACAO",
     ],
   },
+  {
+    slug: "eleicoes-democracia",
+    date: "2026-10-01",
+    theme: "Eleições e Democracia",
+    size: 14,
+    words: [
+      "SUFRAGIO",
+      "SENADO",
+      "CAMARA",
+      "LEGISLACAO",
+      "REPUBLICA",
+      "PLEBISCITO",
+      "REFERENDUM",
+      "DEMOCRACIA",
+      "DIREITO",
+      "IGUALDADE",
+      "REPRESENTACAO",
+      "CONSTITUICAO",
+    ],
+  },
 ];
 
 export interface WordSearchCell {
@@ -306,7 +326,7 @@ export function buildWordSearchGrid(puzzle: WordSearchPuzzle): WordSearchGrid {
     if (!placed) {
       throw new Error(
         `Não foi possível posicionar "${word}" na grade ${size}x${size} do caça-palavras "${puzzle.slug}". ` +
-          "Aumente `size` ou revise a lista de palavras em WORDSEARCHES."
+        "Aumente `size` ou revise a lista de palavras em WORDSEARCHES."
       );
     }
   }
