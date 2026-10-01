@@ -28,8 +28,9 @@
 // timeout) é registrada em stderr e aquele GIF específico fica sem vídeo
 // nesta rodada — o featuredImage/imageUrl/content correspondente
 // simplesmente não é reescrito, e o site continua servindo o GIF cru
-// (src/lib/supabaseImageLoader.ts já faz bypass de transformação pra
-// `.gif`, então isso é seguro). Nunca derruba o build.
+// (next.config.ts usa images.unoptimized, então não há transformação de
+// imagem em runtime que precise de bypass para `.gif`). Nunca derruba o
+// build.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, rm, mkdtemp } from "node:fs/promises";
@@ -53,11 +54,9 @@ const DOWNLOAD_TIMEOUT_MS = 60_000;
 const MAX_NEW = Number(process.env.TRANSCODE_MAX_NEW ?? 20);
 const CONCURRENCY = Number(process.env.TRANSCODE_CONCURRENCY ?? 3);
 
-// Precisa bater com src/lib/mediaUrl.ts (isSupabaseGif) — este script roda
-// via `node scripts/x.mjs` puro, sem transpilador de TS, então não dá pra
-// importar aquele módulo diretamente; mesmo padrão de duplicação documentada
-// já usado em MAX_MEDIA_UPLOAD_BYTES (src/lib/supabase/queries.ts) vs o
-// limite do bucket em supabase/migrations/0009_media_bucket_limits_100mb.sql.
+// Legado: GIFs antigos hospedados no Supabase Storage (projeto já
+// descomissionado — nenhum conteúdo atual referencia mais essas URLs, mas o
+// branch fica aqui como documentação histórica e porque é inofensivo).
 const STORAGE_OBJECT_PATH = "/storage/v1/object/public/";
 // Prefixo da nova Biblioteca de Mídia (src/lib/github/mediaLibrary.ts) —
 // GIFs enviados por ali ficam em public/biblioteca-midias/ e são referenciados

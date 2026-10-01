@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
-import { getSiteSettings, triggerSiteRebuild, updateSiteSettings } from "@/lib/supabase/queries";
+import { getSettings, updateSettings } from "@/lib/github/settings";
 import { useAdminSession } from "@/components/admin/AuthProvider";
 
 export default function AdminConfiguracoesPage() {
-  const { profile } = useAdminSession();
+  const { profile, accessToken } = useAdminSession();
   const isAdmin = profile.role === "admin";
 
   const [loading, setLoading] = useState(true);
@@ -18,48 +18,32 @@ export default function AdminConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-
   useEffect(() => {
-    getSiteSettings().then((settings) => {
-      setSiteName(settings.site_name);
+    getSettings(accessToken).then((settings) => {
+      setSiteName(settings.siteName);
       setTagline(settings.tagline);
-      setDefaultSeoTitle(settings.default_seo_title);
-      setDefaultSeoDescription(settings.default_seo_description);
+      setDefaultSeoTitle(settings.defaultSeoTitle);
+      setDefaultSeoDescription(settings.defaultSeoDescription);
       setLoading(false);
     });
-  }, []);
+  }, [accessToken]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
-      await updateSiteSettings({
-        site_name: siteName,
+      await updateSettings(accessToken, {
+        siteName,
         tagline,
-        default_seo_title: defaultSeoTitle,
-        default_seo_description: defaultSeoDescription,
+        defaultSeoTitle,
+        defaultSeoDescription,
       });
       setMessage("Configurações salvas.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Não foi possível salvar.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleSync() {
-    setSyncing(true);
-    setSyncMessage(null);
-    try {
-      await triggerSiteRebuild();
-      setSyncMessage("Sincronização disparada — o site publicado atualiza em cerca de 1 minuto.");
-    } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : "Não foi possível sincronizar.");
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -72,18 +56,6 @@ export default function AdminConfiguracoesPage() {
       <AdminTopbar title="Configurações" description="Configurações gerais do portal e de SEO." />
 
       <div className="max-w-2xl space-y-6 p-6">
-        <div className="rounded-sm border border-polis-navy/10 bg-white p-4">
-          <h3 className="text-sm font-semibold text-polis-navy">Sincronizar site publicado</h3>
-          <p className="mt-1 text-xs text-polis-slate">
-            O site público é gerado estaticamente. Normalmente ele atualiza sozinho ao publicar uma
-            matéria, mas você pode forçar uma sincronização manual aqui.
-          </p>
-          <Button type="button" variant="secondary" disabled={syncing} onClick={handleSync} className="mt-3">
-            {syncing ? "Sincronizando..." : "🔄 Sincronizar site"}
-          </Button>
-          {syncMessage && <p className="mt-2 text-xs text-polis-slate">{syncMessage}</p>}
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <fieldset className="rounded-sm border border-polis-navy/10 bg-white p-4">
             <legend className="px-1 text-sm font-semibold text-polis-navy">Geral</legend>

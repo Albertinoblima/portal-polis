@@ -3,9 +3,23 @@
 import { createContext, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
-import type { Database, UserRole } from "@/types/database";
+import type { UserRole } from "@/types";
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+// Perfil "sintético" a partir dos dados do GitHub — todo colaborador do
+// repositório com permissão de escrita é tratado como admin (não há papéis
+// granulares por editoria, ao contrário do antigo modelo com Supabase Auth).
+interface Profile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  role: UserRole;
+  bio: string | null;
+  socials: Record<string, string>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextValue {
   profile: Profile;
@@ -45,11 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // Perfil "sintético" a partir dos dados do GitHub — mantém a mesma forma
-  // usada quando o painel ainda dependia de `profiles` no Supabase, para não
-  // exigir alterações em todas as telas que já leem `profile.*` (várias
-  // dessas telas continuam usando Supabase para dados/gravações e serão
-  // migradas nas próximas etapas).
   const profile: Profile = {
     id: String(session.user.id),
     email: session.user.email ?? `${session.user.login}@users.noreply.github.com`,
@@ -65,10 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ profile, accessToken: session.accessToken, signOut }}>
-      <div className="border-b border-yellow-400 bg-yellow-50 px-4 py-2 text-center text-xs text-yellow-900">
-        Painel em migração para login via GitHub: por enquanto, Dashboard, Matérias e Biblioteca de
-        Mídia estão disponíveis. As demais seções voltam nas próximas etapas.
-      </div>
       {children}
     </AuthContext.Provider>
   );

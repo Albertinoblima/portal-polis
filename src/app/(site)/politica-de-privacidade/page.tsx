@@ -21,19 +21,16 @@ const CONTENT_HTML = `
 
   <h2>2. Quais dados coletamos e por quê</h2>
   <ul>
-    <li><strong>Comentários em matérias:</strong> o nome que você informar e o texto do
-    comentário. Todo comentário passa por moderação da redação antes de ficar visível
-    publicamente.</li>
-    <li><strong>Newsletter:</strong> apenas o seu e-mail, usado exclusivamente para o envio
-    das edições da newsletter do Portal Pólis.</li>
-    <li><strong>Formulário de contato:</strong> nome, e-mail e o conteúdo da mensagem
-    enviada à redação, para que possamos responder.</li>
+    <li><strong>Formulário de contato:</strong> ao clicar em "Enviar", você é direcionado para
+    uma conversa no WhatsApp com a redação — nome, telefone e o conteúdo da mensagem ficam
+    apenas no WhatsApp (seu e da redação); nosso site não armazena nada desse formulário em
+    nenhum servidor.</li>
     <li><strong>Preferência de tema (claro/escuro):</strong> fica salva apenas no seu
     próprio navegador (armazenamento local) e nunca chega aos nossos servidores. Não é um
     dado pessoal.</li>
     <li><strong>Acesso ao painel administrativo:</strong> exclusivo para colaboradores da
-    redação — e-mail, papel de acesso e um registro de auditoria das ações realizadas, para
-    segurança e responsabilização editorial.</li>
+    redação com permissão de escrita no repositório do código-fonte — login feito via GitHub,
+    sem cadastro de e-mail/senha próprio do portal.</li>
   </ul>
   <p>Não coletamos dados sensíveis (art. 5º, II, da LGPD) e não fazemos rastreamento
   comportamental para fins publicitários.</p>
@@ -46,24 +43,25 @@ const CONTENT_HTML = `
 
   <h2>4. Base legal para o tratamento</h2>
   <ul>
-    <li><strong>Newsletter:</strong> seu consentimento (art. 7º, I, LGPD) — você pode
-    cancelar a inscrição a qualquer momento.</li>
-    <li><strong>Comentários e contato:</strong> nosso legítimo interesse editorial em manter
+    <li><strong>Formulário de contato:</strong> nosso legítimo interesse editorial em manter
     um canal de interação com os leitores (art. 7º, IX), sempre respeitando finalidade,
-    necessidade e os seus direitos.</li>
+    necessidade e os seus direitos. Como a mensagem é enviada via WhatsApp, o tratamento dos
+    dados nessa conversa segue a política de privacidade do próprio WhatsApp.</li>
     <li><strong>Dados de colaboradores da redação:</strong> execução da relação de
     colaboração e cumprimento de obrigações de responsabilidade editorial (art. 7º, II e V).</li>
   </ul>
 
   <h2>5. Com quem compartilhamos seus dados</h2>
-  <p>Nossos dados são armazenados na infraestrutura da Supabase, contratada como operadora
-  de banco de dados e autenticação. Não vendemos, alugamos ou compartilhamos seus dados
-  pessoais com terceiros para fins de marketing.</p>
+  <p>O site público é 100% estático e hospedado no GitHub Pages; não há banco de dados nem
+  servidor próprio armazenando dados de leitores. O formulário de contato é um link direto
+  para o WhatsApp — a conversa fica entre você, a redação e a Meta (operadora do WhatsApp).
+  Não vendemos, alugamos ou compartilhamos seus dados pessoais com terceiros para fins de
+  marketing.</p>
 
   <h2>6. Por quanto tempo guardamos seus dados</h2>
-  <p>Mantemos cada dado apenas pelo tempo necessário à finalidade que motivou a coleta:
-  mensagens de contato e comentários enquanto forem relevantes à moderação editorial;
-  e-mails de newsletter até que você cancele a inscrição.</p>
+  <p>Não guardamos dados pessoais de leitores em nossos servidores. Mensagens enviadas pelo
+  formulário de contato ficam apenas no histórico do WhatsApp, sujeitas à política de retenção
+  daquele serviço.</p>
 
   <h2>7. Seus direitos como titular</h2>
   <p>A qualquer momento você pode solicitar confirmação de tratamento, acesso, correção,
@@ -72,9 +70,9 @@ const CONTENT_HTML = `
   — respondemos em até 15 dias.</p>
 
   <h2>8. Segurança</h2>
-  <p>Adotamos medidas técnicas e organizacionais razoáveis — como controle de acesso por
-  papel no painel administrativo e registro de auditoria das ações da equipe — para proteger
-  seus dados contra acessos não autorizados.</p>
+  <p>Adotamos medidas técnicas e organizacionais razoáveis — como controle de acesso ao painel
+  administrativo restrito a colaboradores do repositório do código-fonte — para proteger
+  nossos sistemas contra acessos não autorizados.</p>
 
   <h2>9. Alterações desta política</h2>
   <p>Esta política pode ser atualizada para refletir mudanças no portal ou na legislação. A

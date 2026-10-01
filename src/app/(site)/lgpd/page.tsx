@@ -33,11 +33,10 @@ const CONTENT_HTML = `
 
   <h2>3. Boas práticas que já adotamos</h2>
   <ul>
-    <li>Coletamos apenas o dado estritamente necessário para cada finalidade (comentário,
-    newsletter ou contato) — nunca informações além disso.</li>
-    <li>Comentários passam por moderação editorial antes de ficarem públicos.</li>
-    <li>O acesso ao painel administrativo é restrito por papel (role-based) e todas as
-    ações relevantes ficam registradas em log de auditoria.</li>
+    <li>Coletamos apenas o dado estritamente necessário para cada finalidade — hoje,
+    apenas o contato via WhatsApp — nunca informações além disso.</li>
+    <li>O acesso ao painel administrativo é restrito a colaboradores com permissão de
+    escrita no repositório do código-fonte do portal.</li>
     <li>Não realizamos rastreamento comportamental para fins de publicidade nem
     compartilhamos dados com terceiros para fins comerciais.</li>
   </ul>

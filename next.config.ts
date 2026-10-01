@@ -4,8 +4,7 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   images: {
-    loader: "custom",
-    loaderFile: "./src/lib/supabaseImageLoader.ts",
+    unoptimized: true,
   },
 };
 

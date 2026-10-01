@@ -4,11 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  repository_dispatch:
-    types: [content-updated]
   schedule:
     # Rede de segurança: garante que o site nunca fique desatualizado por
-    # mais de 30 min mesmo se o disparo via Edge Function falhar.
+    # mais de 30 min mesmo se algum commit do painel não disparar o push
+    # (ou se houver qualquer outra falha intermitente).
     - cron: "*/30 * * * *"
 
 permissions:
@@ -21,10 +20,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
   NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
   GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
   GA_SERVICE_ACCOUNT_KEY: ${{ secrets.GA_SERVICE_ACCOUNT_KEY }}
@@ -60,9 +55,6 @@ jobs:
 
       - name: Unit tests
         run: npm run test
-
-      - name: Sync content from Supabase
-        run: npm run sync-content
 
       - name: Cache Piper binary + modelo de voz
         id: cache-piper

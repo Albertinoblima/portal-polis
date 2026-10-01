@@ -9,13 +9,11 @@ import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import {
   createBanner,
   deleteBanner,
-  getBanners,
+  listBanners,
   toggleBanner,
-  triggerSiteRebuild,
   updateBanner,
-} from "@/lib/supabase/queries";
-
-type BannerRecord = Awaited<ReturnType<typeof getBanners>>[number];
+} from "@/lib/github/banners";
+import type { Banner } from "@/types";
 
 const SIDEBAR_DIMENSIONS = { width: 1200, height: 960 };
 const SIDEBAR_ASPECT_RATIO = SIDEBAR_DIMENSIONS.width / SIDEBAR_DIMENSIONS.height;
@@ -41,7 +39,10 @@ async function getImageDimensions(url: string): Promise<{ width: number; height:
 
 export default function AdminBannersPage() {
   const { profile, accessToken } = useAdminSession();
-  const { data: banners, loading, refetch } = useSupabaseQuery(getBanners);
+  const { data: banners, loading, refetch } = useSupabaseQuery(
+    () => listBanners(accessToken),
+    [accessToken]
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
@@ -65,15 +66,15 @@ export default function AdminBannersPage() {
     setIsFormOpen(true);
   }
 
-  async function openEditForm(banner: BannerRecord) {
+  async function openEditForm(banner: Banner) {
     setIsFormOpen(true);
     setEditingBannerId(banner.id);
     setTitle(banner.title);
-    setImageUrl(banner.image_url);
-    setLinkUrl(banner.link_url);
+    setImageUrl(banner.imageUrl);
+    setLinkUrl(banner.linkUrl);
     setError(null);
     try {
-      setImageDimensions(await getImageDimensions(banner.image_url));
+      setImageDimensions(await getImageDimensions(banner.imageUrl));
     } catch {
       setImageDimensions(null);
     }
@@ -114,11 +115,10 @@ export default function AdminBannersPage() {
 
     try {
       if (editingBannerId) {
-        await updateBanner(editingBannerId, { title, image_url: imageUrl, link_url: linkUrl || "#" });
+        await updateBanner(accessToken, editingBannerId, { title, imageUrl, linkUrl: linkUrl || "#" });
       } else {
-        await createBanner({ title, image_url: imageUrl, link_url: linkUrl || "#" });
+        await createBanner(accessToken, { title, imageUrl, linkUrl: linkUrl || "#" });
       }
-      await triggerSiteRebuild();
       resetForm();
       setIsFormOpen(false);
       refetch();
@@ -248,10 +248,10 @@ export default function AdminBannersPage() {
                     <td className="px-5 py-3 font-medium text-polis-navy">{banner.title}</td>
                     <td className="px-5 py-3">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${banner.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${banner.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                           }`}
                       >
-                        {banner.is_active ? "Ativo" : "Inativo"}
+                        {banner.isActive ? "Ativo" : "Inativo"}
                       </span>
                     </td>
                     <td className="px-5 py-3">
@@ -266,19 +266,17 @@ export default function AdminBannersPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            await toggleBanner(banner.id, !banner.is_active);
-                            await triggerSiteRebuild();
+                            await toggleBanner(accessToken, banner.id, !banner.isActive);
                             refetch();
                           }}
                           className="font-semibold text-polis-navy hover:text-polis-gold"
                         >
-                          {banner.is_active ? "Desativar" : "Ativar"}
+                          {banner.isActive ? "Desativar" : "Ativar"}
                         </button>
                         <button
                           type="button"
                           onClick={async () => {
-                            await deleteBanner(banner.id);
-                            await triggerSiteRebuild();
+                            await deleteBanner(accessToken, banner.id);
                             refetch();
                           }}
                           className="font-semibold text-red-700 hover:underline"

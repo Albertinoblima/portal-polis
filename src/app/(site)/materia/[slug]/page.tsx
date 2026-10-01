@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
-import { Comments } from "@/components/articles/Comments";
 import { ShareButtons } from "@/components/articles/ShareButtons";
 import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { buildArticleBlocks } from "@/components/newspaper/editionBlocks";
@@ -99,13 +98,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     {
       type: "node",
       node: (
-        <div className="flex h-full flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-polis-rule/20 pb-6">
-            <ShareButtons url={articleUrl} title={article.title} />
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <Comments articleId={article.id} />
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-polis-rule/20 pb-6">
+          <ShareButtons url={articleUrl} title={article.title} />
         </div>
       ),
     },

@@ -30,8 +30,8 @@ export function ArticleEditorForm({ articleId }: ArticleEditorFormProps) {
   const { profile, accessToken } = useAdminSession();
   const canPublish = PUBLISH_ROLES.includes(profile.role);
 
-  // Editorias e autores vêm de src/content/*.json (sincronizados do
-  // Supabase em build, mas somente leitura — não dependem de login).
+  // Editorias e autores vêm de src/content/*.json (versionado no
+  // repositório, somente leitura — não dependem de login).
   const [editorias] = useState(() => getEditorias());
   const [staff] = useState(() => getAuthors());
 

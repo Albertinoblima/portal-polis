@@ -2,16 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
-import { Card } from "@/components/admin/Card";
 import { Button } from "@/components/ui/Button";
 import { useAdminSession } from "@/components/admin/AuthProvider";
-import {
-  getSiteSettings,
-  triggerSiteRebuild,
-  updateSiteAppearance,
-  uploadMedia,
-} from "@/lib/supabase/queries";
-import type { BodyFont, HeadingFont, NavLink, SocialLink } from "@/types/database";
+import { getSettings, updateSettings } from "@/lib/github/settings";
+import { uploadMedia } from "@/lib/github/mediaLibrary";
+import type { BodyFont, HeadingFont, NavLink, SocialLink } from "@/types";
 
 const HEADING_FONT_OPTIONS: { value: HeadingFont; label: string }[] = [
   { value: "eb-garamond", label: "EB Garamond (padrão, serifada clássica)" },
@@ -34,15 +29,13 @@ function moveItem<T>(list: T[], index: number, direction: -1 | 1): T[] {
 }
 
 export default function AdminAparenciaPage() {
-  const { profile } = useAdminSession();
+  const { profile, accessToken } = useAdminSession();
   const isAdmin = profile.role === "admin";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
@@ -58,20 +51,20 @@ export default function AdminAparenciaPage() {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
 
   useEffect(() => {
-    getSiteSettings().then((settings) => {
-      setLogoUrl(settings.logo_url);
-      setFaviconUrl(settings.favicon_url);
-      setColorPrimary(settings.color_primary);
-      setColorAccent(settings.color_accent);
-      setColorPaper(settings.color_paper);
-      setFontHeading(settings.font_heading as HeadingFont);
-      setFontBody(settings.font_body as BodyFont);
-      setNavLinks((settings.nav_links as NavLink[] | null) ?? []);
-      setFooterLinks((settings.footer_links as NavLink[] | null) ?? []);
-      setSocialLinks((settings.social_links as SocialLink[] | null) ?? []);
+    getSettings(accessToken).then((settings) => {
+      setLogoUrl(settings.logoUrl ?? null);
+      setFaviconUrl(settings.faviconUrl ?? null);
+      setColorPrimary(settings.colorPrimary);
+      setColorAccent(settings.colorAccent);
+      setColorPaper(settings.colorPaper);
+      setFontHeading(settings.fontHeading);
+      setFontBody(settings.fontBody);
+      setNavLinks(settings.navLinks ?? []);
+      setFooterLinks(settings.footerLinks ?? []);
+      setSocialLinks(settings.socialLinks ?? []);
       setLoading(false);
     });
-  }, []);
+  }, [accessToken]);
 
   async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -79,8 +72,8 @@ export default function AdminAparenciaPage() {
     setUploadingLogo(true);
     setError(null);
     try {
-      const media = await uploadMedia(file, profile.id, "Logo do site");
-      setLogoUrl(media.url);
+      const media = await uploadMedia(accessToken, file, "Logo do site", profile.name);
+      setLogoUrl(media.path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao enviar o logo.");
     } finally {
@@ -94,8 +87,8 @@ export default function AdminAparenciaPage() {
     setUploadingFavicon(true);
     setError(null);
     try {
-      const media = await uploadMedia(file, profile.id, "Favicon do site");
-      setFaviconUrl(media.url);
+      const media = await uploadMedia(accessToken, file, "Favicon do site", profile.name);
+      setFaviconUrl(media.path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao enviar o favicon.");
     } finally {
@@ -109,36 +102,23 @@ export default function AdminAparenciaPage() {
     setMessage(null);
     setError(null);
     try {
-      await updateSiteAppearance({
-        logo_url: logoUrl,
-        favicon_url: faviconUrl,
-        color_primary: colorPrimary,
-        color_accent: colorAccent,
-        color_paper: colorPaper,
-        font_heading: fontHeading,
-        font_body: fontBody,
-        nav_links: navLinks,
-        footer_links: footerLinks,
-        social_links: socialLinks,
+      await updateSettings(accessToken, {
+        logoUrl: logoUrl ?? undefined,
+        faviconUrl: faviconUrl ?? undefined,
+        colorPrimary,
+        colorAccent,
+        colorPaper,
+        fontHeading,
+        fontBody,
+        navLinks,
+        footerLinks,
+        socialLinks,
       });
-      setMessage("Aparência salva. Sincronize o site para publicar as mudanças.");
+      setMessage("Aparência salva.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível salvar a aparência.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleSync() {
-    setSyncing(true);
-    setSyncMessage(null);
-    try {
-      await triggerSiteRebuild();
-      setSyncMessage("Sincronização disparada — o site publicado atualiza em cerca de 1 minuto.");
-    } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : "Não foi possível sincronizar.");
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -154,18 +134,6 @@ export default function AdminAparenciaPage() {
       />
 
       <div className="max-w-3xl space-y-6 p-6">
-        <Card>
-          <h3 className="text-sm font-semibold text-polis-navy">Sincronizar site publicado</h3>
-          <p className="mt-1 text-xs text-polis-slate">
-            Assim como matérias, mudanças de aparência só aparecem no site publicado depois de uma
-            sincronização (automática ao salvar, ou manual aqui).
-          </p>
-          <Button type="button" variant="secondary" disabled={syncing} onClick={handleSync} className="mt-3">
-            {syncing ? "Sincronizando..." : "🔄 Sincronizar site"}
-          </Button>
-          {syncMessage && <p className="mt-2 text-xs text-polis-slate">{syncMessage}</p>}
-        </Card>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <fieldset className="rounded-sm border border-polis-navy/10 bg-white p-4">
             <legend className="px-1 text-sm font-semibold text-polis-navy">Logo e favicon</legend>

@@ -4,8 +4,10 @@ import { AdminTopbar } from "@/components/admin/Topbar";
 import { BarChart } from "@/components/admin/BarChart";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { StatusBadge } from "@/components/ui/Badge";
+import { useAdminSession } from "@/components/admin/AuthProvider";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getArticlesForAdmin, getEditorias } from "@/lib/supabase/queries";
+import { listArticles } from "@/lib/github/articles";
+import { getEditorias } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import { getAnalyticsSnapshot } from "@/lib/analytics";
 
@@ -16,30 +18,34 @@ function formatDuration(seconds: number): string {
 }
 
 export default function AdminDashboardPage() {
+  const { accessToken } = useAdminSession();
   const analytics = getAnalyticsSnapshot();
-  const { data: articles, loading: loadingArticles } = useSupabaseQuery(getArticlesForAdmin);
-  const { data: editorias } = useSupabaseQuery(getEditorias);
+  const { data: articles, loading: loadingArticles } = useSupabaseQuery(
+    () => listArticles(accessToken),
+    [accessToken]
+  );
+  const editorias = getEditorias();
 
   const published = articles?.filter((a) => a.status === "published") ?? [];
   const inReview = articles?.filter((a) => a.status === "in_review") ?? [];
-  const totalViews = published.reduce((sum, article) => sum + article.view_count, 0);
+  const totalViews = published.reduce((sum, article) => sum + article.viewCount, 0);
   const recent = [...(articles ?? [])]
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 6);
 
-  const porEditoria = (editorias ?? [])
+  const porEditoria = editorias
     .map((editoria) => ({
       label: editoria.name,
       color: editoria.color,
-      value: published.filter((a) => a.editoria_id === editoria.id).length,
+      value: published.filter((a) => a.editoriaId === editoria.id).length,
     }))
     .filter((item) => item.value > 0)
     .sort((a, b) => b.value - a.value);
 
   const maisLidas = [...published]
-    .sort((a, b) => b.view_count - a.view_count)
+    .sort((a, b) => b.viewCount - a.viewCount)
     .slice(0, 5)
-    .map((a) => ({ label: a.title, value: a.view_count }));
+    .map((a) => ({ label: a.title, value: a.viewCount }));
 
   return (
     <>
@@ -164,7 +170,7 @@ export default function AdminDashboardPage() {
                     <span className="truncate font-medium text-polis-navy">{article.title}</span>
                     <span className="flex shrink-0 items-center gap-3 text-polis-gray">
                       <StatusBadge status={article.status} />
-                      {formatDate(article.updated_at)}
+                      {formatDate(article.updatedAt)}
                     </span>
                   </li>
                 ))}

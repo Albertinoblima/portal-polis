@@ -3,7 +3,7 @@ import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper
 
 export const metadata: Metadata = {
   title: "Termos de Uso",
-  description: "Regras de uso do Portal Pólis: comentários, propriedade intelectual e responsabilidades.",
+  description: "Regras de uso do Portal Pólis: propriedade intelectual e responsabilidades.",
 };
 
 const CONTENT_HTML = `
@@ -14,32 +14,18 @@ const CONTENT_HTML = `
 
   <h2>1. O que é o Portal Pólis</h2>
   <p>O Portal Pólis é um portal de jornalismo político independente. A leitura das matérias
-  não exige cadastro; apenas alguns recursos — como comentar ou assinar a newsletter — pedem
-  um nome e/ou e-mail, conforme detalhado na nossa <a href="/politica-de-privacidade">
-  Política de Privacidade</a>.</p>
+  não exige cadastro nem fornecimento de dados pessoais. O único canal de contato direto é o
+  nosso <a href="/contato">formulário de contato</a>, que apenas abre uma conversa no
+  WhatsApp com a redação.</p>
 
-  <h2>2. Comentários e conduta do usuário</h2>
-  <p>Ao comentar em uma matéria, você concorda em:</p>
-  <ul>
-    <li>Não publicar conteúdo ofensivo, discurso de ódio, assédio, ameaças ou discriminação
-    de qualquer natureza;</li>
-    <li>Não publicar spam, propaganda não solicitada ou conteúdo ilegal;</li>
-    <li>Não se passar por outra pessoa nem divulgar dados pessoais de terceiros sem
-    consentimento;</li>
-    <li>Manter o debate civil, mesmo em discordância com o conteúdo publicado.</li>
-  </ul>
-  <p>Todo comentário passa por moderação da redação antes de ficar visível publicamente.
-  Reservamo-nos o direito de não publicar ou de remover comentários que violem estas
-  regras, sem aviso prévio.</p>
-
-  <h2>3. Propriedade intelectual</h2>
+  <h2>2. Propriedade intelectual</h2>
   <p>Os textos, fotografias, ilustrações, marca e logotipo do Portal Pólis são protegidos
   por direitos autorais. Você pode compartilhar links e trechos curtos das nossas matérias
   para uso pessoal e não comercial, sempre citando a fonte e o link original. A reprodução
   integral de matérias, uso comercial do conteúdo ou da marca "Portal Pólis" exige
   autorização prévia — entre em contato pela nossa <a href="/contato">página de Contato</a>.</p>
 
-  <h2>4. Links para sites de terceiros</h2>
+  <h2>3. Links para sites de terceiros</h2>
   <p>Nossas matérias podem conter links para sites de terceiros (fontes, referências,
   redes sociais). Não somos responsáveis pelo conteúdo, pelas políticas de privacidade ou
   pelas práticas desses sites externos.</p>

@@ -41,9 +41,9 @@ const CONTENT_HTML = `
   hipóteses, sua preferência de tema volta ao padrão (claro) a cada nova visita.</p>
 
   <h2>4. Mais informações</h2>
-  <p>Para entender como tratamos dados pessoais de forma mais ampla — comentários,
-  newsletter e formulário de contato — consulte nossa <a href="/politica-de-privacidade">
-  Política de Privacidade</a> e a página <a href="/lgpd">LGPD</a>.</p>
+  <p>Para entender como tratamos dados pessoais de forma mais ampla, consulte nossa
+  <a href="/politica-de-privacidade">Política de Privacidade</a> e a página
+  <a href="/lgpd">LGPD</a>.</p>
 `;
 
 export default function PoliticaDeCookiesPage() {

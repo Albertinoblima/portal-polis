@@ -4,14 +4,16 @@ import { useState } from "react";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { Button } from "@/components/ui/Button";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { createEditoria, getEditorias, updateEditoria } from "@/lib/supabase/queries";
+import { createEditoria, listEditorias, setEditoriaActive } from "@/lib/github/editorias";
 import { useAdminSession } from "@/components/admin/AuthProvider";
-import { logAction } from "@/lib/supabase/audit";
 import { slugify } from "@/lib/utils";
 
 export default function AdminCategoriasPage() {
-  const { profile } = useAdminSession();
-  const { data: editorias, loading, refetch } = useSupabaseQuery(getEditorias);
+  const { accessToken } = useAdminSession();
+  const { data: editorias, loading, refetch } = useSupabaseQuery(
+    () => listEditorias(accessToken),
+    [accessToken]
+  );
 
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState("");
@@ -23,18 +25,11 @@ export default function AdminCategoriasPage() {
     event.preventDefault();
     setError(null);
     try {
-      const created = await createEditoria({
+      await createEditoria(accessToken, {
         name: name.trim(),
         slug: slugify(name),
         color,
         description: description.trim(),
-      });
-      await logAction({
-        userId: profile.id,
-        action: "create",
-        entity: "editoria",
-        entityId: created.id,
-        newValue: { name: created.name },
       });
       setName("");
       setDescription("");
@@ -46,7 +41,7 @@ export default function AdminCategoriasPage() {
   }
 
   async function handleToggleActive(id: string, isActive: boolean) {
-    await updateEditoria(id, { is_active: !isActive });
+    await setEditoriaActive(accessToken, id, !isActive);
     refetch();
   }
 
@@ -125,10 +120,10 @@ export default function AdminCategoriasPage() {
                 <p className="mt-2 text-xs text-polis-gray">/editoria/{editoria.slug}</p>
                 <button
                   type="button"
-                  onClick={() => handleToggleActive(editoria.id, editoria.is_active)}
+                  onClick={() => handleToggleActive(editoria.id, editoria.isActive)}
                   className="mt-3 text-xs font-semibold text-polis-navy hover:text-polis-gold"
                 >
-                  {editoria.is_active ? "Desativar" : "Ativar"}
+                  {editoria.isActive ? "Desativar" : "Ativar"}
                 </button>
               </div>
             ))}

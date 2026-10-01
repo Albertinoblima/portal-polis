@@ -8,14 +8,14 @@ export type UserRole =
 
 export interface User {
   id: string;
-  /** Omitido no conteúdo público sincronizado do Supabase (ver scripts/sync-content.mjs). */
+  /** Omitido do manifesto público em src/content/authors.json. */
   email?: string;
   name: string;
   avatarUrl?: string;
   role: UserRole;
   bio?: string;
   socials?: Partial<Record<"twitter" | "instagram" | "linkedin", string>>;
-  /** Omitidos no conteúdo público sincronizado do Supabase (a view authors_public não os expõe). */
+  /** Omitidos do manifesto público em src/content/authors.json. */
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -125,24 +125,6 @@ export interface Banner {
   isActive: boolean;
 }
 
-export interface NewsletterSubscriber {
-  id: string;
-  email: string;
-  name?: string;
-  preferences: string[];
-  confirmedAt?: string;
-  unsubscribedAt?: string;
-}
-
-export interface AuditLog {
-  id: string;
-  userId: string;
-  action: string;
-  entity: string;
-  entityId: string;
-  createdAt: string;
-}
-
 export interface NavLink {
   label: string;
   href: string;
@@ -152,6 +134,9 @@ export interface SocialLink {
   platform: string;
   url: string;
 }
+
+export type HeadingFont = "eb-garamond" | "playfair-display" | "merriweather";
+export type BodyFont = "inter" | "source-sans-3" | "ibm-plex-sans";
 
 export interface SiteSettings {
   siteName: string;
@@ -163,18 +148,9 @@ export interface SiteSettings {
   colorPrimary: string;
   colorAccent: string;
   colorPaper: string;
-  fontHeading: "eb-garamond" | "playfair-display" | "merriweather";
-  fontBody: "inter" | "source-sans-3" | "ibm-plex-sans";
+  fontHeading: HeadingFont;
+  fontBody: BodyFont;
   navLinks: NavLink[];
   footerLinks: NavLink[];
   socialLinks: SocialLink[];
-}
-
-export interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  handledAt?: string;
-  createdAt: string;
 }
