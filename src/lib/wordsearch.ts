@@ -215,6 +215,25 @@ export const WORDSEARCHES: WordSearchPuzzle[] = [
       "CONSTITUICAO",
     ],
   },
+  {
+    slug: "principios-da-administracao-publica",
+    date: "2026-10-20",
+    theme: "Princípios da Administração Pública",
+    size: 18,
+    words: [
+      "LEGALIDADE",
+      "MORALIDADE",
+      "TRANSPARENCIA",
+      "IMPESSOALIDADE",
+      "PUBLICIDADE",
+      "EFICIENCIA",
+      "PROBIDADE",
+      "CONTROLE",
+      "ADMINISTRACAO",
+      "RAZOABILIDADE",
+      "RESPONSABILIDADE",
+    ],
+  },
 ];
 
 export interface WordSearchCell {

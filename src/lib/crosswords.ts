@@ -650,6 +650,45 @@ export const CROSSWORDS: CrosswordPuzzle[] = [
       },
     ],
   },
+  {
+    slug: "principios-da-administracao-publica",
+    date: "2026-10-20",
+    theme: "Princípios da Administração Pública",
+    entries: [
+      {
+        number: 1,
+        direction: "down",
+        row: 0,
+        col: 0,
+        answer: "CONTROLE",
+        clue: "Atividade de fiscalizar e acompanhar a execução das ações do Estado para cumprir os fins públicos.",
+      },
+      {
+        number: 2,
+        direction: "down",
+        row: 0,
+        col: 2,
+        answer: "MORALIDADE",
+        clue: "Exigência de honestidade, probidade e boa-fé na atuação administrativa.",
+      },
+      {
+        number: 3,
+        direction: "across",
+        row: 3,
+        col: 0,
+        answer: "TRANSPARENCIA",
+        clue: "Princípio que exige clareza, publicidade e acessibilidade das ações da administração pública.",
+      },
+      {
+        number: 4,
+        direction: "down",
+        row: 0,
+        col: 6,
+        answer: "LEGALIDADE",
+        clue: "Ato administrativo deve estar em conformidade com a lei e o ordenamento jurídico.",
+      },
+    ],
+  },
 ];
 
 export interface CrosswordCell {
