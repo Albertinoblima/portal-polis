@@ -119,6 +119,40 @@ npm run test            # testes unitários/componente (Vitest + Testing Library
 npm run test:e2e        # smoke tests E2E (Playwright, serve ./out estático)
 ```
 
+## Publicidade (AdSense) no subdomínio
+
+O projeto já está preparado para ativar anúncios programáticos sem alterar código,
+somente com variáveis de ambiente e aprovação do subdomínio no painel do Google AdSense.
+
+### Pré-requisitos
+
+- Domínio raiz `idialog.com.br` aprovado no AdSense.
+- Subdomínio `portalpolis.idialog.com.br` adicionado em Sites no mesmo painel.
+- `ads.txt` público e acessível.
+
+Este repositório já publica o arquivo em [public/ads.txt](public/ads.txt), servido em:
+
+- `https://portalpolis.idialog.com.br/ads.txt`
+
+### Variáveis para ativação
+
+Preencha em `.env.local` (dev) e nos segredos/variáveis do CI (produção):
+
+- `NEXT_PUBLIC_ADSENSE_CLIENT_ID` (ex.: `ca-pub-8759475534788426`)
+- `NEXT_PUBLIC_ADSENSE_SIDEBAR_SLOTS` (lista CSV dos slots laterais)
+- `NEXT_PUBLIC_ADSENSE_ARTICLE_END_SLOT` (slot do anúncio no fim da matéria)
+
+Com essas variáveis vazias, o site continua sem blocos AdSense (comportamento seguro).
+
+### Posições já implementadas
+
+- Margem lateral do jornal (slots de sidebar).
+- Fim da matéria (bloco in-article, após compartilhar e antes de relacionadas).
+
+### Recomendação operacional
+
+- Manter Auto Ads desativado no painel do AdSense para preservar a estética editorial do Portal Pólis.
+
 ## Testes
 
 - **Unitários/componente** (`npm run test`, Vitest + Testing Library): cobrem as funções puras
