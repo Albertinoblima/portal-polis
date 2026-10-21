@@ -10,7 +10,7 @@ O planejamento completo do produto está documentado em [`docs/`](./docs).
 
 ## Arquitetura em uma imagem
 
-```
+```text
                      ┌─────────────────────────┐
   Leitor  ──────────▶│  Site público (est.)     │  GitHub Pages
                      │  100% HTML pré-gerado    │  portalpolis.idialog.com.br
@@ -53,7 +53,7 @@ O planejamento completo do produto está documentado em [`docs/`](./docs).
 
 ## Estrutura de pastas
 
-```
+```text
 PORTAL-POLIS/
 ├── docs/                          Documentação de planejamento (visão, marca, wireframes, ...)
 ├── public/brand/                  Logos oficiais

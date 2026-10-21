@@ -230,14 +230,8 @@ body {
    causaria um "pulo" perceptível a cada palavra) dão o efeito de marca-texto
    sem interferir na tipografia normal do corpo da matéria. */
 .tts-word--active {
-  /* Fallback para Chrome < 111, que não suporta color-mix(). */
   background-color: rgba(169, 133, 47, 0.45);
   box-shadow: 0 0 0 0.05em rgba(169, 133, 47, 0.45);
-  /* Navegadores modernos usam as linhas abaixo (sobrescrevem o fallback). */
-  /* stylelint-disable-next-line compat-api/css */
-  background-color: color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
-  /* stylelint-disable-next-line compat-api/css */
-  box-shadow: 0 0 0 0.05em color-mix(in srgb, var(--color-gold-muted) 45%, transparent);
   border-radius: 0.15em;
   transition: background-color 100ms ease;
 }
