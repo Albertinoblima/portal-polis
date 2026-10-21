@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/articles/ArticleCard";
+import { PrintAdUnit } from "@/components/ads/PrintAdUnit";
 import { ShareButtons } from "@/components/articles/ShareButtons";
 import { Newspaper, type NewspaperBlock } from "@/components/newspaper/Newspaper";
 import { buildArticleBlocks } from "@/components/newspaper/editionBlocks";
@@ -101,6 +102,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-polis-rule/20 pb-6">
           <ShareButtons url={articleUrl} title={article.title} />
         </div>
+      ),
+    },
+    {
+      type: "node",
+      columns: 1,
+      node: (
+        <PrintAdUnit
+          adSlot={process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_END_SLOT ?? ""}
+          variant="in-article"
+          minHeightPx={150}
+        />
       ),
     },
   ];

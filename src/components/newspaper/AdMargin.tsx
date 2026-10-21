@@ -1,4 +1,5 @@
 import type { Banner } from "@/types";
+import { PrintAdUnit } from "@/components/ads/PrintAdUnit";
 import { FeaturedMedia } from "@/components/ui/FeaturedMedia";
 
 interface AdMarginProps {
@@ -9,6 +10,10 @@ interface AdMarginProps {
 
 const SLOT_COUNT = 4;
 const PLACEHOLDER_TILE_COUNT = 6;
+const ADSENSE_SIDEBAR_SLOTS = (process.env.NEXT_PUBLIC_ADSENSE_SIDEBAR_SLOTS ?? "")
+  .split(",")
+  .map((slot) => slot.trim())
+  .filter(Boolean);
 
 /**
  * Folha de classificados pareada com a capa na primeira dobra dupla do
@@ -58,11 +63,21 @@ export function AdMargin({ banners, slotCount = SLOT_COUNT, isDesktop = false }:
         }}
       >
         {slots.map((banner, index) =>
-          banner ? <AdSlot key={banner.id} banner={banner} /> : <AdPlaceholder key={index} />
+          ADSENSE_SIDEBAR_SLOTS[index] ? (
+            <ProgrammaticAdSlot key={`adsense-${ADSENSE_SIDEBAR_SLOTS[index]}`} adSlot={ADSENSE_SIDEBAR_SLOTS[index]} />
+          ) : banner ? (
+            <AdSlot key={banner.id} banner={banner} />
+          ) : (
+            <AdPlaceholder key={index} />
+          )
         )}
       </div>
     </div>
   );
+}
+
+function ProgrammaticAdSlot({ adSlot }: { adSlot: string }) {
+  return <PrintAdUnit adSlot={adSlot} minHeightPx={210} className="my-0 h-full" />;
 }
 
 function AdSlot({ banner }: { banner: Banner }) {

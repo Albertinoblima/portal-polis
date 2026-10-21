@@ -10,6 +10,7 @@ import {
 } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/settings";
+import { GoogleAdScript } from "@/components/ads/GoogleAdScript";
 import "./globals.css";
 
 // Lista curada de fontes selecionáveis em /admin/aparencia. `next/font` exige
@@ -134,6 +135,7 @@ gtag('config', '${gaId}');`,
             />
           </>
         )}
+        <GoogleAdScript />
         {children}
       </body>
     </html>
