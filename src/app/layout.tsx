@@ -1,38 +1,76 @@
 import type { Metadata } from "next";
-import {
-  Inter,
-  EB_Garamond,
-  JetBrains_Mono,
-  Playfair_Display,
-  Merriweather,
-  Source_Sans_3,
-  IBM_Plex_Sans,
-} from "next/font/google";
+import localFont from "next/font/local";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/settings";
 import { GoogleAdScript } from "@/components/ads/GoogleAdScript";
 import "./globals.css";
 
+// ─── Fontes auto-hospedadas ────────────────────────────────────────────────
+// Todas as fontes são servidas localmente (public/fonts/) para evitar a falha
+// intermitente do next/font/google no CI: o Google Fonts às vezes retorna um
+// formato CSS alternativo que o regex interno do Next.js não reconhece,
+// causando "TypeError: Cannot read properties of null (reading '1')".
+// Arquivos obtidos via: https://fonts.googleapis.com/css2?family=...&display=swap
+
 // Lista curada de fontes selecionáveis em /admin/aparencia. `next/font` exige
 // que toda fonte candidata seja importada em build-time — não dá pra carregar
 // uma fonte arbitrária escolhida em runtime num site 100% estático.
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const ebGaramond = EB_Garamond({ variable: "--font-eb-garamond", subsets: ["latin"] });
-const jetbrainsMono = JetBrains_Mono({
+const inter = localFont({
+  src: "../../public/fonts/inter/inter-normal-100-900.woff2",
+  variable: "--font-inter",
+  display: "swap",
+  weight: "100 900",
+});
+const ebGaramond = localFont({
+  src: [
+    { path: "../../public/fonts/eb-garamond/eb-garamond-normal-400-800.woff2", style: "normal", weight: "400 800" },
+    { path: "../../public/fonts/eb-garamond/eb-garamond-italic-400-800.woff2", style: "italic", weight: "400 800" },
+  ],
+  variable: "--font-eb-garamond",
+  display: "swap",
+});
+const jetbrainsMono = localFont({
+  src: "../../public/fonts/jetbrains-mono/jetbrains-mono-normal-100-800.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  display: "swap",
+  weight: "100 800",
 });
-const playfairDisplay = Playfair_Display({ variable: "--font-playfair-display", subsets: ["latin"] });
-const merriweather = Merriweather({
+const playfairDisplay = localFont({
+  src: [
+    { path: "../../public/fonts/playfair-display/playfair-display-normal-400-900.woff2", style: "normal", weight: "400 900" },
+    { path: "../../public/fonts/playfair-display/playfair-display-italic-400-900.woff2", style: "italic", weight: "400 900" },
+  ],
+  variable: "--font-playfair-display",
+  display: "swap",
+});
+const merriweather = localFont({
+  src: [
+    { path: "../../public/fonts/merriweather/merriweather-normal-300.woff2", style: "normal", weight: "300" },
+    { path: "../../public/fonts/merriweather/merriweather-normal-400.woff2", style: "normal", weight: "400" },
+    { path: "../../public/fonts/merriweather/merriweather-normal-700.woff2", style: "normal", weight: "700" },
+    { path: "../../public/fonts/merriweather/merriweather-normal-900.woff2", style: "normal", weight: "900" },
+    { path: "../../public/fonts/merriweather/merriweather-italic-300.woff2", style: "italic", weight: "300" },
+    { path: "../../public/fonts/merriweather/merriweather-italic-400.woff2", style: "italic", weight: "400" },
+    { path: "../../public/fonts/merriweather/merriweather-italic-700.woff2", style: "italic", weight: "700" },
+    { path: "../../public/fonts/merriweather/merriweather-italic-900.woff2", style: "italic", weight: "900" },
+  ],
   variable: "--font-merriweather",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  display: "swap",
 });
-const sourceSans3 = Source_Sans_3({ variable: "--font-source-sans-3", subsets: ["latin"] });
-const ibmPlexSans = IBM_Plex_Sans({
+const sourceSans3 = localFont({
+  src: "../../public/fonts/source-sans-3/source-sans-3-normal-200-900.woff2",
+  variable: "--font-source-sans-3",
+  display: "swap",
+  weight: "200 900",
+});
+// IBM Plex Sans: auto-hospedada para evitar falha intermitente do next/font/google no CI.
+const ibmPlexSans = localFont({
+  src: [
+    { path: "../../public/fonts/ibm-plex-sans/ibm-plex-sans-latin-ext.woff2", style: "normal", weight: "100 900" },
+    { path: "../../public/fonts/ibm-plex-sans/ibm-plex-sans-latin.woff2", style: "normal", weight: "100 900" },
+  ],
   variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const HEADING_FONT_VAR: Record<string, string> = {
